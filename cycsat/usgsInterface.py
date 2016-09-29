@@ -1,41 +1,66 @@
 ########################################################
-# tools for querying USGS EE for imagery
+# tool for querying USGS EE for imagery
 ########################################################
 
 import subprocess
 
 import shapefile
 from usgs import api
+from usgs import soap
+import pandas as pd
 
 import config
-print config.usgs_username,config.usgs_password
-# login to usgs servers
-subprocess.call(['usgs','login',config.usgs_username,config.usgs_password],shell=True)
 
-in_file = 'C:/Users/Owen/Documents/Academic/CNERG/data/nuclear-facilities-update/nuclear-facilities-update.shp'
-plants = shapefile.Reader(in_file)
+def search_usgs(instrument):
+	'''searches usgs earth explorer and returns results as dictionary and pandas df'''
 
-lat = plants.records()[2][-2]
-lng = plants.records()[2][-1]
+	# login to usgs servers and get and api key
+	login = subprocess.check_output(['usgs','login',config.usgs_username,config.usgs_password],shell=True)
+	key = login.strip()
 
-fields = api.dataset_fields('ORBVIEW3', 'EE')
-print fields
+	in_file = 'C:/Users/Owen/Documents/Academic/CNERG/data/nuclear-facilities-update/nuclear-facilities-update.shp'
+	plants = shapefile.Reader(in_file)
 
-where = {
-	9947: 0,	 # cloud cover less than 10%
-	}
+	result = {}
+	rows = []
+	for plant in plants.records():
 
-# scenes = api.search('LANDSAT_8', 'EE', start_date='2001-04-01', end_date='2015-05-01', where=where,
-# 					 lat=lat, lng=lng, extended=True)
+		lat = plant[-2]
+		lng = plant[-1]
 
-	# for i in scenes:
-	# 	print i['acquisitionDate']
+		where = {
+		9947: 0,	 # cloud cover less than 10%
+		}
 
-# logout of usgs servers
-subprocess.check_output(['usgs','logout'],shell=True)
+		scenes = api.search(instrument, 'EE', start_date='2001-04-01', end_date='2015-05-01', where=where,lat=lat, lng=lng,
+							api_key=key)
 
+		print plant[0],plant[1],lat,lng,len(scenes)
+		rows.append([plant[0],plant[1],lat,lng,len(scenes)])
 
-# acquisitionDate
-# browseUrl
-# displayId
-# Scene Cloud Cover
+		if len(scenes)>0:
+			result[plant[0]] = {
+			'name': plant[1],
+			'state':plant[5],
+			'scenes':scenes,
+			'count' : len(scenes)
+			}
+
+	# logout of usgs servers
+	subprocess.check_output(['usgs','logout'],shell=True)
+
+	df = pd.DataFrame(rows,columns=['id','name','lat','lng','scenes'])
+	df = df[df['scenes']>0].copy()
+
+	return {'results':result,'dataframe':df}
+
+result = search_usgs('ORBVIEW3')
+
+# # login to usgs servers and get and api key
+# login = subprocess.check_output(['usgs','login',config.usgs_username,config.usgs_password],shell=True)
+# key = login.strip()
+
+# eid = '3V040902P0000465071A520016001782M_001648451'
+# a = api.download('ORBVIEW3','EE',eid,'L1B')
+
+# #fields = api.dataset_fields('ORBVIEW3', 'EE')
