@@ -5,3 +5,6 @@ cycsat/config.ini
 # Sublime files
 cycsat-sublime.sublime-project
 cycsat-sublime.sublime-workspace
+
+# Other
+testing.py
