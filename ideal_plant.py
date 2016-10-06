@@ -8,6 +8,7 @@ from rasterio import features
 
 from skimage import io
 from skimage.segmentation import quickshift
+from skimage.segmentation import slic
 
 import fiona
 from shapely.geometry import mapping, shape
@@ -22,9 +23,12 @@ images = ['test_data/images/'+x for x in images if '_clip.tif' in x]
 # image.close()
 
 img = io.imread(images[0])
-segments = quickshift(img, kernel_size=20, convert2lab=False, max_dist=20, ratio=0.5)
+#segments = quickshift(img, kernel_size=5000, convert2lab=False, max_dist=5000, ratio=0.5)
+segments = slic(img)
 print("Quickshift number of segments: %d" % len(np.unique(segments)))
 
+# 1 rectangles, 2 circles, 
+# 2 circles, plume and one body of water
 
 
 # band1.fill(10)

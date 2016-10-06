@@ -1,16 +1,13 @@
 import os
 
 import gdal, ogr, os, osr
-
 from osgeo import ogr
 
-import shapefile
 import numpy as np
 
-import fiona
-import shapely
-
-import rasterio
+extensions = {
+    'GTiff':'.tif'
+}
 
 def open_shape(in_file):
     '''reads in a shapefile.'''
@@ -35,26 +32,19 @@ def raster2array(rasterfn):
     array = band.ReadAsArray()
     return array
 
-def array2GTiff(newRasterfn,rasterOrigin,pixelWidth,pixelHeight,array):
+def array2image(path,array,image_format='GTiff'):
 
     cols = array.shape[1]
     rows = array.shape[0]
-    
-    originX = rasterOrigin[0]
-    originY = rasterOrigin[1]
 
-    driver = gdal.GetDriverByName('GTiff')
+    driver = gdal.GetDriverByName(image_format)
 
-    outRaster = driver.Create(newRasterfn, cols, rows, 1, gdal.GDT_Byte)
-
-    outRaster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+    # add file extension based on driver
+    outRaster = driver.Create(path+extensions[image_format], cols, rows, 1, gdal.GDT_Int32)
 
     outband = outRaster.GetRasterBand(1)
     outband.WriteArray(array)
     
-    outRasterSRS = osr.SpatialReference()
-    outRasterSRS.ImportFromEPSG(4326)
-    outRaster.SetProjection(outRasterSRS.ExportToWkt())
-    
     outband.FlushCache()
+
 
