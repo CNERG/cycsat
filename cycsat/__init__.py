@@ -1,11 +1,16 @@
 """
 __init__.py
 
-Imports important objects when cycscene is imported.
+This file initializes cycsat, imports the Sensor class, and creates the 
+Session class, which is used for reading the sqlite3 database.
 
 """
 
 # Check here for dependencies. #
+
+from cycsat import agency
+from cycsat import target
+from cycsat import sensor
 
 class Session(object):
 	'''

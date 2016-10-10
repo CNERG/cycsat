@@ -1,7 +1,13 @@
 """
-simulation.py
+observation.py
+
+This file contains the classes and functions used for simulated 
+observation missions: events, scenes. It also inlcudes the sensor class, 
+which is the tool for writing scenes with events.
 
 """
+
+import gdal
 
 class Event(object):
 	'''

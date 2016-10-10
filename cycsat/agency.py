@@ -1,9 +1,11 @@
 """
 agency.py
 
-Contains the missions (simulations), scenes, events for a given world.
+This file contains all the classes and functions that make up what might be 
+called an space "agency." Instruments, satellites, and missions.
 
 """
+
 class Instrument(object):
 	"""
 	This object is a particular instrument associated with a satellite.

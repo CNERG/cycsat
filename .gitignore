@@ -1,6 +1,7 @@
 # byte-compiled / optimized / DLL files
 *.pyc
 cycsat/config.ini
+__pycache__/*
 
 # Sublime files
 cycsat-sublime.sublime-project
