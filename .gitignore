@@ -10,3 +10,5 @@ cycsat-sublime.sublime-workspace
 # Other
 testing.py
 test_data/*
+.ipynb_checkpoints/*
+demos/*

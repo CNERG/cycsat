@@ -7,6 +7,7 @@ This contains the functions for writing scenes with events.
 
 import gdal
 import numpy as np
+from skimage.draw import circle, set_color
 
 extensions = {
     'GTiff':'.tif'
@@ -28,7 +29,7 @@ def array_to_image(path,array,image_format='GTiff'):
     outband.FlushCache()
 
 
-class Canvas(object):
+class Basemap(object):
     '''
     The canvas object.
 
@@ -41,12 +42,17 @@ class Canvas(object):
         self.name = name
         self.mmu = mmu
         
-        self.data = np.zeros((width,length),dtype=np.int32)
+        self.data = np.zeros((w,l),dtype=np.int32)
 
     def change_mmu(self,mmu):
         '''Change the minimim mapping unit (pixel size in meters).'''
         self.mmu = mmu
 
-    def draw_canvas(self,path=None,image_format='GTiff'):
+    def draw(self,path,image_format='GTiff'):
         '''Draws the canvas saving it as an image.'''
-        array_to_image(self.name,self.data,image_format=image_format)
+        array_to_image(path,self.data,image_format=image_format)
+
+    def add_circle(self,x,y,radius,value):
+
+        rr, cc = circle(x,y,radius)
+        set_color(self.data, (rr, cc), 2)
