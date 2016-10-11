@@ -1,10 +1,7 @@
 """
-target.py
+world.py
 
-The target module.
-
-Contains the satillite, sensor (one satillite has many sensors), site, and feature
-classes.
+Contains the Facility and Feature classes.
 
 """
 

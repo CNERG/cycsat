@@ -1,9 +1,7 @@
 """
 observation.py
 
-This file contains the classes and functions used for simulated 
-observation missions: events, scenes. It also inlcudes the sensor class, 
-which is the tool for writing scenes with events.
+Contains the Event and Scene classes.
 
 """
 
@@ -15,9 +13,7 @@ class Event(object):
 	One Feature has many Events. Events are simply the probability
 	
 	Attributes:
-		frequecy: the liklihood the event will happen every scene.
 		
-
 	'''
 
 	def __init__(self,name=None):
@@ -30,7 +26,6 @@ class Scene(object):
 	a simulation.
 	
 	Attributes:
-		time_step: the time step of the scene
 		
 	'''
 

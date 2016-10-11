@@ -1,7 +1,7 @@
 """
 sensor.py
 
-This contains the functions for writing scenes with events.
+Contains tools for writing scenes.
 
 """
 
