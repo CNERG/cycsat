@@ -9,9 +9,7 @@ Session class, which is used for reading the sqlite3 database.
 # Check here for dependencies. #
 
 # import cycsat modules
-from cycsat import agency
-from cycsat import world
-from cycsat import sensor
+from .data_model import Base
 
 import sqlite3
 
@@ -20,20 +18,29 @@ from sqlalchemy.orm import sessionmaker
 
 Session = sessionmaker()
 
-class Interface(object):
+class Agency(object):
 	'''
-	An interface for interfacing between sqlalchemy, sqlite3, and data classes
+	An interface for working with sqlalchemy, sqlite3, and data classes
 	
 	'''
 
 	def __init__(self,database):
+		'''
+		'''
+		global Session
+		global Base
+
+		# add db extension if unspecified
+		if database[:-2]!='.db':
+			database+='.db'
 		
 		self.database = database
-		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=True)
+		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=False)
 		
-		global Session
 		Session.configure(bind=self.engine)
 		self.session = Session()
+
+		Base.metadata.create_all(self.engine)
 
 
 

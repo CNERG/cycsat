@@ -1,14 +1,12 @@
 """
-database.py
+data_model.py
 
-Contains the database functions.
+Contains the data model functions.
 
 """
-# import classes
 
-# import third-party modules
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Table
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -64,70 +62,63 @@ World classes
 **********************************
 '''
 
-class Facility(object):
+class Site(Base):
 	'''	
 	'''
-
-	__tablename__ = 'facility'
+	__tablename__ = 'site'
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	satellite_id = Column(Integer, ForeignKey('satellite.id'))
+	mission_id = Column(Integer, ForeignKey('mission.id'))
 
-	satellite = relationship(Satellite, back_populates='missions')
+	mission = relationship(Mission, back_populates='sites')
 
-'''
-to create a scene
+Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
-1. get a list of all the features
-2. for all the features that have a proability that allows them to appear, create events in the
-events table
-3. Use the events (visable features) to generate a scene!
 
-'''
-
-class Feature(object):
+class Feature(Base):
 	'''
 	This object is a feature associated with a site.
-	
-	Attributes:
-		liklihood: % chance this feature will appear in each scene.
-		name: 
-		shape:
 		
 	'''
+	__tablename__ = 'feature'
 
-	def __init__(self,name=None):
-		self.name = name
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+	site_id = Column(Integer, ForeignKey('site.id'))
+
+	site = relationship(Site, back_populates='features')
+	scenes = relationship('Event', back_populates='feature')
+
+Site.features = relationship('Feature', order_by=Feature.id,back_populates='site')
 
 
 '''
-observation classes
-**********************************
+Observation classes
 '''
 
-class Event(object):
+class Event(Base):
 	'''
-	Events are junction tables (many-to-many) between features and scenes.
-	One Feature has many Events. Events are simply the probability
-	
-	Attributes:
-		
 	'''
+	__tablename__ = 'event'
 
-	def __init__(self,name=None):
-		self.name = name
+	feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
+	scene_id = Column(Integer, ForeignKey('scene.id'), primary_key=True)
+	visible = Column(Integer)
 
+	feature = relationship('Feature', back_populates='scenes')
+	scene = relationship('Scene', back_populates='features')
 
-class Scene(object):
+class Scene(Base):
 	'''
-	This object is a canvas with features from a particular time in
-	a simulation.
-	
-	Attributes:
-		
 	'''
+	__tablename__ = 'scene'
 
-	def __init__(self,name=None):
-		self.name = name
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+	site_id = Column(Integer, ForeignKey('site.id'))
 
+	site = relationship(Site, back_populates='scenes')
+	features = relationship('Event', back_populates='scene')
+
+Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
