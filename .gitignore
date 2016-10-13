@@ -12,3 +12,4 @@ testing.py
 test_data/*
 .ipynb_checkpoints/*
 demos/*
+*.db

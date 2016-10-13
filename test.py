@@ -1,5 +1,16 @@
-from cycsat import Session
+from cycsat import Interface
+from cycsat import data_model
 
-s = Session('name')
+cur = Interface('test.db')
 
-print s.name
+data_model.Base.metadata.create_all(cur.engine)
+
+test_sat = data_model.Satellite(name='test')
+test_sat.instruments = [data_model.Instrument(name='thermal')]
+
+cur.session.add(test_sat)
+cur.session.commit()
+
+
+
+

@@ -8,24 +8,32 @@ Session class, which is used for reading the sqlite3 database.
 
 # Check here for dependencies. #
 
+# import cycsat modules
 from cycsat import agency
 from cycsat import world
 from cycsat import sensor
 
-class Session(object):
+import sqlite3
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+Session = sessionmaker()
+
+class Interface(object):
 	'''
-	This object is for managing cycsensor.
+	An interface for interfacing between sqlalchemy, sqlite3, and data classes
 	
-	Attributes:
-		id: the session id
-		database: a sqlite3 file
-
 	'''
 
-	def __init__(self,name=None):
-		self.name = name
-
-
+	def __init__(self,database):
+		
+		self.database = database
+		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=True)
+		
+		global Session
+		Session.configure(bind=self.engine)
+		self.session = Session()
 
 
 
