@@ -1,9 +1,6 @@
 """
 __init__.py
 
-This file initializes cycsat, imports the Sensor class, and creates the 
-Session class, which is used for reading the sqlite3 database.
-
 """
 
 # Check here for dependencies. #
@@ -16,9 +13,11 @@ import sqlite3
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+
 Session = sessionmaker()
 
-class Agency(object):
+
+class Interface(object):
 	'''
 	An interface for working with sqlalchemy, sqlite3, and data classes
 	
@@ -41,7 +40,3 @@ class Agency(object):
 		self.session = Session()
 
 		Base.metadata.create_all(self.engine)
-
-
-
-

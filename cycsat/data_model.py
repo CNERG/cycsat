@@ -13,6 +13,7 @@ from sqlalchemy.orm import relationship
 # create the declarative base
 Base = declarative_base()
 
+
 '''
 Agency classes
 **********************************
@@ -73,6 +74,7 @@ class Site(Base):
 
 	mission = relationship(Mission, back_populates='sites')
 
+
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
 
@@ -89,6 +91,7 @@ class Feature(Base):
 
 	site = relationship(Site, back_populates='features')
 	scenes = relationship('Event', back_populates='feature')
+
 
 Site.features = relationship('Feature', order_by=Feature.id,back_populates='site')
 
@@ -109,6 +112,7 @@ class Event(Base):
 	feature = relationship('Feature', back_populates='scenes')
 	scene = relationship('Scene', back_populates='features')
 
+
 class Scene(Base):
 	'''
 	'''
@@ -120,5 +124,6 @@ class Scene(Base):
 
 	site = relationship(Site, back_populates='scenes')
 	features = relationship('Event', back_populates='scene')
+
 
 Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')

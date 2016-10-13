@@ -1,4 +1,4 @@
-from cycsat import Agency
+from cycsat import Interface
 from cycsat.data_model import Base
 from cycsat.data_model import Satellite, Instrument, Mission
 from cycsat.data_model import Site, Feature
