@@ -1,7 +1,7 @@
 """
 data_model.py
 
-Contains the data model functions.
+Contains the data model classes.
 
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 '''
-Agency clases
+Agency classes
 **********************************
 '''
 
