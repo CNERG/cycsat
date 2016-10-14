@@ -6,13 +6,13 @@ Contains the data model classes.
 """
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy import Column, Integer, String, Table, Numeric, Boolean
+from sqlalchemy.dialects.sqlite import BLOB
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
 # create the declarative base
 Base = declarative_base()
-
 
 '''
 Agency classes
@@ -30,13 +30,15 @@ class Satellite(Base):
 
 class Instrument(Base):
 	'''
+	resolution in meters.
 	'''
 	__tablename__ = 'instrument'
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	resolution = Column(Numeric(precision=2))
+	
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
-
 	satellite = relationship(Satellite, back_populates='instruments')
 
 
@@ -49,8 +51,8 @@ class Mission(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
-
 	satellite = relationship(Satellite, back_populates='missions')
 
 
@@ -70,8 +72,11 @@ class Site(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	mission_id = Column(Integer, ForeignKey('mission.id'))
+	
+	width = Column(Integer)
+	length = Column(Integer)
 
+	mission_id = Column(Integer, ForeignKey('mission.id'))
 	mission = relationship(Mission, back_populates='sites')
 
 
@@ -87,6 +92,10 @@ class Feature(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	static = Column(Boolean, default=True)
+	floating = Column(Boolean, default=False)
+	geometry = Column(BLOB)
+
 	site_id = Column(Integer, ForeignKey('site.id'))
 
 	site = relationship(Site, back_populates='features')

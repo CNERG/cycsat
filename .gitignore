@@ -13,3 +13,5 @@ test_data/*
 .ipynb_checkpoints/*
 demos/*
 *.db
+*.tif
+*.xml

@@ -13,46 +13,26 @@ extensions = {
     'GTiff':'.tif'
 }
 
+# draw a site
+# 1. take a site's dems and draw a basemap
+# 2. get all the features from the site that are "static"
+
+
 def array_to_image(path,array,image_format='GTiff'):
 
-    cols = array.shape[1]
-    rows = array.shape[0]
+    rows = array.shape[-2]
+    cols = array.shape[-1]
 
     driver = gdal.GetDriverByName(image_format)
 
     # add file extension based on driver
     outRaster = driver.Create(path+extensions[image_format], cols, rows, 1, gdal.GDT_Int32)
 
+    # write bands
     outband = outRaster.GetRasterBand(1)
     outband.WriteArray(array)
-    
     outband.FlushCache()
 
 
-class Basemap(object):
-    '''
-    The canvas object.
 
-    Attributes:
-        name: A descriptive name.
-        width: The with of the canvas in pixels
 
-    '''
-    def __init__(self,name,w,l,mmu=1):
-        self.name = name
-        self.mmu = mmu
-        
-        self.data = np.zeros((w,l),dtype=np.int32)
-
-    def change_mmu(self,mmu):
-        '''Change the minimim mapping unit (pixel size in meters).'''
-        self.mmu = mmu
-
-    def draw(self,path,image_format='GTiff'):
-        '''Draws the canvas saving it as an image.'''
-        array_to_image(path,self.data,image_format=image_format)
-
-    def add_circle(self,x,y,radius,value):
-
-        rr, cc = circle(x,y,radius)
-        set_color(self.data, (rr, cc), 2)
