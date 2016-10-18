@@ -7,7 +7,6 @@ Contains tools for writing scenes.
 
 import gdal
 import numpy as np
-from skimage.draw import circle, set_color
 
 extensions = {
     'GTiff':'.tif'
@@ -26,7 +25,7 @@ def array_to_image(path,array,image_format='GTiff'):
     driver = gdal.GetDriverByName(image_format)
 
     # add file extension based on driver
-    outRaster = driver.Create(path+extensions[image_format], cols, rows, 1, gdal.GDT_Int32)
+    outRaster = driver.Create(path+extensions[image_format], cols, rows, 1, gdal.GDT_Byte)
 
     # write bands
     outband = outRaster.GetRasterBand(1)
