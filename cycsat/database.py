@@ -27,6 +27,21 @@ class Satellite(Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
 
+	def get_instruments(self):
+
+		instruments = dict()
+		for instrument in self.instruments:
+			instruments[instrument.name] = instrument
+
+		return instruments
+
+	def get_missions(self):
+
+		missions = dict()
+		for mission in self.missions:
+			missions[mission.name] = mission
+
+		return missions
 
 class Instrument(Base):
 	'''
@@ -35,8 +50,8 @@ class Instrument(Base):
 	__tablename__ = 'instrument'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	resolution = Column(Numeric(precision=2))
+	name = Column(String, unique=True)
+	resolution = Column(Integer)
 	
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
 	satellite = relationship(Satellite, back_populates='instruments')
@@ -55,6 +70,14 @@ class Mission(Base):
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
 	satellite = relationship(Satellite, back_populates='missions')
 
+	def get_sites(self):
+
+		sites = dict()
+		for site in self.sites:
+			sites[site.name] = site
+
+		return sites
+
 
 Satellite.missions = relationship('Mission', order_by=Mission.id,back_populates='satellite')
 Satellite.instruments = relationship('Instrument', order_by=Instrument.id, back_populates='satellite')
@@ -67,6 +90,9 @@ World classes
 
 class Site(Base):
 	'''	
+	
+	width & length in kilometers
+
 	'''
 	__tablename__ = 'site'
 
@@ -78,6 +104,14 @@ class Site(Base):
 
 	mission_id = Column(Integer, ForeignKey('mission.id'))
 	mission = relationship(Mission, back_populates='sites')
+
+	def get_features(self):
+
+		features = dict()
+		for feature in self.features:
+			features[feature.name] = feature
+
+		return features
 
 
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
@@ -94,12 +128,21 @@ class Feature(Base):
 	name = Column(String)
 	static = Column(Boolean, default=True)
 	floating = Column(Boolean, default=False)
-	geometry = Column(BLOB)
+	geometry = Column(String)
+	prob_visable = Column(Integer)
 
 	site_id = Column(Integer, ForeignKey('site.id'))
 
 	site = relationship(Site, back_populates='features')
 	scenes = relationship('Event', back_populates='feature')
+
+	def define(self,FeatureDefinion):
+		'''
+		add a predefined feature
+
+		'''
+		self.geometry = FeatureDefinion.geometry.wkt
+
 
 
 Site.features = relationship('Feature', order_by=Feature.id,back_populates='site')

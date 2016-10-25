@@ -21,12 +21,12 @@ class Image(object):
 	'''
 	'''
 
-	def __init__(self,length,width,bands=3):
+	def __init__(self,Site,bands=3):
 		'''
 		'''
 		self.bands = dict()
 		for band in range(bands):
-			self.bands[band+1] = np.zeros((length, width),dtype=np.uint8)
+			self.bands[band+1] = np.zeros((Site.length, Site.width),dtype=np.uint8)
 
 	def add_feature(self,feature,spectra):
 		'''
