@@ -65,12 +65,11 @@ def place_features(Site):
 	return built_features
 
 '''
-basic shape templates
+basic shapely shape templates
 
 '''
 
 class Circle(object):
-
 	def __init__(self,width=4000):
 		self.geometry = Point(0,0).buffer(width)	
 

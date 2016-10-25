@@ -15,4 +15,4 @@ demos/*
 *.db
 *.tif
 *.xml
-*notes.txt
+notes/
