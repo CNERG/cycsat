@@ -5,6 +5,8 @@ Contains the data model classes.
 
 """
 
+from shapely.wkt import loads as load_wkt
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Table, Numeric, Boolean
 from sqlalchemy.dialects.sqlite import BLOB
@@ -14,13 +16,11 @@ from sqlalchemy.orm import relationship
 # create the declarative base
 Base = declarative_base()
 
-'''
-Agency classes
-**********************************
-'''
 
 class Satellite(Base):
 	'''
+	A collection of instruments and missions
+
 	'''
 	__tablename__ = 'satellite'
 
@@ -43,9 +43,11 @@ class Satellite(Base):
 
 		return missions
 
+
 class Instrument(Base):
 	'''
-	resolution in meters.
+	A set of parameters for generating a scene associated with a sateillite
+
 	'''
 	__tablename__ = 'instrument'
 
@@ -83,15 +85,9 @@ Satellite.missions = relationship('Mission', order_by=Mission.id,back_populates=
 Satellite.instruments = relationship('Instrument', order_by=Instrument.id, back_populates='satellite')
 
 
-'''
-World classes 
-**********************************
-'''
-
 class Site(Base):
 	'''	
-	
-	width & length in kilometers
+	A geographic area (landscape) with a collection of facilities
 
 	'''
 	__tablename__ = 'site'
@@ -117,39 +113,79 @@ class Site(Base):
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
 
+class Facility(Base):
+	'''
+	A collection of features at a site
+		width and length: kilometers
+		
+	'''
+	__tablename__ = 'facility'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+	width = Column(Integer)
+	length = Column(Integer)
+
+	site_id = Column(Integer, ForeignKey('site.id'))
+	site = relationship(Site, back_populates='facilities')
+
+	def get_features(self):
+		features = dict()
+		for feature in self.features:
+			features[feature.name] = feature
+		return features
+
+
+Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
+
+
 class Feature(Base):
 	'''
-	This object is a feature associated with a site.
+	A collection of shapes 
 		
 	'''
 	__tablename__ = 'feature'
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	static = Column(Boolean, default=True)
-	floating = Column(Boolean, default=False)
-	geometry = Column(String)
-	prob_visable = Column(Integer)
+	visibility = Column(Integer)
 
-	site_id = Column(Integer, ForeignKey('site.id'))
+	facility_id = Column(Integer, ForeignKey('facility.id'))
+	facility = relationship(Facility, back_populates='features')
 
-	site = relationship(Site, back_populates='features')
-	scenes = relationship('Event', back_populates='feature')
-
-	def define(self,FeatureDefinion):
-		'''
-		add a predefined feature
-
-		'''
-		self.geometry = FeatureDefinion.geometry.wkt
+	events = relationship('Event', back_populates='feature')
 
 
+Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
 
-Site.features = relationship('Feature', order_by=Feature.id,back_populates='site')
 
+class Shape(Base):
+	'''
+	A single shape or object that makes up a feature
+		
+	'''
+	__tablename__ = 'shape'
 
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+	level = Column(Integer,default=0)
+	visibility = Column(Integer)
+	color = Column(String)
+	feature_id = Column(Integer, ForeignKey('feature.id'))
+	feature = relationship(Feature, back_populates='shapes')
+
+	archetype = Column(String)
+
+	__mapper_args__ = {'polymorphic_on': archetype}
+
+	def build_geometry(self):
+		return load_wkt(self.geometry)
+
+Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
 '''
-Observation classes
+
+simulation objects
+
 '''
 
 class Event(Base):
@@ -157,12 +193,13 @@ class Event(Base):
 	'''
 	__tablename__ = 'event'
 
-	feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
-	scene_id = Column(Integer, ForeignKey('scene.id'), primary_key=True)
 	visible = Column(Integer)
 
-	feature = relationship('Feature', back_populates='scenes')
-	scene = relationship('Scene', back_populates='features')
+	feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
+	scene_id = Column(Integer, ForeignKey('scene.id'), primary_key=True)
+
+	feature = relationship('Feature', back_populates='events')
+	scene = relationship('Scene', back_populates='events')
 
 
 class Scene(Base):
@@ -171,11 +208,14 @@ class Scene(Base):
 	__tablename__ = 'scene'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String)
+
 	site_id = Column(Integer, ForeignKey('site.id'))
-
 	site = relationship(Site, back_populates='scenes')
-	features = relationship('Event', back_populates='scene')
 
+	instrument_id = Column(Integer, ForeignKey('instrument.id'))
+	instrument = relationship(Instrument, back_populates='scenes')
+
+	events = relationship('Event', back_populates='scene')
 
 Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
+Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')

@@ -30,7 +30,8 @@ class Image(object):
 
 	def add_feature(self,feature,spectra):
 		'''
-		Add a geometry to a canvas, returns new canvas
+		Add a shapely geometry to a canvas, returns new canvas
+
 		'''
 
 		coords = np.array(list(feature.exterior.coords))
