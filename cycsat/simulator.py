@@ -3,7 +3,8 @@ simulator.py
 
 '''
 
-# import cycsat modules
+from random import randint
+
 from .database import Base
 from .database import Satellite, Instrument, Mission
 from .database import Site, Feature, Event, Scene
@@ -17,7 +18,7 @@ from sqlalchemy.orm import sessionmaker
 Session = sessionmaker()
 
 
-class Agency(object):
+class Designer(object):
 	'''
 	An interface for working with sqlalchemy, sqlite3, and data classes
 	
@@ -74,9 +75,25 @@ class Agency(object):
 		self.session.commit()
 
 
+def get_all_shapes(Mission):
+	'''
+	'''
+	shapes = []
+	for site in Mission.sites:
+		for facility in site.facilities:
+			for feature in facility.features:
+				for shape in feature.shapes:
+					shapes.append(shape)
 
+	return shapes
 
+# def create_event(Shape):
+# 	'''
+# 	'''
 
+# 	die_roll = randint(1,99)
 
-
-
+# 	if Shape.visibility < die_roll:
+# 		break
+# 	else:
+# 		pass

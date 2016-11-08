@@ -7,38 +7,47 @@ Object/API for writing scenes from pre-built geometries.
 
 import shapely
 import json
+import ast
 
 from skimage.draw import polygon
 from shapely.geometry import Polygon, Point
+#from scipy.ndimage
 
 import shapely
 import numpy as np
 
 import gdal
 
+# use Instrument pbject
 
-class Image(object):
+
+class Canvas(object):
 	'''
 	'''
-
-	def __init__(self,Site,bands=3):
+	def __init__(self,width,length, bands=3):
 		'''
 		'''
 		self.bands = dict()
 		for band in range(bands):
-			self.bands[band+1] = np.zeros((Site.length, Site.width),dtype=np.uint8)
+			self.bands[band+1] = np.zeros((length,width),dtype=np.uint8)
 
-	def add_feature(self,feature,spectra):
+	def add_shape(self,Shape):
 		'''
-		Add a shapely geometry to a canvas, returns new canvas
-
+		Add a shapely geometries to a canvas
 		'''
-
-		coords = np.array(list(feature.exterior.coords))
+		geometry = Shape.build_geometry(placed=True)
+		spectra = ast.literal_eval(Shape.color)
+		
+		coords = np.array(list(geometry.exterior.coords))
 		rr, cc = polygon(coords[:,0], coords[:,1], self.bands[1].shape)
 
 		for band in zip(self.bands, spectra):
 			self.bands[band[0]][rr, cc] = band[1]
+
+	def draw(self,path):
+		'''
+		'''
+		arrays_to_image(self,path)
 
 
 extensions = {
@@ -50,21 +59,23 @@ extensions = {
 # 2. get all the features from the site that are "static"
 
 
-def array_to_image(image,path,image_format='GTiff'):
+# need to add info for resamplign and 
 
-    rows = image.bands[1].shape[-2]
-    cols = image.bands[1].shape[-1]
+def arrays_to_image(Canvas,path,image_format='GTiff'):
 
-    bands = len(image.bands)
+    rows = Canvas.bands[1].shape[-2]
+    cols = Canvas.bands[1].shape[-1]
+
+    bands = len(Canvas.bands)
 
     driver = gdal.GetDriverByName(image_format)
 
     # add file extension based on driver
     outRaster = driver.Create(path+extensions[image_format], cols, rows, bands, gdal.GDT_Byte)
 
-    for band in image.bands:
+    for band in Canvas.bands:
     	outband = outRaster.GetRasterBand(band)
-    	outband.WriteArray(image.bands[band])
+    	outband.WriteArray(Canvas.bands[band])
     	outband.FlushCache()
 
 

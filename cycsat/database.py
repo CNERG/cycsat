@@ -4,9 +4,17 @@ data_model.py
 Contains the data model classes.
 
 """
+from shapely.geometry import Polygon, Point
+
+from .sensor import Canvas
+
+from random import randint
+
+from .geometry import create_blueprint, assess_blueprint
 
 from shapely.wkt import loads as load_wkt
 
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Table, Numeric, Boolean
 from sqlalchemy.dialects.sqlite import BLOB
@@ -53,7 +61,8 @@ class Instrument(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, unique=True)
-	resolution = Column(Integer)
+	resolution = Column(Integer, default=1) # in 10ths of centimeters
+	bands = Column(Integer, default=3)
 	
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
 	satellite = relationship(Satellite, back_populates='instruments')
@@ -68,6 +77,7 @@ class Mission(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	timesteps = Column(String)
 	
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
 	satellite = relationship(Satellite, back_populates='missions')
@@ -109,6 +119,11 @@ class Site(Base):
 
 		return features
 
+	def draw(self):
+		'''
+		'''
+		pass
+
 
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
@@ -125,10 +140,68 @@ class Facility(Base):
 	name = Column(String)
 	width = Column(Integer)
 	length = Column(Integer)
+	xoff = Column(Integer)
+	yoff = Column(Integer)
 
 	site_id = Column(Integer, ForeignKey('site.id'))
 	site = relationship(Site, back_populates='facilities')
 
+
+	def build_footprint(self):
+		'''
+		'''
+		# convert meters to centimeters
+		width = self.width*10
+		length = self.length*10
+		self.footprint = Polygon([(0,0),(0,width),(length,width),(length,0)])
+		return self.footprint
+
+
+	def build(self):
+		'''
+		'''
+		built = 0
+		while (built == 0):
+			create_blueprint(self)
+			valid = assess_blueprint(self)
+			if valid:
+				built = 1
+			else:
+				pass
+
+
+	def draw(self,path):
+		'''
+		generates a plan of all the static shapes
+		'''
+		shape_stack = dict()
+
+		canvas = Canvas(self.width*10,self.length*10)
+
+		for feature in self.features:
+			for shape in feature.shapes:
+
+				die_roll = randint(1,101)
+
+				if (shape.visibility < die_roll):
+					continue
+				if shape.level in shape_stack:
+					shape_stack[shape.level].append(shape)
+				else:
+					shape_stack[shape.level] = [shape]
+
+		for level in sorted(shape_stack):
+			for shape in shape_stack[level]:
+				canvas.add_shape(shape)
+		
+		canvas.draw(path)
+
+
+	def generate_events(self):
+		'''
+		'''
+
+	
 	def get_features(self):
 		features = dict()
 		for feature in self.features:
@@ -153,8 +226,6 @@ class Feature(Base):
 	facility_id = Column(Integer, ForeignKey('facility.id'))
 	facility = relationship(Facility, back_populates='features')
 
-	events = relationship('Event', back_populates='feature')
-
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
 
@@ -169,21 +240,29 @@ class Shape(Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
 	level = Column(Integer,default=0)
-	visibility = Column(Integer)
-	color = Column(String)
+	visibility = Column(Integer, default=100)
+	color = Column(String, default='[0,0,0]')
+	archetype = Column(String)
+	placement = Column(String)
+	xoff = Column(Integer,default=0)
+	yoff = Column(Integer,default=0)
+	
 	feature_id = Column(Integer, ForeignKey('feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	archetype = Column(String)
+	events = relationship('Event', back_populates='shape')
 
 	__mapper_args__ = {'polymorphic_on': archetype}
 
-	def build_geometry(self):
-		return load_wkt(self.geometry)
+	def build_geometry(self,placed=False):
+		if placed:
+			return load_wkt(self.placement)
+		else:
+			return load_wkt(self.geometry)
 
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
-'''
 
+'''
 simulation objects
 
 '''
@@ -198,7 +277,7 @@ class Event(Base):
 	feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
 	scene_id = Column(Integer, ForeignKey('scene.id'), primary_key=True)
 
-	feature = relationship('Feature', back_populates='events')
+	shape = relationship('Shape', back_populates='events')
 	scene = relationship('Scene', back_populates='events')
 
 
@@ -219,3 +298,42 @@ class Scene(Base):
 
 Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
 Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
+
+
+'''
+shape types
+'''
+
+class Circle(Shape):
+    __mapper_args__ = {'polymorphic_identity': 'circle'}
+
+    def __init__(self,color='[31,84,168]',radius=400,level=0,xoff=0,yoff=0,rotation=0,visibility=100):
+    	self.radius = radius
+    	self.level = level
+    	self.color = color
+    	self.xoff = xoff
+    	self.yoff = yoff
+    	self.visibility = visibility
+
+    	self.geometry = Point(xoff,yoff).buffer(self.radius).wkt
+
+    @declared_attr
+    def geometry(self):
+    	return Shape.__table__.c.get('geometry', Column(String))
+
+class Rectangle(Shape):
+    __mapper_args__ = {'polymorphic_identity': 'rectangle'}
+
+    def __init__(self,color='[110,160,62]',width=300,length=400,level=0,xoff=0,yoff=0,rotation=0):
+    	self.width = width
+    	self.length = length
+    	self.level = level
+    	self.color = color
+    	self.xoff = xoff
+    	self.yoff = yoff
+
+    	self.geometry = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
+
+    @declared_attr
+    def geometry(self):
+    	return Shape.__table__.c.get('geometry', Column(String))

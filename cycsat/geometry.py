@@ -1,18 +1,14 @@
 """
 
-features.py
+geometry.py
 
 units in centimeters
 
 """
-
-from .database import Shape
-
 from sqlalchemy import Column, Integer, String
 
-from sqlalchemy.ext.declarative import declared_attr
-
 from random import randint
+import itertools
 
 import numpy as np
 from shapely.geometry import Polygon, Point
@@ -25,179 +21,117 @@ a blueprint object is a copy of all the shapes placed onto the footprint of a fa
 
 '''
 
-class Blueprint(object):
-
-	def __init__(self,Facility):
-
-		self.features = Facility.features
-
-		# convert centimeters to meters and define footprint
-		width = Facility.width*100
-		length = Facility.length*100
-		self.footprint = Polygon([(0,0),(0,width),(length,width),(length,0)])
-
-	def create_draft(self):
-		'''
-		Posits (or proposes) locations for all the features at a facility
-		
-		'''
-		self.draft = list()
-
-		features = self.features.copy()
-
-		for feature in features:
-
-			posited_feature = dict()
-
-			# posit (or propose) the feature
-			posited_shape_stack = posit_feature(feature,self.footprint)
-			posited_feature['posited_shape_stack'] = posited_shape_stack
-			posited_feature['feature'] = feature
-
-			# create a copy
-			posit_stack = posited_feature.copy()
-
-			self.draft.append(posit_stack)
-
-
-	def assess(self):
-
-		assessment = dict()
-		assessment['success'] = []
-		assessment['conflict'] = []
-
-		draft = self.draft.copy()
-
-		posited_shape_stacks = [x['posited_shape_stack'] for x in draft]
-
-		merged_shape_stacks = dict()
-
-		# combine all the posited shape stacks
-		for shape_stack in posited_shape_stacks:
-			for level in shape_stack:
-				if level in merged_shape_stacks:
-					merged_shape_stacks[level]+=shape_stack[level]
-				else:
-					merged_shape_stacks[level] = shape_stack[level]
-
-		overlaps = []
-
-		for level in merged_shape_stacks:
-			for shape in merged_shape_stacks[level]:
-				overlaps = [shape.disjoint(x) for x in merged_shape_stacks[level]]
-				
-				if False in overlaps:
-					assessment['conflict'].append(shape)
-				else:
-					assessment['success'].append(shape)
-
-		if len(assessment['conflict'])>0:
-			assessment['result'] = False
-		else:
-			assessment['result'] = True
-
-		self.assessment = assessment
-
-	def design(self,attempts=10):
-		fails = 0
-		while fails<attempts:
-			self.create_draft()
-			self.assess()
-
-			if self.assessment['result']:
-				break
-			else:
-				fails+=1
-
-def stack_shapes(Feature):
+def create_blueprint(Facility,max_attempts=20):
 	'''
-	Returns a dictionary of shapes sorted and merged by their levels
+	Posits (or proposes) locations for all the features at a facility
+	
+	'''
+	Facility.build_footprint()
+
+	# place features
+	for feature in Facility.features:
+		placed = place_feature(feature, Facility.footprint,max_attempts=max_attempts)
+		if placed:
+			continue
+		else:
+			print('blueprint failed')
+
+
+def assess_blueprint(Facility):
+	'''
 	'''
 	shape_stack = dict()
 
-	# stack shapes by level
-	for shape in Feature.shapes:
-		if shape.level in shape_stack:
-			shape_stack[shape.level].append(load_wkt(shape.geometry))
+	# build a shape stack by level
+	for feature in Facility.features:
+		for shape in feature.shapes:
+			geometry = shape.build_geometry(placed=True)
+			if shape.level in shape_stack:
+				shape_stack[shape.level].append(geometry)
+			else:
+				shape_stack[shape.level] = [geometry]
+
+	level_overlaps = []
+	for level in shape_stack:
+		level_overlaps.append(check_disjoints(shape_stack[level]))
+
+	if False in level_overlaps:
+		return False
+	else:
+		return True
+
+
+def check_disjoints(shapes):
+
+	for a, b in itertools.combinations(shapes, 2):
+		if a.disjoint(b):
+			continue
 		else:
-			shape_stack[shape.level] = [load_wkt(shape.geometry)]
+			return False
 
-	return shape_stack
+	return True
 
 
-def posit_feature(Feature,footprint):
+def posit_point(footprint):
+	'''
+	'''
+	# define the footprint boundary
+	length = footprint.bounds[-2]
+	width = footprint.bounds[-1]
+
+	# create a random point within footprint
+	posited_point = Point(randint(0,width+1), randint(0,length+1))
+
+	return posited_point
+
+
+def place_shape(Shape,placement):
+	'''
+	Shifts a shape to a posited point and checks if it falls within the footprint
+	'''
+	placed_x = placement.coords.xy[0][0]
+	placed_y = placement.coords.xy[1][0]
+
+	geometry = Shape.build_geometry()
+		
+	shape_x = geometry.centroid.coords.xy[0][0]
+	shape_y = geometry.centroid.coords.xy[1][0]
+	
+	shift_x = placed_x - shape_x + Shape.xoff
+	shift_y = placed_y - shape_y + Shape.yoff
+
+	Shape.placement = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
+	
+	return Shape
+
+
+def place_feature(Feature,footprint,max_attempts=20):
 	'''
 	Posits (or proposes) a random placement for a feature within a facility footprint, returns
 	a shape stack with proposed locations
 	'''
-	
-	length = footprint.bounds[-2]
-	width = footprint.bounds[-1]
+	attempts = 0
+	while attempts<max_attempts:
 
-	shape_stack = stack_shapes(Feature)
+		posited_point = posit_point(footprint)
 
-	posit = Point(randint(0,width+1), randint(0,length+1))
-	posit_x = posit.coords.xy[0][0]
-	posit_y = posit.coords.xy[1][0]
+		typology_checks = list()
+		for shape in Feature.shapes:
+			place_shape(shape,posited_point)
+			placement = shape.build_geometry(placed=True)
+			typology_checks.append(placement.within(footprint))
 
-	posited_shape_stack = dict()
+		if False not in typology_checks:
+			return True
+		else:
+			attempts+=1
 
-	for level in shape_stack:
-		for shape in shape_stack[level]:
-
-			placed = 0
-			while (placed < 10): 
-
-				shape_x = shape.centroid.coords.xy[0][0]
-				shape_y = shape.centroid.coords.xy[1][0]
-				shift_x = posit_x - shape_x
-				shift_y = posit_y - shape_y
-
-				posited = shift_shape(shape,xoff=shift_x,yoff=shift_y)
-
-				if posited.within(footprint):
-					if level in posited_shape_stack:
-						posited_shape_stack[level].append(posited)
-					else:
-						posited_shape_stack[level] = [posited]
-					placed = 15
-				else:
-					placed+=1
-					continue
-
-			if (placed < 15):
-				# shape cannot be placed
-				break
-
-	return posited_shape_stack
-
+	print(Feature.id,'placement failed after',max_attempts,'attempts.')
+	return False
 
 '''
 basic shapely shape templates
 
 '''
 
-class Circle(Shape):
-    __mapper_args__ = {'polymorphic_identity': 'circle'}
 
-    def __init__(self,radius=4000,level=0):
-    	self.radius = radius
-    	self.geometry = Point(0,0).buffer(self.radius).wkt
-    	self.level = level
-
-    @declared_attr
-    def geometry(self):
-    	return Shape.__table__.c.get('geometry', Column(String))
-
-class Rectangle(Shape):
-    __mapper_args__ = {'polymorphic_identity': 'rectangle'}
-
-    def __init__(self,width=3000,length=4000,level=0):
-    	self.width = width
-    	self.length = length
-    	self.geometry = Polygon([(0,0),(0,self.width),(self.length,self.width),(self.length,0)]).wkt
-    	self.level = level
-
-    @declared_attr
-    def geometry(self):
-    	return Shape.__table__.c.get('geometry', Column(String))
