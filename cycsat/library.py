@@ -1,38 +1,11 @@
-from cycsat.simulation import Writer
+'''
+library.py
 
-#from cycsat.geometry import draft_blueprint, assess_blueprint
-from cycsat.geometry import place_shape, place_feature
-from cycsat.geometry import create_blueprint, assess_blueprint
+'''
+from .data_model import Facility, Feature, Shape, Circle, Rectangle
 
-from cycsat.data_model import Base
-from cycsat.data_model import Satellite,Instrument, Mission, Shape, Facility
-from cycsat.data_model import Site, Feature
 
-from cycsat.data_model import Circle, Rectangle
-
-import os
-
-try:
-	os.remove('space agency.db')
-except:
-	pass
-
-# open/create a agency
-hq = Writer('space agency')
-
-# create a satellite
-sat = Satellite(name='land viewer')
-low_res = Instrument(name='low',mmu=300)
-high_res = Instrument(name='low',mmu=10)
-
-# create a new mission with one site
-mission = Mission(name='pilot mission')
-sat.missions.append(mission)
-
-# add a new site
-site = Site(name='landscape',width=5000,length=5000)
-
-facility = Facility(name='reactor',width=862, length=877)
+reactor = Facility(name='reactor',width=862, length=877)
 
 # create a cooling tower with some shapes
 cooling_tower = Feature(name='cooling tower 1')
@@ -59,13 +32,5 @@ containment2 = Feature(name='containment building 2')
 containment2.shapes.append(Circle(radius=520,color='[70,70,70]'))
 containment2.shapes.append(Circle(radius=520,level=1,color='[70,70,70]'))
 
-facility.features = [cooling_tower, cooling_tower2, 
+reactor.features = [cooling_tower, cooling_tower2, 
 					turbine_building, containment1, containment2]
-
-site.facilities.append(facility)
-mission.sites.append(site)
-
-# save the data to the data_model
-hq.save(sat)
-facility.define()
-hq.save(facility)

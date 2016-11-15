@@ -9,6 +9,7 @@ import shapely
 import json
 import ast
 
+from skimage.transform import resize, downscale_local_mean
 from skimage.draw import polygon
 from shapely.geometry import Polygon, Point
 #from scipy.ndimage
@@ -18,8 +19,9 @@ import numpy as np
 
 import gdal
 
-# use Instrument pbject
-
+extensions = {
+    'GTiff':'.tif'
+}
 
 class Canvas(object):
 	'''
@@ -44,39 +46,33 @@ class Canvas(object):
 		for band in zip(self.bands, spectra):
 			self.bands[band[0]][rr, cc] = band[1]
 
-	def draw(self,path):
+	def draw(self,path,Instrument,image_format='GTiff'):
 		'''
+		need to add pixel size, reduce resoultion (zoom) and increase pizel size
 		'''
-		arrays_to_image(self,path)
+		origin = 0
 
+		rows = round(self.bands[1].shape[-2]/Instrument.mmu)
+		cols = round(self.bands[1].shape[-1]/Instrument.mmu)
 
-extensions = {
-    'GTiff':'.tif'
-}
+		bands = len(self.bands)
+		driver = gdal.GetDriverByName(image_format)
 
-# draw a site
-# 1. take a site's dems and draw a basemap
-# 2. get all the features from the site that are "static"
+		outRaster = driver.Create(path+extensions[image_format], cols, rows, bands, gdal.GDT_Byte)
+		outRaster.SetGeoTransform((origin,Instrument.mmu,0,origin,0,Instrument.mmu*-1))
 
+		for band in self.bands:
+			outband = outRaster.GetRasterBand(band)
 
-# need to add info for resamplign and 
+			if (Instrument.mmu > 1):
+				band_array = downscale_local_mean(self.bands[band],(Instrument.mmu,Instrument.mmu))
+				band_array = resize(band_array,(rows,cols),preserve_range=True)
+				#band_array = band_array.round()
+			else:
+				band_array = self.bands[band]
 
-def arrays_to_image(Canvas,path,image_format='GTiff'):
-
-    rows = Canvas.bands[1].shape[-2]
-    cols = Canvas.bands[1].shape[-1]
-
-    bands = len(Canvas.bands)
-
-    driver = gdal.GetDriverByName(image_format)
-
-    # add file extension based on driver
-    outRaster = driver.Create(path+extensions[image_format], cols, rows, bands, gdal.GDT_Byte)
-
-    for band in Canvas.bands:
-    	outband = outRaster.GetRasterBand(band)
-    	outband.WriteArray(Canvas.bands[band])
-    	outband.FlushCache()
+			outband.WriteArray(band_array)
+			outband.FlushCache()
 
 
 

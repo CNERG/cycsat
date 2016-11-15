@@ -4,14 +4,11 @@ data_model.py
 Contains the data model classes.
 
 """
-from shapely.geometry import Polygon, Point
-
 from .sensor import Canvas
-
-from random import randint
-
 from .geometry import create_blueprint, assess_blueprint
 
+from random import randint
+from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
 
 from sqlalchemy.ext.declarative import declared_attr
@@ -21,7 +18,7 @@ from sqlalchemy.dialects.sqlite import BLOB
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
-# create the declarative base
+
 Base = declarative_base()
 
 
@@ -61,9 +58,9 @@ class Instrument(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, unique=True)
-	resolution = Column(Integer, default=1) # in 10ths of centimeters
+	mmu = Column(Integer, default=1) # in 10ths of centimeters	
 	bands = Column(Integer, default=3)
-	
+
 	satellite_id = Column(Integer, ForeignKey('satellite.id'))
 	satellite = relationship(Satellite, back_populates='instruments')
 
@@ -157,7 +154,7 @@ class Facility(Base):
 		return self.footprint
 
 
-	def build(self):
+	def define(self):
 		'''
 		'''
 		built = 0
@@ -170,20 +167,18 @@ class Facility(Base):
 				pass
 
 
-	def draw(self,path):
+	def make_canvas(self):
 		'''
 		generates a plan of all the static shapes
 		'''
 		shape_stack = dict()
 
-		canvas = Canvas(self.width*10,self.length*10)
+		self.canvas = Canvas(self.width*10,self.length*10)
 
 		for feature in self.features:
 			for shape in feature.shapes:
 
-				die_roll = randint(1,101)
-
-				if (shape.visibility < die_roll):
+				if shape.visibility!=100:
 					continue
 				if shape.level in shape_stack:
 					shape_stack[shape.level].append(shape)
@@ -192,10 +187,13 @@ class Facility(Base):
 
 		for level in sorted(shape_stack):
 			for shape in shape_stack[level]:
-				canvas.add_shape(shape)
-		
-		canvas.draw(path)
+				self.canvas.add_shape(shape)
 
+	def draw(self,path,Instrument):
+		'''
+		'''
+		self.make_canvas()
+		self.canvas.draw(path,Instrument)
 
 	def generate_events(self):
 		'''
@@ -230,6 +228,12 @@ class Feature(Base):
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
 
 
+# events = Table('events', Base.metadata,
+# 				Column('shape_id', ForeignKey('feature.id'),primary_key=True),
+# 				Column('scene_id', ForeignKey('scene.id'),primary_key=True)
+# 				)
+
+
 class Shape(Base):
 	'''
 	A single shape or object that makes up a feature
@@ -250,7 +254,7 @@ class Shape(Base):
 	feature_id = Column(Integer, ForeignKey('feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	events = relationship('Event', back_populates='shape')
+	#scenes = relationship('Scene',secondary=events,back_populates='shapes')
 
 	__mapper_args__ = {'polymorphic_on': archetype}
 
@@ -267,20 +271,6 @@ simulation objects
 
 '''
 
-class Event(Base):
-	'''
-	'''
-	__tablename__ = 'event'
-
-	visible = Column(Integer)
-
-	feature_id = Column(Integer, ForeignKey('feature.id'), primary_key=True)
-	scene_id = Column(Integer, ForeignKey('scene.id'), primary_key=True)
-
-	shape = relationship('Shape', back_populates='events')
-	scene = relationship('Scene', back_populates='events')
-
-
 class Scene(Base):
 	'''
 	'''
@@ -294,7 +284,7 @@ class Scene(Base):
 	instrument_id = Column(Integer, ForeignKey('instrument.id'))
 	instrument = relationship(Instrument, back_populates='scenes')
 
-	events = relationship('Event', back_populates='scene')
+	#shapes = relationship('Shape',secondary=events,back_populates='scenes')
 
 Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
 Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')

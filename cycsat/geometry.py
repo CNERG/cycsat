@@ -16,10 +16,6 @@ from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
-'''
-a blueprint object is a copy of all the shapes placed onto the footprint of a facility
-
-'''
 
 def create_blueprint(Facility,max_attempts=20):
 	'''
