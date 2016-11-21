@@ -1,10 +1,8 @@
-"""
+'''
 
 geometry.py
 
-units in centimeters
-
-"""
+'''
 from sqlalchemy import Column, Integer, String
 
 from random import randint
@@ -18,10 +16,13 @@ from shapely.ops import cascaded_union
 
 
 def create_blueprint(Facility,max_attempts=20):
-	'''
-	Posits (or proposes) locations for all the features at a facility
-	
-	'''
+	"""Creates a random layout for all the features of a facility and 
+	gives each feature a placed geometry
+
+	Keyword arguments:
+	max_attempts -- the maximum number of times attempts will be made
+
+	"""
 	Facility.build_footprint()
 
 	# place features
@@ -34,8 +35,8 @@ def create_blueprint(Facility,max_attempts=20):
 
 
 def assess_blueprint(Facility):
-	'''
-	'''
+	"""Checks to see the blueprint has any illegal overlaps"""
+
 	shape_stack = dict()
 
 	# build a shape stack by level
@@ -58,6 +59,7 @@ def assess_blueprint(Facility):
 
 
 def check_disjoints(shapes):
+	"""Checks if there are any overlaps in a list of shapes"""
 
 	for a, b in itertools.combinations(shapes, 2):
 		if a.disjoint(b):

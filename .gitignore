@@ -16,3 +16,6 @@ demos/*
 *.tif
 *.xml
 notes/
+output/
+swu_capacitated.xml
+reactor_test.sqlite

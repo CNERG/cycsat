@@ -1,37 +1,36 @@
-"""
-database.py
+'''
 
-"""
+simulation.py
 
-from .data_model import Facility
-import cycsat.library
+'''
+from .prototypes import samples
 
-from .data_model import Base
+from .archetypes import Facility
+from .archetypes import Base
 
 from random import randint
+import os
+import shutil
 
 import sqlite3
+import pandas as pd
 
+from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+
 Session = sessionmaker()
 
-class Writer(object):
+
+class World(object):
 	'''
-	An interface for working with sqlalchemy, sqlite3, and data classes
-	
+	interface for working with database
 	'''
 
 	def __init__(self,database):
-		'''
-		'''
 		global Session
 		global Base
-
-		# add db extension if unspecified
-		if database[:-3]!='.db':
-			database+='.db'
 		
 		self.database = database
 		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=False)
@@ -41,30 +40,24 @@ class Writer(object):
 
 		Base.metadata.create_all(self.engine)
 
-	def select(self,Entity,id=None,satellite=None,one=True,name=None):
-		'''
-		select a 
-		'''
+	def select(self,Archetype,sql='',first=True):
+		"""Selects archetype instances from database
 
-		if name:
-			query = self.session.query(Entity).filter_by(name=name)
-		elif id:
-			query = self.session.query(Entity).filter_by(id=id)
+		Keyword arguments:
+		Archetype -- the archetype class to select
+		sql -- the sql query
+
+		"""
+		query = self.session.query(Archetype).filter(text(sql)).order_by(Archetype.id)
+		
+		if first:
+			return query.first()
 		else:
-			query = self.session.query(Entity)
-			if one:
-				return query.first()
-			else:
-				return query.all()
-
-		return query.first()
+			return query.all()
 
 
-	def save(self,Entities):
-		'''
-		add changed or new entities to a project
-
-		'''
+	def write(self,Entities):
+		"""Writes archetype instances to database"""
 
 		if isinstance(Entities, list):
 			self.session.add_all(Entities)
@@ -74,74 +67,83 @@ class Writer(object):
 		self.session.commit()
 
 
-class Reader(object):
+class Simulator(object):
 	'''
 	'''
 	def __init__(self,database):
 		'''
 		'''
-		self.session = sqlite3.connect(database)
-		self.cur = self.session.cursor()
+		self.world = World(database)
+		self.reader = sqlite3.connect(self.world.database)
 
 
-	def read_table(self,table):
-		'''
-		'''
-		self.cur.execute('SELECT * FROM {table};'.\
-			format(table=table))
-
-		cols = [x[0] for x in self.cur.description]
-		data = self.cur.fetchall()
-
-		result = dict()
-		for i,row in enumerate(data):
-			result[i] = dict()
-			for col in zip(cols,row):
-				result[i][col[0]] = col[1]
-		return result
+	def read(self,sql):
+		"""Read sql query as pandas dataframe"""
+		df = pd.read_sql_query(sql,self.reader)
+		return df
 
 
-class Simulator(object):
-	'''
-	'''
+	def build(self):
+		"""Builds all the facilities in an output database from cyclus"""
 
-	def __init__(self,output_db,input_db):
-		'''
-		'''
-		self.writer = Writer(output_db)
-		self.reader = Reader(input_db)
-
-	def add_facilities(self):
-		'''
-		'''
 		facilities = list()
-		AgentEntry = self.reader.read_table('AgentEntry')
-		for agent in AgentEntry:
-			if AgentEntry[agent]['Kind']=='Facility':
+		AgentEntry = self.read('select * from AgentEntry')
+		
+		for agent in AgentEntry.iterrows():
 
-				if AgentEntry[agent]['Prototype']=='Reactor':
-					facility = cycsat.library.reactor
-				else:
-					facility = Facility(width=500,length=500)
+			prototype = agent[1]['Prototype']
 
+			if agent[1]['Kind']=='Facility':
+				facility = samples[prototype](AgentId=agent[1]['AgentId'])
+
+				facility.build()
 				facilities.append(facility)
+			
+		self.world.write(facilities)
 
-		self.writer.save(facilities)
+	def simulate(self):
+		"""Generates events for all facilties"""
 
-	def build_facilities(self):
-		'''
-		'''
-		facilities = self.writer.select(Facility,one=False)
+		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
+		facilities = self.world.select(Facility,first=False)
+
 		for facility in facilities:
-			facility.define()
-
-		self.writer.save(facilities)
-
-	def draw_facilities(self,path,Instrument):
-		'''
-		'''
+			for timestep in range(self.duration):
+				try:
+					facility.simulate(timestep,self.reader,self.world)
+				except:
+					continue
 
 
+	def prepare(self,Mission,Satellite):
+		"""Write selcted scenes"""
+
+		Satellite.missions.append(Mission)
+		self.world.write(Satellite)
+
+		if not os.path.exists('output'):
+			os.makedirs('output')
+		
+		self.dir = 'output/'+Mission.name+'-'+str(Mission.id)+'/'
+		
+		try:
+			shutil.rmtree(self.dir)
+		except:
+			pass
+		os.makedirs(self.dir)
+
+
+	def launch(self,Mission,Satellite):
+		"""
+		"""
+		facilities = self.world.select(Facility,first=False)
+
+		for instrument in Satellite.instruments:
+			for facility in facilities:
+				instrument.calibrate(facility)
+				for timestep in range(self.duration):
+					print(timestep,instrument.id,facility.id)
+					instrument.capture(facility,timestep,self.dir)
 
 
 
@@ -151,17 +153,12 @@ class Simulator(object):
 
 
 
-# def get_all_shapes(Mission):
-# 	'''
-# 	'''
-# 	shapes = []
-# 	for site in Mission.sites:
-# 		for facility in site.facilities:
-# 			for feature in facility.features:
-# 				for shape in feature.shapes:
-# 					shapes.append(shape)
+		
 
-# 	return shapes
+
+
+
+
 
 
 

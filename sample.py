@@ -1,71 +1,36 @@
-from cycsat.simulation import Writer
-
-#from cycsat.geometry import draft_blueprint, assess_blueprint
-from cycsat.geometry import place_shape, place_feature
-from cycsat.geometry import create_blueprint, assess_blueprint
-
-from cycsat.data_model import Base
-from cycsat.data_model import Satellite,Instrument, Mission, Shape, Facility
-from cycsat.data_model import Site, Feature
-
-from cycsat.data_model import Circle, Rectangle
-
 import os
+from shutil import copyfile
 
-try:
-	os.remove('space agency.db')
-except:
-	pass
+# copying the test database (this is just for repeated testing)
+src = 'C:/Users/Owen/Documents/Academic/CNERG/reactor_test.sqlite'
+dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test.sqlite'
+copyfile(src, dst)
 
-# open/create a agency
-hq = Writer('space agency')
+###################################################################################################
+'''
+STAGING GROUND:
+TESTING CYCSAT STARTS HERE
+'''
+###################################################################################################
 
-# create a satellite
-sat = Satellite(name='land viewer')
-low_res = Instrument(name='low',mmu=300)
-high_res = Instrument(name='low',mmu=10)
+from cycsat.simulation import Simulator
+from cycsat.prototypes.instrument import RedBand, BlueBand, GreenBand
+from cycsat.archetypes import Satellite,Instrument, Mission, Shape, Facility,Scene, Event
+from cycsat.prototypes.satellite import StandardRGB
 
-# create a new mission with one site
-mission = Mission(name='pilot mission')
-sat.missions.append(mission)
+# initialize the simulator object
+sim = Simulator('reactor_test.sqlite')
+sim.build()
 
-# add a new site
-site = Site(name='landscape',width=5000,length=5000)
+# select a facility and draw it using the RedBand
+sim.simulate()
 
-facility = Facility(name='reactor',width=862, length=877)
+# define mission and satellite
+mission = Mission(name='first test mission')
+satellite = StandardRGB(name='test satellite')
 
-# create a cooling tower with some shapes
-cooling_tower = Feature(name='cooling tower 1')
-cooling_tower.shapes.append(Circle(radius=900,color='[146,149,155]'))
-cooling_tower.shapes.append(Circle(level=1,radius=620,color='[79,81,84]'))
-cooling_tower.shapes.append(Circle(level=2,radius=800,color='[255,255,255]',xoff=500,yoff=500,visibility=25))
+sim.prepare(mission,satellite)
+sim.launch(mission,satellite)
 
-#create a cooling tower with some shapes
-cooling_tower2 = Feature(name='cooling tower 2')
-cooling_tower2.shapes.append(Circle(radius=900,color='[146,149,155]'))
-cooling_tower2.shapes.append(Circle(level=1,radius=620,color='[79,81,84]'))
-
-# create a cooling tower with some shapes
-turbine_building = Feature(name='turbine building')
-turbine_building.shapes.append(Rectangle(width=580,length=2220,color='[208,40,14]'))
-
-# create a containement building
-containment1 = Feature(name='containment building 1')
-containment1.shapes.append(Circle(radius=520,color='[70,70,70]'))
-containment1.shapes.append(Circle(radius=340,level=1,color='[70,70,70]'))
-
-# create a containment building
-containment2 = Feature(name='containment building 2')
-containment2.shapes.append(Circle(radius=520,color='[70,70,70]'))
-containment2.shapes.append(Circle(radius=520,level=1,color='[70,70,70]'))
-
-facility.features = [cooling_tower, cooling_tower2, 
-					turbine_building, containment1, containment2]
-
-site.facilities.append(facility)
-mission.sites.append(site)
-
-# save the data to the data_model
-hq.save(sat)
-facility.define()
-hq.save(facility)
+# "launch" sat and collect write scenes for a new mission
+#sim.launch(Mission(name='test'),StandardRGB())
