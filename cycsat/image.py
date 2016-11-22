@@ -42,8 +42,9 @@ class Sensor(object):
 		self.method = method
 		
 		self.mmu = Instrument.mmu
-		self.min_spectrum = Instrument.min_spectrum
-		self.max_spectrum = Instrument.max_spectrum
+		self.min_spectrum = float(Instrument.min_spectrum)
+		self.max_spectrum = float(Instrument.max_spectrum)
+		self.name = Instrument.name
 
 	def reset(self):
 		"""Resets the capture array to the background array"""
@@ -60,7 +61,7 @@ class Sensor(object):
 		geometry = Shape.build_geometry(placed=True)
 		material = np.fromstring(Shape.material)
 
-		mask = (self.wavelength > self.min_spectrum) & (self.wavelength < self.max_spectrum)
+		mask = (self.wavelength >= self.min_spectrum) & (self.wavelength <= self.max_spectrum)
 		spectrum = material[mask]
 		value = round(spectrum.mean())
 		
@@ -114,9 +115,9 @@ def materialize(name='Default',rgb=None,blob=True):
 	reflectance = np.zeros(281)+255
 
 	if rgb:
-		reflectance[(wavelength > 0.64) & (wavelength <0.67) ] = rgb[0]
-		reflectance[(wavelength > 0.53) & (wavelength <0.59) ] = rgb[1]
-		reflectance[(wavelength > 0.45) & (wavelength <0.51) ] = rgb[2]
+		reflectance[(wavelength >= 0.64) & (wavelength <= 0.67) ] = rgb[0]
+		reflectance[(wavelength >= 0.53) & (wavelength <= 0.59) ] = rgb[1]
+		reflectance[(wavelength >= 0.45) & (wavelength <= 0.51) ] = rgb[2]
 
 	if blob:
 		return reflectance.tostring()

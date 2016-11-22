@@ -8,29 +8,25 @@ copyfile(src, dst)
 
 ###################################################################################################
 '''
-STAGING GROUND:
 TESTING CYCSAT STARTS HERE
 '''
 ###################################################################################################
 
 from cycsat.simulation import Simulator
-from cycsat.prototypes.instrument import RedBand, BlueBand, GreenBand
-from cycsat.archetypes import Satellite,Instrument, Mission, Shape, Facility,Scene, Event
-from cycsat.prototypes.satellite import StandardRGB
+from cycsat.archetypes import Mission
+from cycsat.prototypes.satellite import LANDSAT8, RGB
 
-# initialize the simulator object
+# initialize the simulator object and build the world
 sim = Simulator('reactor_test.sqlite')
 sim.build()
 
-# select a facility and draw it using the RedBand
+# generate events table
 sim.simulate()
 
 # define mission and satellite
 mission = Mission(name='first test mission')
-satellite = StandardRGB(name='test satellite')
+satellite = LANDSAT8(name='test satellite')
 
+# prepare and launch mission
 sim.prepare(mission,satellite)
-sim.launch(mission,satellite)
-
-# "launch" sat and collect write scenes for a new mission
-#sim.launch(Mission(name='test'),StandardRGB())
+sim.launch("Prototype='Reactor'",0,1)

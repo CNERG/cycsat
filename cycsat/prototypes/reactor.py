@@ -8,9 +8,6 @@ from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
 from cycsat.image import materialize
 
-'''
-facility prototypes
-'''
 
 class SampleReactor(Facility):
     __mapper_args__ = {'polymorphic_identity': 'Reactor'}
@@ -30,14 +27,11 @@ class SampleReactor(Facility):
         SampleTurbine()
         ]
 
-
-'''
-feature prototypes
-'''
+"""
+**********************************************************************************************
+"""
 
 class SampleCoolingTower(Feature):
-    '''
-    '''
     __mapper_args__ = {'polymorphic_identity': 'sample cooling tower'}
 
     def __init__(self,name='sample cooling tower',visibility=100):
@@ -54,8 +48,6 @@ class SampleCoolingTower(Feature):
 
 
 class SampleContainment(Feature):
-    '''
-    '''
     __mapper_args__ = {'polymorphic_identity': 'sample containment'}
 
     def __init__(self,name='sample containement',visibility=100):
@@ -70,8 +62,6 @@ class SampleContainment(Feature):
 
 
 class SampleTurbine(Feature):
-    '''
-    '''
     __mapper_args__ = {'polymorphic_identity': 'sample turbine'}
 
     def __init__(self,name='sample turbine',visibility=100):

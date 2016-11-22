@@ -1,8 +1,7 @@
-'''
-
+"""
 simulation.py
 
-'''
+"""
 from .prototypes import samples
 
 from .archetypes import Facility
@@ -24,9 +23,7 @@ Session = sessionmaker()
 
 
 class World(object):
-	'''
-	interface for working with database
-	'''
+	"""Interface for managing the facility geometry (i.e. the "world)"""
 
 	def __init__(self,database):
 		global Session
@@ -68,11 +65,8 @@ class World(object):
 
 
 class Simulator(object):
-	'''
-	'''
+	"""Interface for running simulations and building the "world" """
 	def __init__(self,database):
-		'''
-		'''
 		self.world = World(database)
 		self.reader = sqlite3.connect(self.world.database)
 
@@ -116,7 +110,10 @@ class Simulator(object):
 
 
 	def prepare(self,Mission,Satellite):
-		"""Write selcted scenes"""
+		"""Prepare the folder structure for data collection"""
+
+		self.mission = Mission
+		self.satellite = Satellite
 
 		Satellite.missions.append(Mission)
 		self.world.write(Satellite)
@@ -130,20 +127,31 @@ class Simulator(object):
 			shutil.rmtree(self.dir)
 		except:
 			pass
+		
 		os.makedirs(self.dir)
 
 
-	def launch(self,Mission,Satellite):
-		"""
-		"""
-		facilities = self.world.select(Facility,first=False)
+	def launch(self,sql='',min_timestep=None,max_timestep=None):
+		"""Collect images for all facilities using a satellite"""
 
-		for instrument in Satellite.instruments:
-			for facility in facilities:
+		facilities = self.world.select(Facility,sql=sql,first=False)
+
+		start = 0
+		if min_timestep:
+			start = min_timestep
+
+		end = self.duration
+		if max_timestep:
+			end = max_timestep
+
+		for facility in facilities:
+			for instrument in self.satellite.instruments:
 				instrument.calibrate(facility)
-				for timestep in range(self.duration):
+
+				for timestep in range(start,end):
 					print(timestep,instrument.id,facility.id)
 					instrument.capture(facility,timestep,self.dir)
+
 
 
 

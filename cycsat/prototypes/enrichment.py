@@ -5,6 +5,7 @@ enrichment.py
 '''
 from cycsat.archetypes import Facility
 
+
 class SampleEnrichment(Facility):
     __mapper_args__ = {'polymorphic_identity': 'Enrichment'}
 

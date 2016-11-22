@@ -21,7 +21,6 @@ def create_blueprint(Facility,max_attempts=20):
 
 	Keyword arguments:
 	max_attempts -- the maximum number of times attempts will be made
-
 	"""
 	Facility.build_footprint()
 

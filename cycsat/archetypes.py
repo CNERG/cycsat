@@ -1,7 +1,5 @@
 """
-data_model.py
-
-Contains the data model classes.
+archetypes.py
 
 """
 from .image import Sensor, materialize
@@ -19,7 +17,7 @@ from shapely.wkt import loads as load_wkt
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Table, Numeric, Boolean
+from sqlalchemy import Column, Integer, String, Table, Boolean
 from sqlalchemy.dialects.sqlite import BLOB
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
@@ -39,54 +37,34 @@ operations = {
 
 
 class Satellite(Base):
-	'''
-	A collection of instruments and missions
-	'''
+	"""A collection of instruments"""
 
 	__tablename__ = 'CycSat_Satellite'
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
 	prototype = Column(String)
+	mmu = Column(Integer)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
-	def get_instruments(self):
-
-		instruments = dict()
-		for instrument in self.instruments:
-			instruments[instrument.name] = instrument
-
-		return instruments
-
-	def get_missions(self):
-
-		missions = dict()
-		for mission in self.missions:
-			missions[mission.name] = mission
-
-		return missions
-
 
 class Instrument(Base):
-	'''
-	A set of parameters for generating a scene associated with a sateillite
+	"""Parameters for generating a scene"""
 
-	'''
 	__tablename__ = 'CycSat_Instrument'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String, unique=True)
+	name = Column(String)
 	mmu = Column(Integer, default=1) # in 10ths of centimeters
-	min_spectrum = Column(Numeric)
-	max_spectrum = Column(Numeric)
+	min_spectrum = Column(String)
+	max_spectrum = Column(String)
 	prototype = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
 	satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
 	satellite = relationship(Satellite, back_populates='instruments')
-
 
 	def calibrate(self,Facility,method='normal'):
 		"""Generates a sensor with all the static shapes"""
@@ -137,10 +115,8 @@ class Instrument(Base):
 
 
 class Mission(Base):
-	'''
-	A single mission for a particular satellite
+	"""Collection of images from a satellite"""
 
-	'''
 	__tablename__ = 'CycSat_Mission'
 
 	id = Column(Integer, primary_key=True)
@@ -150,21 +126,13 @@ class Mission(Base):
 	satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
 	satellite = relationship(Satellite, back_populates='missions')
 
-	def get_sites(self):
-
-		sites = dict()
-		for site in self.sites:
-			sites[site.name] = site
-
-		return sites
-
 
 Satellite.missions = relationship('Mission', order_by=Mission.id,back_populates='satellite')
 Satellite.instruments = relationship('Instrument', order_by=Instrument.id, back_populates='satellite')
 
 
 class Site(Base):
-	"""A collection of Facilities"""
+	"""Collection of facilities"""
 
 	__tablename__ = 'CycSat_Site'
 
@@ -182,11 +150,8 @@ Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
 
 class Facility(Base):
-	'''
-	A collection of features at a site
-		width and length: kilometers
-		
-	'''
+	"""A collection of features"""
+
 	__tablename__ = 'CycSat_Facility'
 
 	id = Column(Integer, primary_key=True)
@@ -196,19 +161,11 @@ class Facility(Base):
 	length = Column(Integer)
 	prototype = Column(String)
 	defined = Column(Boolean,default=False)
+
+	__mapper_args__ = {'polymorphic_on': prototype}
 	
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
-
-	__mapper_args__ = {'polymorphic_on': prototype}
-
-
-	def get_features(self):
-		features = dict()
-		for feature in self.features:
-			features[feature.name] = feature
-		return features
-
 
 	def build_footprint(self):
 		width = self.width*10
@@ -231,12 +188,12 @@ class Facility(Base):
 				pass
 
 	def simulate(self,timestep,reader,world):
-		"""Evaluates the rules for dynamic shapes at a given timestep
+		"""Evaluates the rules for dynamic shapes at a given timestep and
+		generates events
 
 		Keyword arguments:
-		timestep -- the timestep for events
+		timestep -- the timestep for simulation
 		reader -- a reader connection for reading data from the database
-
 		"""
 		dynamic_shapes = []
 		for feature in self.features:
@@ -272,10 +229,8 @@ Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='
 
 
 class Feature(Base):
-	'''
-	A collection of shapes 
-		
-	'''
+	"""Collection of shapes"""
+
 	__tablename__ = 'CycSat_Feature'
 
 	id = Column(Integer, primary_key=True)
@@ -283,20 +238,18 @@ class Feature(Base):
 	visibility = Column(Integer)
 	prototype = Column(String)
 
+	__mapper_args__ = {'polymorphic_on': prototype}
+
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
-
-	__mapper_args__ = {'polymorphic_on': prototype}
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
 
 
 class Shape(Base):
-	'''
-	A single shape or object that makes up a feature
-		
-	'''
+	"""A geometry with rules"""
+
 	__tablename__ = 'CycSat_Shape'
 
 	id = Column(Integer, primary_key=True)
@@ -310,15 +263,15 @@ class Shape(Base):
 
 	default_material = np.zeros(281)+255
 	material = Column(BLOB, default=default_material.tostring())
+
+	__mapper_args__ = {'polymorphic_on': prototype}
 	
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	#scenes = relationship('Scene',secondary=events,back_populates='shapes')
-
-	__mapper_args__ = {'polymorphic_on': prototype}
-
 	def build_geometry(self,placed=False):
+		"""Returns a shapely geometry"""
+
 		if placed:
 			return load_wkt(self.placement)
 		else:
@@ -329,8 +282,8 @@ Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature
 
 
 class Rule(Base):
-	'''
-	'''
+	"""Condition for a shape to appear to have an event in a timestep"""
+	
 	__tablename__ = 'CycSat_Rule'
 
 	id = Column(Integer, primary_key=True)
@@ -346,8 +299,8 @@ Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
 
 
 class Event(Base):
-	"""
-	"""
+	"""An instance of a non-static shape at a facility for a given timestep"""
+
 	__tablename__ = 'CycSat_Event'
 
 	id = Column(Integer, primary_key=True)
@@ -364,26 +317,26 @@ Shape.events = relationship('Event',order_by=Event.id,back_populates='shape')
 Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
 
 
-class Scene(Base):
-	'''
-	'''
-	__tablename__ = 'CycSat_Scene'
+# class Scene(Base):
+# 	'''
+# 	'''
+# 	__tablename__ = 'CycSat_Scene'
 
-	id = Column(Integer, primary_key=True)
-	timestep = Column(Integer)
-	data = Column(BLOB)
+# 	id = Column(Integer, primary_key=True)
+# 	timestep = Column(Integer)
+# 	data = Column(BLOB)
 
-	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
-	mission = relationship(Mission,back_populates='scenes')
+# 	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
+# 	mission = relationship(Mission,back_populates='scenes')
 
-	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Facility,back_populates='scenes')
+# 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+# 	facility = relationship(Facility,back_populates='scenes')
 
-	instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
-	instrument = relationship(Instrument, back_populates='scenes')
+# 	instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
+# 	instrument = relationship(Instrument, back_populates='scenes')
 
 
-# Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
-Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
-Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
-Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
+# # Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
+# Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
+# Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
+# Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
