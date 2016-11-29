@@ -1,9 +1,7 @@
-'''
+"""
 sensor.py
 
-Object/API for writing scenes from pre-built geometries.
-
-'''
+"""
 import shapely
 import json
 import ast
@@ -11,7 +9,6 @@ import ast
 from skimage.transform import resize, downscale_local_mean
 from skimage.draw import polygon
 from shapely.geometry import Polygon, Point
-#from scipy.ndimage
 
 import shapely
 import numpy as np
@@ -75,12 +72,11 @@ class Sensor(object):
 
 
 	def capture(self,path,img_format='GTiff'):
-		"""Writes the image canvas to an image using GDAL
+		"""Writes an image using GDAL
 
 		Keyword arguments:
 		path -- the path to write the image
-		img_format -- the GDAL format of the image
-
+		img_format -- the GDAL format
 		"""
 		origin = 0
 

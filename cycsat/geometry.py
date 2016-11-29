@@ -20,7 +20,7 @@ def create_blueprint(Facility,max_attempts=20):
 	gives each feature a placed geometry
 
 	Keyword arguments:
-	max_attempts -- the maximum number of times attempts will be made
+	max_attempts -- the maximum number attempts to be made
 	"""
 	Facility.build_footprint()
 
@@ -70,8 +70,8 @@ def check_disjoints(shapes):
 
 
 def posit_point(footprint):
-	'''
-	'''
+	"""Generates a random point within a footprint"""
+	
 	# define the footprint boundary
 	length = footprint.bounds[-2]
 	width = footprint.bounds[-1]
@@ -83,9 +83,8 @@ def posit_point(footprint):
 
 
 def place_shape(Shape,placement):
-	'''
-	Shifts a shape to a posited point and checks if it falls within the footprint
-	'''
+	"""Places a shape to a coordinate position"""
+
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 
@@ -103,10 +102,8 @@ def place_shape(Shape,placement):
 
 
 def place_feature(Feature,footprint,max_attempts=20):
-	'''
-	Posits (or proposes) a random placement for a feature within a facility footprint, returns
-	a shape stack with proposed locations
-	'''
+	"""Places a feature within a footprint and checks typology of shapes"""
+	
 	attempts = 0
 	while attempts<max_attempts:
 

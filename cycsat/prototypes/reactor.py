@@ -1,7 +1,7 @@
-'''
+"""
 prototypes/reactor.py
 
-'''
+"""
 
 from cycsat.archetypes import Facility, Feature
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume

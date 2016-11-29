@@ -12,6 +12,7 @@ A synthetic satellite time series generator that uses Cyclus for nuclear non-pro
 
 ## Package structure
 
+```
 cycsat\
 	archetypes.py
 	geometry.py
@@ -25,6 +26,7 @@ cycsat\
 		shapes.py
 		sink.py
 		source.py
+```
 
 | Module           | Description                                              |
 | -----------------| ---------------------------------------------------------|

@@ -29,4 +29,4 @@ satellite = LANDSAT8(name='test satellite')
 
 # prepare and launch mission
 sim.prepare(mission,satellite)
-sim.launch("Prototype='Reactor'",0,1)
+sim.launch("Prototype='Reactor'",0,3)
