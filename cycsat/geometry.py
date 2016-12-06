@@ -15,6 +15,12 @@ from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
 
+def build_geometry(self,width,length):
+	"""Builds a rectangle geometry given a width and a length"""
+	geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
+	return geometry
+
+
 def create_blueprint(Facility,max_attempts=20):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry
@@ -33,6 +39,24 @@ def create_blueprint(Facility,max_attempts=20):
 			print('blueprint failed')
 
 
+def create_plan(Site,max_attempts=20):
+	"""Creates a random layout for all the features of a facility and 
+	gives each feature a placed geometry
+
+	Keyword arguments:
+	max_attempts -- the maximum number attempts to be made
+	"""
+	Site.build_footprint()
+	facilities = Site.facilities
+
+	for facility in facilities:
+		placed = place_facility(facility,Site.footprint)
+		if placed:
+			continue
+		else:
+			print('site plan failed')
+
+
 def assess_blueprint(Facility):
 	"""Checks to see the blueprint has any illegal overlaps"""
 
@@ -41,7 +65,7 @@ def assess_blueprint(Facility):
 	# build a shape stack by level
 	for feature in Facility.features:
 		for shape in feature.shapes:
-			geometry = shape.build_geometry(placed=True)
+			geometry = shape.build_footprint(geometry='placed')
 			if shape.level in shape_stack:
 				shape_stack[shape.level].append(geometry)
 			else:
@@ -82,23 +106,37 @@ def posit_point(footprint):
 	return posited_point
 
 
-def place_shape(Shape,placement):
+def place(Entity,placement,ContextEntity=None):
 	"""Places a shape to a coordinate position"""
-
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 
-	geometry = Shape.build_geometry()
-		
-	shape_x = geometry.centroid.coords.xy[0][0]
-	shape_y = geometry.centroid.coords.xy[1][0]
-	
-	shift_x = placed_x - shape_x + Shape.xoff
-	shift_y = placed_y - shape_y + Shape.yoff
+	if ContextEntity:
+		location = ContextEntity.build_footprint()
+		geometry = Entity.build_footprint(geometry='placed')
+	else:
+		geometry = Entity.build_footprint()
+		location = geometry
 
-	Shape.placement = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
+	shape_x = location.centroid.coords.xy[0][0]
+	shape_y = location.centroid.coords.xy[1][0]
+
+	try:
+		xoff = Entity.xoff
+		yoff = Entity.yoff
+	except:
+		xoff = 0
+		yoff = 0
+
+	shift_x = placed_x - shape_x + xoff
+	shift_y = placed_y - shape_y + yoff
+
+	if ContextEntity:
+		Entity.focus = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
+	else:
+		Entity.placement = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
 	
-	return Shape
+	return Entity
 
 
 def place_feature(Feature,footprint,max_attempts=20):
@@ -111,8 +149,8 @@ def place_feature(Feature,footprint,max_attempts=20):
 
 		typology_checks = list()
 		for shape in Feature.shapes:
-			place_shape(shape,posited_point)
-			placement = shape.build_geometry(placed=True)
+			place(shape,posited_point,rewrite=True)
+			placement = shape.build_footprint(geometry='placed')
 			typology_checks.append(placement.within(footprint))
 
 		if False not in typology_checks:
@@ -123,9 +161,24 @@ def place_feature(Feature,footprint,max_attempts=20):
 	print(Feature.id,'placement failed after',max_attempts,'attempts.')
 	return False
 
-'''
-basic shapely shape templates
 
-'''
+def place_facility(Facility,footprint,max_attempts=20):
+	"""Places a facility within a site footprint and checks typology"""
+	
+	attempts = 0
+	while attempts<max_attempts:
 
+		posited_point = posit_point(footprint)
+
+		place(Facility,posited_point)
+		placement = Facility.build_footprint(geometry='placed')
+		typology_check = placement.within(footprint)
+
+		if typology_check:
+			return True
+		else:
+			attempts+=1
+
+	print(Facility.id,'facility placement failed after',max_attempts,'attempts.')
+	return False
 

@@ -1,9 +1,14 @@
 """
+
+
 archetypes.py
+
+
 
 """
 from .image import Sensor, materialize
-from .geometry import create_blueprint, assess_blueprint
+from .geometry import create_blueprint, assess_blueprint, place
+from .geometry import build_geometry
 
 import pandas as pd
 import numpy as np
@@ -11,6 +16,7 @@ import numpy as np
 import copy
 from random import randint
 import operator
+import ast
 
 from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
@@ -45,6 +51,12 @@ class Satellite(Base):
 	name = Column(String)
 	prototype = Column(String)
 	mmu = Column(Integer)
+	width = Column(Integer)
+	length = Column(Integer)
+
+	def build_ifov(self):
+		self.ifov = build_geometry(self.width*10,self.length*10)
+		return self.ifov
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
@@ -57,6 +69,8 @@ class Instrument(Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
 	mmu = Column(Integer, default=1) # in 10ths of centimeters
+	width = Column(Integer)
+	length = Column(Integer)
 	min_spectrum = Column(String)
 	max_spectrum = Column(String)
 	prototype = Column(String)
@@ -65,13 +79,26 @@ class Instrument(Base):
 
 	satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
 	satellite = relationship(Satellite, back_populates='instruments')
+		
+
+	def build_ifov(self):
+		self.ifov = build_geometry(self.width*10,self.length*10)
+		return self.ifov
+
+	
+	def focus(self,Facility,world):
+		"""Centers the instrument ifov on a facility"""
+		
+		# adds all the possible shapes to an attribute list
+
 
 	def calibrate(self,Facility,method='normal'):
 		"""Generates a sensor with all the static shapes"""
 
 		shape_stack = dict()
-		self.sensor = Sensor(Facility.width*10,Facility.length*10,self,method)
+		self.sensor = Sensor(self,method)
 
+		# add all the static (in level order) to the image
 		for feature in Facility.features:
 			for shape in feature.shapes:
 
@@ -86,17 +113,15 @@ class Instrument(Base):
 			for shape in shape_stack[level]:
 				self.sensor.add_shape(shape)
 
-		self.shapes = []
-		for feature in Facility.features:
-			for shape in feature.shapes:
-				self.shapes.append(shape)
-
 
 	def capture(self,Facility,timestep,path):
-		"""Adds selected shapes to a canvas"""
+		"""Adds shapes at timestep to a image"""
 
 		self.sensor.reset()
+
+		# gets all events from a timestep
 		events = [event.shape_id for event in Facility.events if event.timestep==timestep]
+		# get all shapes from a timestep (if there is an event)
 		shapes = [shape for shape in self.shapes if shape.id in events]
 		
 		shape_stack = dict()
@@ -145,6 +170,10 @@ class Site(Base):
 	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
 	mission = relationship(Mission, back_populates='sites')
 
+	def build_footprint(self):
+		self.footprint = build_geometry(self.width*10,self.length*10)
+		return self.footprint
+
 
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
@@ -161,17 +190,21 @@ class Facility(Base):
 	length = Column(Integer)
 	prototype = Column(String)
 	defined = Column(Boolean,default=False)
+	placement = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 	
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
-	def build_footprint(self):
-		width = self.width*10
-		length = self.length*10
-		self.footprint = Polygon([(0,0),(0,width),(length,width),(length,0)])
-		return self.footprint
+	def build_footprint(self,placed=False):
+
+		
+		if placed:
+			return load_wkt(self.placement)
+		else:
+			self.footprint = build_geometry(self.width*10,self.length*10)
+			return self.footprint
 
 
 	def build(self):
@@ -257,9 +290,14 @@ class Shape(Base):
 	level = Column(Integer,default=0)
 	visibility = Column(Integer, default=100)
 	prototype = Column(String)
-	placement = Column(String)
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)
+
+	# geometry relative to facility layout
+	placement = Column(String)
+
+	# geometry relative to last instrument
+	focus = Column(String)
 
 	default_material = np.zeros(281)+255
 	material = Column(BLOB, default=default_material.tostring())
@@ -269,11 +307,14 @@ class Shape(Base):
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	def build_geometry(self,placed=False):
+	def build_footprint(self,geometry='abstract'):
 		"""Returns a shapely geometry"""
-
-		if placed:
+		if geometry == 'abstract':
+			return load_wkt(self.geometry)
+		elif geometry == 'placed':
 			return load_wkt(self.placement)
+		elif geometry == 'focus':
+			return load_wkt(self.focus)
 		else:
 			return load_wkt(self.geometry)
 
@@ -317,26 +358,25 @@ Shape.events = relationship('Event',order_by=Event.id,back_populates='shape')
 Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
 
 
-# class Scene(Base):
-# 	'''
-# 	'''
-# 	__tablename__ = 'CycSat_Scene'
+class Scene(Base):
+	'''
+	'''
+	__tablename__ = 'CycSat_Scene'
 
-# 	id = Column(Integer, primary_key=True)
-# 	timestep = Column(Integer)
-# 	data = Column(BLOB)
+	id = Column(Integer, primary_key=True)
+	timestep = Column(Integer)
+	data = Column(BLOB)
 
-# 	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
-# 	mission = relationship(Mission,back_populates='scenes')
+	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
+	mission = relationship(Mission,back_populates='scenes')
 
-# 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-# 	facility = relationship(Facility,back_populates='scenes')
+	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+	facility = relationship(Facility,back_populates='scenes')
 
-# 	instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
-# 	instrument = relationship(Instrument, back_populates='scenes')
+	instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
+	instrument = relationship(Instrument, back_populates='scenes')
 
-
-# # Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
-# Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
-# Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
-# Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
+# Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
+Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
+Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
+Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')

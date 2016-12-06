@@ -23,7 +23,7 @@ extensions = {
 
 class Sensor(object):
 
-	def __init__(self,width,length,Instrument,method='normal'):
+	def __init__(self,Instrument,method='normal'):
 		"""Initiate a sensor instance
 
 		Keyword arguments:
@@ -32,20 +32,43 @@ class Sensor(object):
 		Instrument -- Instrument instance to draw the image
 		method -- 'normal' (random normal distribution around mean) or 'mean'
 		"""
-		self.background = np.zeros((length,width),dtype=np.uint8)
+		width = Instrument.ifov_width*10
+		length = Instrument.ifov_length*10
+		self.ifov = Instrument.build_ifov()
+		
+		self.name = Instrument.name
+		self.mmu = Instrument.mmu
+		self.min_spectrum = float(Instrument.min_spectrum)
+		self.max_spectrum = float(Instrument.max_spectrum)
+
+		self.background = np.zeros((width,length),dtype=np.uint8)
 		self.foreground = self.background.copy()
 		
 		self.wavelength = (np.arange(281)/100) + 0.20
 		self.method = method
 		
-		self.mmu = Instrument.mmu
-		self.min_spectrum = float(Instrument.min_spectrum)
-		self.max_spectrum = float(Instrument.max_spectrum)
-		self.name = Instrument.name
-
+	
 	def reset(self):
 		"""Resets the capture array to the background array"""
 		self.foreground = self.background.copy()
+
+	
+	def focus(self,Facility):
+		"""Focuses the intrument on a facility"""
+		self.shapes = []
+		for feature in Facility.features:
+			for shape in feature.shapes:
+				self.shapes.append(shape)
+
+		self.build_footprint()
+		cross_hairs = self.footprint.centroid
+		
+		for shape in self.shapes:
+			place(shape,cross_hairs,Facility)
+
+		world.write(Facility)
+
+
 
 
 	def add_shape(self,Shape,background=True):
@@ -55,7 +78,7 @@ class Sensor(object):
 		if background:
 			image = self.background
 
-		geometry = Shape.build_geometry(placed=True)
+		geometry = Shape.build_footprint(placed=True)
 		material = np.fromstring(Shape.material)
 
 		mask = (self.wavelength >= self.min_spectrum) & (self.wavelength <= self.max_spectrum)

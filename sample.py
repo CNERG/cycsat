@@ -13,7 +13,7 @@ TESTING CYCSAT STARTS HERE
 ###################################################################################################
 
 from cycsat.simulation import Simulator
-from cycsat.archetypes import Mission
+from cycsat.archetypes import Mission, Facility, Site
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 
 # initialize the simulator object and build the world
@@ -25,7 +25,7 @@ sim.simulate()
 
 # define mission and satellite
 mission = Mission(name='first test mission')
-satellite = LANDSAT8(name='test satellite')
+satellite = LANDSAT8(name='test satellite',mmu=300)
 
 # prepare and launch mission
 sim.prepare(mission,satellite)

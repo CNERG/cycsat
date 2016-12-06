@@ -146,11 +146,14 @@ class Simulator(object):
 
 		for facility in facilities:
 			for instrument in self.satellite.instruments:
+				instrument.focus(facility,self.world)
 				instrument.calibrate(facility)
 
 				for timestep in range(start,end):
 					print(timestep,instrument.id,facility.id)
 					instrument.capture(facility,timestep,self.dir)
+
+				#self.world.write(facility)
 
 
 
