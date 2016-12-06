@@ -6,6 +6,8 @@ import shapely
 import json
 import ast
 
+from .geometry import place
+
 from skimage.transform import resize, downscale_local_mean
 from skimage.draw import polygon
 from shapely.geometry import Polygon, Point
@@ -20,6 +22,7 @@ extensions = {
     'GTiff':'.tif'
 }
 
+# the sensor could be the top level object
 
 class Sensor(object):
 
@@ -27,13 +30,11 @@ class Sensor(object):
 		"""Initiate a sensor instance
 
 		Keyword arguments:
-		width -- width of image
-		length -- length of image
 		Instrument -- Instrument instance to draw the image
 		method -- 'normal' (random normal distribution around mean) or 'mean'
 		"""
-		width = Instrument.ifov_width*10
-		length = Instrument.ifov_length*10
+		width = Instrument.width*10
+		length = Instrument.length*10
 		self.ifov = Instrument.build_ifov()
 		
 		self.name = Instrument.name
@@ -52,7 +53,7 @@ class Sensor(object):
 		"""Resets the capture array to the background array"""
 		self.foreground = self.background.copy()
 
-	
+
 	def focus(self,Facility):
 		"""Focuses the intrument on a facility"""
 		self.shapes = []
@@ -60,41 +61,38 @@ class Sensor(object):
 			for shape in feature.shapes:
 				self.shapes.append(shape)
 
-		self.build_footprint()
-		cross_hairs = self.footprint.centroid
+		cross_hairs = self.ifov.centroid
 		
 		for shape in self.shapes:
 			place(shape,cross_hairs,Facility)
 
-		world.write(Facility)
+
+	def calibrate(self,Facility,method='normal'):
+		"""Generates a sensor with all the static shapes"""
+		shape_stack = dict()
+
+		# add all the static (in level order) to the image
+		for feature in Facility.features:
+			for shape in feature.shapes:
+
+				if shape.visibility!=100:
+					continue
+				if shape.level in shape_stack:
+					shape_stack[shape.level].append(shape)
+				else:
+					shape_stack[shape.level] = [shape]
+
+		for level in sorted(shape_stack):
+			for shape in shape_stack[level]:
+				add_shape(self,shape,geometry='focused',background=True)
 
 
+	def capture_shape(self,Shape,geometry='focused'):
+		"""Adds a shape to the foreground image"""
+		add_shape(self,Shape,geometry=geometry,background=False)
 
 
-	def add_shape(self,Shape,background=True):
-		"""Adds a shape to the image, default background image"""
-
-		image = self.foreground
-		if background:
-			image = self.background
-
-		geometry = Shape.build_footprint(placed=True)
-		material = np.fromstring(Shape.material)
-
-		mask = (self.wavelength >= self.min_spectrum) & (self.wavelength <= self.max_spectrum)
-		spectrum = material[mask]
-		value = round(spectrum.mean())
-		
-		coords = np.array(list(geometry.exterior.coords))
-		rr, cc = polygon(coords[:,0], coords[:,1], image.shape)
-		
-		if self.method == 'normal':
-			image[rr, cc] = np.random.normal(loc=value,scale=20,size=image[rr, cc].shape)
-		else:
-			image[rr, cc] = value
-
-
-	def capture(self,path,img_format='GTiff'):
+	def write(self,path,img_format='GTiff'):
 		"""Writes an image using GDAL
 
 		Keyword arguments:
@@ -120,6 +118,30 @@ class Sensor(object):
 
 		outband.WriteArray(band_array)
 		outband.FlushCache()
+
+
+
+def add_shape(Sensor,Shape,geometry='abstract',background=True):
+		"""Adds a shape to the sensor objects image, by default the background image"""
+
+		image = Sensor.foreground
+		if background:
+			image = Sensor.background
+
+		geometry = Shape.build_footprint(geometry=geometry)
+		material = np.fromstring(Shape.material)
+
+		mask = (Sensor.wavelength >= Sensor.min_spectrum) & (Sensor.wavelength <= Sensor.max_spectrum)
+		spectrum = material[mask]
+		value = round(spectrum.mean())
+		
+		coords = np.array(list(geometry.exterior.coords))
+		rr, cc = polygon(coords[:,0], coords[:,1], image.shape)
+		
+		if Sensor.method == 'normal':
+			image[rr, cc] = np.random.normal(loc=value,scale=20,size=image[rr, cc].shape)
+		else:
+			image[rr, cc] = value
 
 
 def materialize(name='Default',rgb=None,blob=True):

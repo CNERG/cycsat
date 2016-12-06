@@ -85,44 +85,29 @@ class Instrument(Base):
 		self.ifov = build_geometry(self.width*10,self.length*10)
 		return self.ifov
 
-	
-	def focus(self,Facility,world):
-		"""Centers the instrument ifov on a facility"""
-		
-		# adds all the possible shapes to an attribute list
 
+	def target(self,Facility):
+		"""Creates a sensor object and focuses it on a facility"""
+		self.Sensor = Sensor(self)
 
-	def calibrate(self,Facility,method='normal'):
-		"""Generates a sensor with all the static shapes"""
-
-		shape_stack = dict()
-		self.sensor = Sensor(self,method)
-
-		# add all the static (in level order) to the image
+		self.shapes = []
 		for feature in Facility.features:
 			for shape in feature.shapes:
-
-				if shape.visibility!=100:
-					continue
-				if shape.level in shape_stack:
-					shape_stack[shape.level].append(shape)
-				else:
-					shape_stack[shape.level] = [shape]
-
-		for level in sorted(shape_stack):
-			for shape in shape_stack[level]:
-				self.sensor.add_shape(shape)
+				self.shapes.append(shape)
+		
+		self.Sensor.focus(Facility)
+		self.Sensor.calibrate(Facility)
 
 
 	def capture(self,Facility,timestep,path):
 		"""Adds shapes at timestep to a image"""
 
-		self.sensor.reset()
+		self.Sensor.reset()
 
 		# gets all events from a timestep
-		events = [event.shape_id for event in Facility.events if event.timestep==timestep]
+		events = [Event.shape_id for Event in Facility.events if Event.timestep==timestep]
 		# get all shapes from a timestep (if there is an event)
-		shapes = [shape for shape in self.shapes if shape.id in events]
+		shapes = [Shape for Shape in self.shapes if Shape.id in events]
 		
 		shape_stack = dict()
 		for shape in shapes:
@@ -133,10 +118,10 @@ class Instrument(Base):
 
 		for level in sorted(shape_stack):
 			for shape in shape_stack[level]:
-				self.sensor.add_shape(shape,background=False)
+				self.Sensor.capture_shape(shape)
 
 		path = path+str(Facility.id)+'-'+str(self.id)+'-'+str(timestep)
-		self.sensor.capture(path)
+		self.Sensor.write(path)
 
 
 class Mission(Base):
@@ -313,7 +298,7 @@ class Shape(Base):
 			return load_wkt(self.geometry)
 		elif geometry == 'placed':
 			return load_wkt(self.placement)
-		elif geometry == 'focus':
+		elif geometry == 'focused':
 			return load_wkt(self.focus)
 		else:
 			return load_wkt(self.geometry)

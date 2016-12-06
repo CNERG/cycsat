@@ -15,7 +15,7 @@ from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
 
-def build_geometry(self,width,length):
+def build_geometry(width,length):
 	"""Builds a rectangle geometry given a width and a length"""
 	geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
 	return geometry
@@ -115,7 +115,7 @@ def place(Entity,placement,ContextEntity=None):
 		location = ContextEntity.build_footprint()
 		geometry = Entity.build_footprint(geometry='placed')
 	else:
-		geometry = Entity.build_footprint()
+		geometry = Entity.build_footprint(geometry='abstract')
 		location = geometry
 
 	shape_x = location.centroid.coords.xy[0][0]
@@ -149,7 +149,7 @@ def place_feature(Feature,footprint,max_attempts=20):
 
 		typology_checks = list()
 		for shape in Feature.shapes:
-			place(shape,posited_point,rewrite=True)
+			place(shape,posited_point)
 			placement = shape.build_footprint(geometry='placed')
 			typology_checks.append(placement.within(footprint))
 
