@@ -33,6 +33,8 @@ class Sensor(object):
 		Instrument -- Instrument instance to draw the image
 		method -- 'normal' (random normal distribution around mean) or 'mean'
 		"""
+		self.Instrument = Instrument
+
 		width = Instrument.width*10
 		length = Instrument.length*10
 		self.ifov = Instrument.build_ifov()
@@ -56,6 +58,8 @@ class Sensor(object):
 
 	def focus(self,Facility):
 		"""Focuses the intrument on a facility"""
+
+		self.Facility = Facility
 		self.shapes = []
 		for feature in Facility.features:
 			for shape in feature.shapes:
@@ -72,15 +76,13 @@ class Sensor(object):
 		shape_stack = dict()
 
 		# add all the static (in level order) to the image
-		for feature in Facility.features:
-			for shape in feature.shapes:
-
-				if shape.visibility!=100:
-					continue
-				if shape.level in shape_stack:
-					shape_stack[shape.level].append(shape)
-				else:
-					shape_stack[shape.level] = [shape]
+		for shape in self.shapes:
+			if shape.visibility!=100:
+				continue
+			if shape.level in shape_stack:
+				shape_stack[shape.level].append(shape)
+			else:
+				shape_stack[shape.level] = [shape]
 
 		for level in sorted(shape_stack):
 			for shape in shape_stack[level]:
@@ -90,6 +92,23 @@ class Sensor(object):
 	def capture_shape(self,Shape,geometry='focused'):
 		"""Adds a shape to the foreground image"""
 		add_shape(self,Shape,geometry=geometry,background=False)
+
+
+	def archive(self,Scene,Mission,World):
+		"""Saves as a scene"""
+		if (self.mmu > 1):
+			band_array = downscale_local_mean(self.foreground,(self.mmu,self.mmu))
+			band_array = resize(band_array,(rows,cols),preserve_range=True)
+		else:
+			band_array = self.foreground
+
+		Scene.data = band_array.tostring()
+
+		Mission.scenes.append(Scene)
+		self.Facility.scenes.append(Scene)
+		self.Instrument.scenes.append(Scene)
+
+		World.write([Mission,self.Facility,self.Instrument])
 
 
 	def write(self,path,img_format='GTiff'):

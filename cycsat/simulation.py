@@ -11,8 +11,11 @@ from random import randint
 import os
 import shutil
 
+from skimage.io import imread
+
 import sqlite3
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from sqlalchemy import text
 from sqlalchemy import create_engine
@@ -150,9 +153,31 @@ class Simulator(object):
 
 				for timestep in range(start,end):
 					print(timestep,instrument.id,facility.id)
-					instrument.capture(facility,timestep,self.dir)
+					instrument.capture(facility,timestep,self.dir,
+						method='archive',Mission=self.mission,World=self.world)
 
 				#self.world.write(facility)
+
+	# def plot(self):
+	# 	"""
+	# 	"""
+
+	# 	fig = plt.figure()
+
+	# 	# adds sub plots
+	# 	ax1 = fig.add_subplot(2,2,1)
+	# 	ax2 = fig.add_subplot(2,2,2)
+	# 	ax3 = fig.add_subplot(2,2,3)
+
+
+
+
+
+
+
+
+
+
 
 
 

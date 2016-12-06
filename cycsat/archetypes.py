@@ -99,7 +99,7 @@ class Instrument(Base):
 		self.Sensor.calibrate(Facility)
 
 
-	def capture(self,Facility,timestep,path):
+	def capture(self,Facility,timestep,path,method='write',Mission=None,World=None):
 		"""Adds shapes at timestep to a image"""
 
 		self.Sensor.reset()
@@ -121,7 +121,12 @@ class Instrument(Base):
 				self.Sensor.capture_shape(shape)
 
 		path = path+str(Facility.id)+'-'+str(self.id)+'-'+str(timestep)
-		self.Sensor.write(path)
+		
+		if method == 'archive':
+			scene = Scene()
+			self.Sensor.archive(scene,Mission,World)
+		else:
+			self.Sensor.write(path)
 
 
 class Mission(Base):
