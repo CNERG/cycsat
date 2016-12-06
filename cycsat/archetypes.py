@@ -99,7 +99,7 @@ class Instrument(Base):
 		self.Sensor.calibrate(Facility)
 
 
-	def capture(self,Facility,timestep,path,method='write',Mission=None,World=None):
+	def capture(self,Facility,timestep,path,Mission=None,World=None):
 		"""Adds shapes at timestep to a image"""
 
 		self.Sensor.reset()
@@ -119,14 +119,17 @@ class Instrument(Base):
 		for level in sorted(shape_stack):
 			for shape in shape_stack[level]:
 				self.Sensor.capture_shape(shape)
-
-		path = path+str(Facility.id)+'-'+str(self.id)+'-'+str(timestep)
 		
-		if method == 'archive':
-			scene = Scene()
-			self.Sensor.archive(scene,Mission,World)
-		else:
-			self.Sensor.write(path)
+		# create and save the scene object
+		scene = Scene(timestep=timestep)
+		self.scenes.append(scene)
+		Facility.scenes.append(scene)
+		if Mission:
+			Mission.scenes.append(scene)
+		World.write([Mission,self,Facility])
+		
+		path = path+str(scene.id)
+		self.Sensor.write(path)
 
 
 class Mission(Base):
@@ -355,7 +358,6 @@ class Scene(Base):
 
 	id = Column(Integer, primary_key=True)
 	timestep = Column(Integer)
-	data = Column(BLOB)
 
 	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
 	mission = relationship(Mission,back_populates='scenes')

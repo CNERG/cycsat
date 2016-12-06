@@ -94,23 +94,6 @@ class Sensor(object):
 		add_shape(self,Shape,geometry=geometry,background=False)
 
 
-	def archive(self,Scene,Mission,World):
-		"""Saves as a scene"""
-		if (self.mmu > 1):
-			band_array = downscale_local_mean(self.foreground,(self.mmu,self.mmu))
-			band_array = resize(band_array,(rows,cols),preserve_range=True)
-		else:
-			band_array = self.foreground
-
-		Scene.data = band_array.tostring()
-
-		Mission.scenes.append(Scene)
-		self.Facility.scenes.append(Scene)
-		self.Instrument.scenes.append(Scene)
-
-		World.write([Mission,self.Facility,self.Instrument])
-
-
 	def write(self,path,img_format='GTiff'):
 		"""Writes an image using GDAL
 

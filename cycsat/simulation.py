@@ -154,7 +154,7 @@ class Simulator(object):
 				for timestep in range(start,end):
 					print(timestep,instrument.id,facility.id)
 					instrument.capture(facility,timestep,self.dir,
-						method='archive',Mission=self.mission,World=self.world)
+						Mission=self.mission,World=self.world)
 
 				#self.world.write(facility)
 
