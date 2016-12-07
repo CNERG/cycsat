@@ -6,9 +6,11 @@ archetypes.py
 
 
 """
-from .image import Sensor, materialize
+from .image import Sensor
 from .geometry import create_blueprint, assess_blueprint, place
 from .geometry import build_geometry
+
+from .laboratory import materialize
 
 import pandas as pd
 import numpy as np
@@ -93,7 +95,7 @@ class Instrument(Base):
 		self.shapes = []
 		for feature in Facility.features:
 			for shape in feature.shapes:
-				self.shapes.append(shape)
+				self.shapes.append(materialize(shape))
 		
 		self.Sensor.focus(Facility)
 		self.Sensor.calibrate(Facility)
@@ -286,14 +288,13 @@ class Shape(Base):
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)
 
+	material_code = Column(Integer)
+	rgb = Column(String)
+
 	# geometry relative to facility layout
 	placement = Column(String)
-
 	# geometry relative to last instrument
 	focus = Column(String)
-
-	default_material = np.zeros(281)+255
-	material = Column(BLOB, default=default_material.tostring())
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 	

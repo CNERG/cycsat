@@ -6,8 +6,6 @@ prototypes/reactor.py
 from cycsat.archetypes import Facility, Feature
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
-from cycsat.image import materialize
-
 
 class SampleReactor(Facility):
     __mapper_args__ = {'polymorphic_identity': 'Reactor'}
@@ -24,7 +22,8 @@ class SampleReactor(Facility):
         SampleCoolingTower(),
         SampleContainment(),
         SampleContainment(),
-        SampleTurbine()
+        SampleTurbine(),
+        Lawn()
         ]
 
 """
@@ -41,9 +40,9 @@ class SampleCoolingTower(Feature):
 
         # define shapes
         self.shapes = [
-        Circle(radius=900,material=materialize(rgb=[146,149,1])),
-        Circle(level=1,radius=620,material=materialize(rgb=[79,81,84])),
-        Plume(level=2,radius=800,material=materialize(rgb=[255,255,255]),xoff=500,yoff=500)
+        Circle(radius=900,material_code=23),
+        Circle(level=1,radius=620,material_code=24),
+        Plume(level=2,radius=800,rgb=[255,255,255],xoff=500,yoff=500)
         ]
 
 
@@ -57,7 +56,7 @@ class SampleContainment(Feature):
 
         # define shapes
         self.shapes = [
-        Circle(radius=520,material=materialize(rgb=[70,70,70]))
+        Circle(radius=520,rgb=[70,70,70])
         ]
 
 
@@ -71,7 +70,21 @@ class SampleTurbine(Feature):
 
         # define shapes
         self.shapes = [
-        Rectangle(width=580,length=2220,material=materialize(rgb=[208,40,14]))
+        Rectangle(width=580,length=2220,rgb=[208,40,14])
+        ]
+
+
+class Lawn(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'lawn'}
+
+    def __init__(self,name='lawn',visibility=100):
+        
+        self.name = name
+        self.visibility = visibility
+
+        # define shapes
+        self.shapes = [
+        Rectangle(width=500,length=500,material_code=1213)
         ]
 
 

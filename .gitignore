@@ -18,5 +18,9 @@ demos/*
 notes/
 output/
 swu_capacitated.xml
-reactor_test.sqlite
-simulation/
+*.sqlite
+simulations/
+plots/
+materials/
+*.pdf
+materials/ASCII/

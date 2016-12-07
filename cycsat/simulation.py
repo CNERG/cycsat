@@ -158,16 +158,49 @@ class Simulator(object):
 
 				#self.world.write(facility)
 
-	# def plot(self):
-	# 	"""
-	# 	"""
+	# right now only four facilities can be compared
+	def plot_timestep(self,timestep,instrument_id=1,sql=''):
+		"""Plots a timestep given a sql query and a facility list"""
 
-	# 	fig = plt.figure()
+		facilities = self.world.select(Facility,sql=sql,first=False)
 
-	# 	# adds sub plots
-	# 	ax1 = fig.add_subplot(2,2,1)
-	# 	ax2 = fig.add_subplot(2,2,2)
-	# 	ax3 = fig.add_subplot(2,2,3)
+		query = self.read(sql='SELECT * FROM CycSat_Scene')
+		scenes = query[(query['timestep']==timestep) & (query['instrument_id'] == instrument_id)]
+
+		scene_collection = dict()
+		
+		for facility in facilities:
+			scene = scenes[scenes['facility_id']==facility.id]
+			try:
+				scene_collection[facility.id] = {'name':facility.name,'scene_id':scene.iloc[0]['id']}
+			except:
+				continue
+
+		fig = plt.figure()
+		fig.suptitle('timestep:/n'+str(timestep))
+
+		# adds sub plots
+		ax1 = fig.add_subplot(2,2,1)
+		ax2 = fig.add_subplot(2,2,2)
+		ax3 = fig.add_subplot(2,2,3)
+		ax4 = fig.add_subplot(2,2,4)
+
+		im_path = self.dir+str(scene_collection[3]['scene_id'])+'.tif'
+		im1 = imread(im_path)
+
+		ax1.imshow(im1,'gray')
+		ax1.set_title(scene_collection[3]['name'])
+
+		plt.savefig('plots/'+str(timestep)+'.pdf')
+
+		plt.clf()
+		plt.cla()
+
+
+
+
+
+
 
 
 

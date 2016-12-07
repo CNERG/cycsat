@@ -26,7 +26,7 @@ extensions = {
 
 class Sensor(object):
 
-	def __init__(self,Instrument,method='normal'):
+	def __init__(self,Instrument,method=''):
 		"""Initiate a sensor instance
 
 		Keyword arguments:
@@ -131,42 +131,17 @@ def add_shape(Sensor,Shape,geometry='abstract',background=True):
 			image = Sensor.background
 
 		geometry = Shape.build_footprint(geometry=geometry)
-		material = np.fromstring(Shape.material)
 
-		mask = (Sensor.wavelength >= Sensor.min_spectrum) & (Sensor.wavelength <= Sensor.max_spectrum)
-		spectrum = material[mask]
-		value = round(spectrum.mean())
+		value = Shape.material.measure(wl_min=Sensor.min_spectrum,wl_max=Sensor.max_spectrum)
+
+		# mask = (Sensor.wavelength >= Sensor.min_spectrum) & (Sensor.wavelength <= Sensor.max_spectrum)
+		# spectrum = material[mask]
+		# value = round(spectrum.mean())
 		
 		coords = np.array(list(geometry.exterior.coords))
 		rr, cc = polygon(coords[:,0], coords[:,1], image.shape)
-		
-		if Sensor.method == 'normal':
-			image[rr, cc] = np.random.normal(loc=value,scale=20,size=image[rr, cc].shape)
-		else:
-			image[rr, cc] = value
 
-
-def materialize(name='Default',rgb=None,blob=True):
-	"""Returns an array of reflection values indexed by wavelength
-	
-	Keyword arguments:
-	name -- name of the material
-	rgb -- RGB values, for simplicity
-	blob -- return as blob for data storage
-	"""
-	wavelength = (np.arange(281)/100) + 0.20
-	reflectance = np.zeros(281)+255
-
-	if rgb:
-		reflectance[(wavelength >= 0.64) & (wavelength <= 0.67) ] = rgb[0]
-		reflectance[(wavelength >= 0.53) & (wavelength <= 0.59) ] = rgb[1]
-		reflectance[(wavelength >= 0.45) & (wavelength <= 0.51) ] = rgb[2]
-
-	if blob:
-		return reflectance.tostring()
-	else:
-		return reflectance
-
+		image[rr, cc] = value
 
 
 
