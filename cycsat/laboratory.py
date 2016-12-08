@@ -89,7 +89,6 @@ def materialize(Shape):
 	return Shape
 
 
-
 # DEMO
 
 # brick = Material('ammonium_chloride_gds77.27373')
