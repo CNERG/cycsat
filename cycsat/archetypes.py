@@ -87,6 +87,7 @@ class Instrument(Base):
 	def target(self,Facility):
 		"""Creates a sensor object and focuses it on a facility"""
 		self.Sensor = Sensor(self)
+		self.Facility = Facility
 
 		self.shapes = []
 		for feature in Facility.features:
@@ -97,13 +98,13 @@ class Instrument(Base):
 		self.Sensor.calibrate(Facility)
 
 
-	def capture(self,Facility,timestep,path,Mission=None,World=None):
+	def capture(self,timestep,path,Mission=None,World=None):
 		"""Adds shapes at timestep to a image"""
 
 		self.Sensor.reset()
 
 		# gets all events from a timestep
-		events = [Event.shape_id for Event in Facility.events if Event.timestep==timestep]
+		events = [Event.shape_id for Event in self.Facility.events if Event.timestep==timestep]
 		# get all shapes from a timestep (if there is an event)
 		shapes = [Shape for Shape in self.shapes if Shape.id in events]
 		
@@ -121,10 +122,10 @@ class Instrument(Base):
 		# create and save the scene object
 		scene = Scene(timestep=timestep)
 		self.scenes.append(scene)
-		Facility.scenes.append(scene)
+		self.Facility.scenes.append(scene)
 		if Mission:
 			Mission.scenes.append(scene)
-		World.write([Mission,self,Facility])
+		World.write([Mission,self,self.Facility])
 		
 		path = path+str(scene.id)
 		self.Sensor.write(path)

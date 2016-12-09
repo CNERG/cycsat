@@ -114,7 +114,7 @@ class Simulator(object):
 		
 		if not os.path.exists('output'):
 			os.makedirs('output')
-		self.dir = 'output/'+Mission.name+'-'+str(Mission.id)+'/'
+		self.dir = 'output/'+self.world.database+'/'+str(Mission.id)+'/'
 		
 		if not os.path.exists(self.dir):
 			os.makedirs(self.dir)
@@ -122,7 +122,6 @@ class Simulator(object):
 
 	def launch(self,sql='',min_timestep=None,max_timestep=None):
 		"""Collect images for all facilities using a satellite"""
-
 		facilities = self.world.select(Facility,sql=sql,first=False)
 
 		start = 0
@@ -139,13 +138,12 @@ class Simulator(object):
 
 				for timestep in range(start,end):
 					print(timestep,instrument.id,facility.id)
-					instrument.capture(facility,timestep,self.dir,
+					instrument.capture(timestep,self.dir,
 						Mission=self.mission,World=self.world)
 
 				self.world.write(facility)
 
 
-	# right now only four facilities can be compared
 	def plot_timestep(self,timestep,instrument_id=1,sql=''):
 		"""Plots a timestep given a sql query and a facility list"""
 
@@ -179,13 +177,12 @@ class Simulator(object):
 			im_path = self.dir+str(facility['scene_id'])+'.tif'
 			im1 = imread(im_path)
 
-			print('plot')
 			ax.imshow(im1,'gray')
 			ax.set_title(scene_collection[3]['name'])
-			plt.savefig('plots/'+str(timestep)+'.pdf')
-
-			plt.clf()
-			plt.cla()
+		
+		plt.savefig('plots/'+str(timestep)+'.pdf')
+		plt.clf()
+		plt.cla()
 
 
 
