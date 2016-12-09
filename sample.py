@@ -1,10 +1,10 @@
 import os
 from shutil import copyfile
 
-#copying the test database (this is just for repeated testing)
-src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/reactor_test.sqlite'
-dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
-copyfile(src, dst)
+# # copying the test database (this is just for repeated testing)
+# src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.sqlite'
+# dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
+# copyfile(src, dst)
 
 ###############################################################################
 '''
@@ -20,19 +20,18 @@ from cycsat.image import Sensor
 
 # initialize the simulator object and build the world
 sim = Simulator('reactor_test_sample.sqlite')
-sim.build()
+#sim.build()
 
-# generate events table
-sim.simulate()
+# # generate events table
+# sim.simulate()
 
 # define mission and satellite
-mission = Mission(name='first test mission')
+# mission = Mission(name='first test mission')
 satellite = LANDSAT8(name='test satellite',mmu=100)
 
-# prepare and launch mission
+# # prepare and launch mission
 sim.prepare(mission,satellite)
-sim.launch("Prototype='Reactor'",0,3)
-
+# sim.launch("Prototype='Reactor'",0,3)
 
 # sim.dir = 'output/first test mission-1/'
 # for i in range(40):

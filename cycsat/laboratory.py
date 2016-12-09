@@ -10,7 +10,7 @@ import numpy as np
 import os
 import ast
 
-
+# opens the USGS library of spectra
 cdir, cfile = os.path.split(__file__)
 f = os.walk(cdir+'/materials/ASCII')
 samples = list()

@@ -1,9 +1,5 @@
 """
-
-
 archetypes.py
-
-
 
 """
 from .image import Sensor

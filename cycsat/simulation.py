@@ -34,10 +34,8 @@ class World(object):
 		
 		self.database = database
 		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=False)
-		
 		Session.configure(bind=self.engine)
 		self.session = Session()
-
 		Base.metadata.create_all(self.engine)
 
 	def select(self,Archetype,sql='',first=True):
@@ -49,7 +47,6 @@ class World(object):
 
 		"""
 		query = self.session.query(Archetype).filter(text(sql)).order_by(Archetype.id)
-		
 		if first:
 			return query.first()
 		else:
@@ -63,7 +60,6 @@ class World(object):
 			self.session.add_all(Entities)
 		else:
 			self.session.add(Entities)
-
 		self.session.commit()
 
 
@@ -87,15 +83,12 @@ class Simulator(object):
 		AgentEntry = self.read('select * from AgentEntry')
 		
 		for agent in AgentEntry.iterrows():
-
-			prototype = agent[1]['Prototype']
+			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
-
 				facility.build()
 				facilities.append(facility)
-			
 		self.world.write(facilities)
 
 	def simulate(self):
@@ -103,7 +96,6 @@ class Simulator(object):
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
 		facilities = self.world.select(Facility,first=False)
-
 		for facility in facilities:
 			for timestep in range(self.duration):
 				try:
@@ -117,21 +109,15 @@ class Simulator(object):
 
 		self.mission = Mission
 		self.satellite = Satellite
-
 		Satellite.missions.append(Mission)
 		self.world.write(Satellite)
-
+		
 		if not os.path.exists('output'):
 			os.makedirs('output')
-		
 		self.dir = 'output/'+Mission.name+'-'+str(Mission.id)+'/'
 		
-		try:
-			shutil.rmtree(self.dir)
-		except:
-			pass
-		
-		os.makedirs(self.dir)
+		if not os.path.exists(self.dir):
+			os.makedirs(self.dir)
 
 
 	def launch(self,sql='',min_timestep=None,max_timestep=None):
@@ -156,19 +142,18 @@ class Simulator(object):
 					instrument.capture(facility,timestep,self.dir,
 						Mission=self.mission,World=self.world)
 
-				#self.world.write(facility)
+				self.world.write(facility)
+
 
 	# right now only four facilities can be compared
 	def plot_timestep(self,timestep,instrument_id=1,sql=''):
 		"""Plots a timestep given a sql query and a facility list"""
 
 		facilities = self.world.select(Facility,sql=sql,first=False)
-
 		query = self.read(sql='SELECT * FROM CycSat_Scene')
 		scenes = query[(query['timestep']==timestep) & (query['instrument_id'] == instrument_id)]
 
 		scene_collection = dict()
-		
 		for facility in facilities:
 			scene = scenes[scenes['facility_id']==facility.id]
 			try:
@@ -177,24 +162,30 @@ class Simulator(object):
 				continue
 
 		fig = plt.figure()
-		fig.suptitle('timestep:/n'+str(timestep))
+		fig.suptitle('timestep: '+str(timestep))
 
-		# adds sub plots
-		ax1 = fig.add_subplot(2,2,1)
-		ax2 = fig.add_subplot(2,2,2)
-		ax3 = fig.add_subplot(2,2,3)
-		ax4 = fig.add_subplot(2,2,4)
+		# add sub plots
+		ax0 = fig.add_subplot(2,2,1)
+		ax1 = fig.add_subplot(2,2,2)
+		ax2 = fig.add_subplot(2,2,3)
+		ax3 = fig.add_subplot(2,2,4)
 
-		im_path = self.dir+str(scene_collection[3]['scene_id'])+'.tif'
-		im1 = imread(im_path)
+		axes = [ax0, ax1, ax2, ax3]
 
-		ax1.imshow(im1,'gray')
-		ax1.set_title(scene_collection[3]['name'])
+		for i, facility in enumerate(scene_collection):
 
-		plt.savefig('plots/'+str(timestep)+'.pdf')
+			ax = axes[i]
+			facility = scene_collection[facility]
+			im_path = self.dir+str(facility['scene_id'])+'.tif'
+			im1 = imread(im_path)
 
-		plt.clf()
-		plt.cla()
+			print('plot')
+			ax.imshow(im1,'gray')
+			ax.set_title(scene_collection[3]['name'])
+			plt.savefig('plots/'+str(timestep)+'.pdf')
+
+			plt.clf()
+			plt.cla()
 
 
 

@@ -22,7 +22,6 @@ extensions = {
     'GTiff':'.tif'
 }
 
-# the sensor could be the top level object
 
 class Sensor(object):
 
