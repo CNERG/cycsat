@@ -143,6 +143,33 @@ def add_shape(Sensor,Shape,geometry='abstract',background=True):
 		image[rr, cc] = value
 
 
+def write_array(array,path,mmu=1,img_format='GTiff'):
+	"""Writes an image using GDAL
+
+	Keyword arguments:
+	path -- the path to write the image
+	img_format -- the GDAL format
+	"""
+	origin = 0
+
+	rows = round(array.shape[-2]/mmu)
+	cols = round(array.shape[-1]/mmu)
+
+	driver = gdal.GetDriverByName(img_format)
+
+	outRaster = driver.Create(path+extensions[img_format], cols, rows, 1, gdal.GDT_Byte)
+	outRaster.SetGeoTransform((origin,mmu,0,origin,0,mmu*-1))
+
+	outband = outRaster.GetRasterBand(1)
+	if (mmu > 1):
+		band_array = downscale_local_mean(array,(mmu,mmu))
+		band_array = resize(band_array,(rows,cols),preserve_range=True)
+	else:
+		band_array = array
+
+	outband.WriteArray(band_array)
+	outband.FlushCache()
+
 
 
 
