@@ -66,6 +66,7 @@ class World(object):
 class Simulator(object):
 	"""Interface for running simulations and building the "world" """
 	def __init__(self,database):
+		self.database = database
 		self.world = World(database)
 		self.reader = sqlite3.connect(self.world.database)
 
@@ -76,11 +77,15 @@ class Simulator(object):
 		return df
 
 
-	def build(self):
+	def build(self,AgentId=None):
 		"""Builds all the facilities in an output database from cyclus"""
 
 		facilities = list()
-		AgentEntry = self.read('select * from AgentEntry')
+
+		sql = 'select * from AgentEntry'
+		if AgentId:
+			sql = 'select * from AgentEntry where AgentId='+str(AgentId)
+		AgentEntry = self.read(sql)
 		
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
@@ -90,6 +95,7 @@ class Simulator(object):
 				facility.build()
 				facilities.append(facility)
 		self.world.write(facilities)
+
 
 	def simulate(self):
 		"""Generates events for all facilties"""

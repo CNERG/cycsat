@@ -8,7 +8,7 @@ from .geometry import build_geometry
 
 from .laboratory import materialize
 
-from terrain import build_terrain
+from .terrain import build_terrain
 
 import pandas as pd
 import numpy as np
@@ -182,7 +182,7 @@ class Facility(Base):
 	name = Column(String)
 	width = Column(Integer)
 	length = Column(Integer)
-	self.terrain = Column(String)
+	terrain = Column(BLOB)
 	prototype = Column(String)
 	defined = Column(Boolean,default=False)
 	placement = Column(String)
@@ -204,7 +204,8 @@ class Facility(Base):
 
 	def build(self):
 		"""Randomly places all the features of a facility"""
-		self.terrain = build_terrain(self.width)
+		print('building:',self.name)
+		self.terrain = build_terrain(self.width,self.length)
 		built = 0
 		while (built == 0):
 			create_blueprint(self)

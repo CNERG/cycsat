@@ -10,8 +10,9 @@ def build_terrain(width,length):
 	n = math.ceil(math.log(width,2))
 	land = mpd(n)
 	clip = land[0:width,0:length]
+	flat = clip.ravel()
 
-	return clip.to_string()
+	return flat.tostring()
 
 
 def jitter(x,high=10):
