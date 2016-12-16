@@ -4,10 +4,18 @@ import numpy as np
 import math
 
 
-def jitter(x,low=0,high=5):
-	return int(x+np.random.normal(low,high))
+def build_terrain(width):
+	"""
+	"""
+	n = math.log(width,2)
+	land = mpd(n)
 
-jitter = np.vectorize(jitter)
+	return n.to_string()
+
+
+def jitter(x,high=10):
+	noise = np.random.normal(0,high)
+	return int(x+noise)
 
 
 def init_corners(array):
@@ -16,86 +24,71 @@ def init_corners(array):
 	corners+= np.random.randint(0,255,(2,2))
 	return array
 
-def midpoints(array):
+
+def midpoints(array,jit):
 	"""Sets the edges to the mean of the corners"""
 	midpoint = int(array.shape[0]/2)
 	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
 
-	edges = jitter(corners)
-
-	array[0,midpoint] = int(edges[0,:].mean())
-	array[midpoint,-1] = int(edges[-1,:].mean())
-	array[-1,midpoint] = int(edges[:,-1].mean())
-	array[midpoint,0] = int(edges[:,0].mean())
-	
-	array[midpoint,midpoint] = jitter(edges.mean())
+	array[0,midpoint] = jitter(corners[0,:].mean())
+	array[midpoint,-1] = jitter(corners[-1,:].mean())
+	array[-1,midpoint] = jitter(corners[:,-1].mean())
+	array[midpoint,0] = jitter(corners[:,0].mean())
+	array[midpoint,midpoint] = jitter(corners.mean())
 
 	return array
 
 
-def mpd(size=9):
+def mpd(n=3,jit=5):
 
-	if (size % 2 == 0):
-		size+=1
-
-	array = np.zeros((size,size))
+	size = (2**n)+1
+	heightmap = np.zeros((size,size))
 	
-	# initialize corners
-	init_corners(array)
-	midpoints(array)
-	# count iterations
-	iterations = int(math.log(array.shape[0]-1)/math.log(2))-1
-	print(iterations)
+	# initialize corners and midpoints (pass 1)
+	init_corners(heightmap)
+	midpoints(heightmap,jit)
 
-	number = 2
+	slices = nested_quarters(n,heightmap)
+
+	for level in sorted(slices):
+		for array in sorted(slices[level]):
+			midpoints(slices[level][array],jit)
+
+	return heightmap
+	
+
+def nested_quarters(n,array):
+	"""
+	"""
+	iterations = n-2
+	slices = dict()
+
+	# first iteration
+	targets = quarter_array(array)
+	slices[0] = targets
+	
+	# following iterations
 	for i in range(iterations):
-		width = size/number
-		data = np.zeros(number)+width
+		target = i
+		slices[target+1] = dict()
+		for array in slices[target]:
+			quarters = quarter_array(slices[target][array])
+			for quarter in quarters:
+				slices[target+1][array+quarter] = quarters[quarter]
 
-		integer = np.vectorize(int)
-		data = integer(data.cumsum())+1
-		data[-1]+=-1
-		number+=2
+	return slices
+
+
+def quarter_array(array):
+	"""Divides an array into quarters and returns a dictionary of views"""
+	spread = int(array.shape[0]/2)+1
 	
-		miny = 0	
-		for y in data:
-			minx = 0
-			for x in data:
-				print(miny,y,minx,x)
-				midpoints(array[miny:y,minx:x])
-				minx=x-1
-			miny=y-1
+	views = dict()
+	views['A'] = array[0:spread,0:spread]
+	views['B'] = array[0:spread,spread-1:(spread*2)-1]
+	views['C'] = array[spread-1:(spread*2)-1,0:spread]
+	views['D'] = array[spread-1:(spread*2)-1,spread-1:(spread*2)-1]
 
-	return array
-
-
-
-
-
-
-
-	# midpoints(array)
-
-# class Landscape(object):
-# 	"""
-# 	"""
-# 	def __init__(self,size=5,clases=2):
-
-# 		if (size % 2 == 0):
-# 			size+=1
-
-# 		self.data = 
-# 		
-
-# 		midpoint = int(size/2)
-# 		edges = jitter(np.random.randint(0,255,size=4))
-
-# 		self.data[0,midpoint] = edges[0]
-# 		self.data[midpoint,-1] = edges[1]
-# 		self.data[-1,midpoint] = edges[2]
-# 		self.data[midpoint,0] = edges[3]
-		
-# 		self.data[midpoint,midpoint] = jitter(edges.mean())[0]
-
+	return views
 
 
