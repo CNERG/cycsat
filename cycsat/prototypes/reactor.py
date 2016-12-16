@@ -15,7 +15,7 @@ class SampleReactor(Facility):
         self.AgentId = AgentId
         self.name = name
         self.width = 862
-        self.length = 877
+        self.length = 862
 
         self.features = [
         SampleCoolingTower(),

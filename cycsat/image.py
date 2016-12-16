@@ -56,7 +56,8 @@ class Sensor(object):
 
 
 	def focus(self,Facility):
-		"""Focuses the intrument on a facility"""
+		"""Shifts all the shapes of a facility to be aligned with 
+		an instrument's center"""
 
 		self.Facility = Facility
 		self.shapes = []
@@ -73,6 +74,8 @@ class Sensor(object):
 	def calibrate(self,Facility,method='normal'):
 		"""Generates a sensor with all the static shapes"""
 		shape_stack = dict()
+
+		self.background = Facility.terrain.fromstring()
 
 		# add all the static (in level order) to the image
 		for shape in self.shapes:

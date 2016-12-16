@@ -4,13 +4,14 @@ import numpy as np
 import math
 
 
-def build_terrain(width):
+def build_terrain(width,length):
 	"""
 	"""
-	n = math.log(width,2)
+	n = math.ceil(math.log(width,2))
 	land = mpd(n)
+	clip = land[0:width,0:length]
 
-	return n.to_string()
+	return clip.to_string()
 
 
 def jitter(x,high=10):
