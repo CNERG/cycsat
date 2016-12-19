@@ -202,9 +202,7 @@ class Facility(Base):
 
 
 	def build(self):
-		"""Randomly places all the features of a facility"""
-		print('building:',self.name)
-		self.terrain = build_terrain(self.width,self.length)
+		"""Randomly places all the features of a facility"""	
 		built = 0
 		while (built == 0):
 			create_blueprint(self)

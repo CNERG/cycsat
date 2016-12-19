@@ -72,11 +72,7 @@ class Sensor(object):
 
 	def calibrate(self,Facility,method='normal'):
 		"""Generates a sensor with all the static shapes"""
-		print('calibrating:',self.name)
 		shape_stack = dict()
-		background = np.fromstring(Facility.terrain)
-		#self.background = background.reshape(Facility.width,-1)
-		print(self.background.shape)
 
 		# add all the static (in level order) to the image
 		for shape in self.shapes:

@@ -104,7 +104,7 @@ def quarter_array(array):
 # 	Flooding
 # =============================================================================
 
-from skimage.morphology import morphology
+from skimage.morphology import watershed
 
 
 
