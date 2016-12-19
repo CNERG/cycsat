@@ -1,10 +1,15 @@
 """
+terrain.py
 """
 import numpy as np
 import math
 
+# =============================================================================
+# Terrain generation
+# =============================================================================
 
-def build_terrain(width,length):
+
+def build_terrain(width,length,method='mpd'):
 	"""
 	"""
 	n = math.ceil(math.log(width,2))
@@ -42,6 +47,7 @@ def midpoints(array,jit):
 
 
 def mpd(n=3,jit=5):
+	"""Midpoint distance replacement"""
 
 	size = (2**n)+1
 	heightmap = np.zeros((size,size))
@@ -92,5 +98,13 @@ def quarter_array(array):
 	views['D'] = array[spread-1:(spread*2)-1,spread-1:(spread*2)-1]
 
 	return views
+
+
+# =============================================================================
+# 	Flooding
+# =============================================================================
+
+from skimage.morphology import morphology
+
 
 

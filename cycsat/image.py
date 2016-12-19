@@ -1,6 +1,5 @@
 """
-sensor.py
-
+image.py
 """
 import shapely
 import json
@@ -135,7 +134,6 @@ def add_shape(Sensor,Shape,geometry='abstract',background=True):
 			image = Sensor.background
 
 		geometry = Shape.build_footprint(geometry=geometry)
-
 		value = Shape.material.measure(wl_min=Sensor.min_spectrum,wl_max=Sensor.max_spectrum)
 
 		# mask = (Sensor.wavelength >= Sensor.min_spectrum) & (Sensor.wavelength <= Sensor.max_spectrum)

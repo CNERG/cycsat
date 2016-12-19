@@ -1,10 +1,8 @@
-'''
-
+"""
 __init__.py
+"""
 
-'''
-
-# Check for dependencies. #
+# Check for dependencies.
 modules = [
 'pandas',
 'numpy',
@@ -14,7 +12,6 @@ modules = [
 'gdal'
 ]
 
-needed_modules = list()
 
 for module in modules:
 	try:

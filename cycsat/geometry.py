@@ -1,6 +1,5 @@
 """
 geometry.py
-
 """
 from sqlalchemy import Column, Integer, String
 
@@ -12,6 +11,10 @@ from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
+
+import geopandas as pd
+
+
 
 
 def build_geometry(width,length):

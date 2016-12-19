@@ -1,6 +1,5 @@
 """
 archetypes.py
-
 """
 from .image import Sensor
 from .geometry import create_blueprint, assess_blueprint, place

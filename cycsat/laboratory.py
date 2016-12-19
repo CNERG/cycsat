@@ -1,8 +1,5 @@
 """
-
-materials_reader.py:
-Translates an ASCII file into a Material.
-
+laboratory.py
 """
 import pandas as pd
 import numpy as np

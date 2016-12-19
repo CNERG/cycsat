@@ -6,11 +6,9 @@ src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.s
 dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
 copyfile(src, dst)
 
-###############################################################################
-'''
-TESTING CYCSAT STARTS HERE
-'''
-###############################################################################
+# =============================================================================
+# TESTING CYCSAT STARTS HERE
+# =============================================================================
 
 from cycsat.simulation import Simulator
 from cycsat.archetypes import Mission, Facility, Site, Satellite
