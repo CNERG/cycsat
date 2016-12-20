@@ -4,6 +4,15 @@ terrain.py
 import numpy as np
 import math
 
+
+def get_corners(array):
+	"""Returns the corners of an array."""
+	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
+	return corners
+
+
+
+
 # =============================================================================
 # Terrain generation
 # =============================================================================
@@ -27,7 +36,7 @@ def jitter(x,high=10):
 
 def init_corners(array):
 	"""Sets the corners of an array to a random value"""
-	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
+	corners = get_corners(array)
 	corners+= np.random.randint(0,255,(2,2))
 	return array
 
@@ -35,7 +44,7 @@ def init_corners(array):
 def midpoints(array,jit):
 	"""Sets the edges to the mean of the corners"""
 	midpoint = int(array.shape[0]/2)
-	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
+	corners = get_corners(array)
 
 	array[0,midpoint] = jitter(corners[0,:].mean())
 	array[midpoint,-1] = jitter(corners[-1,:].mean())
@@ -105,6 +114,47 @@ def quarter_array(array):
 # =============================================================================
 
 from skimage.morphology import watershed
+
+
+def floodFill(c,r,mask,value=1):
+	"""Fills water from the lowest corner."""
+	# cells already filled
+	filled = set()
+	# cells to fill
+	fill = set()
+	fill.add((c,r))
+
+	width = mask.shape[1]
+	height = mask.shape[0]
+
+	flood = np.zeros_like(mask,dtype=np.int8)
+
+	while fill:
+		x,y = fill.pop()
+		if y == height or x == width or x < 0 or y < 0:
+			continue
+		if mask[y][x] == value:
+			flood[y][x] = value
+			filled.add((x,y))
+
+			west = (x-1,y)
+			east = (x+1,y)
+			north = (x,y-1)
+			south = (x,y+1)
+
+			if not west in filled:
+				fill.add(west)
+			if not east in filled:
+				fill.add(east)
+			if not north in filled:
+				fill.add(north)
+			if not south in filled:
+				fill.add(south)
+
+	return flood
+
+
+
 
 
 

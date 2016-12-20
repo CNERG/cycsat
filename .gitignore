@@ -24,3 +24,6 @@ plots/
 materials/
 *.pdf
 materials/ASCII/
+*dbf
+*shp
+*shx
