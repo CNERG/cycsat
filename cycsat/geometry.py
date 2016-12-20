@@ -12,12 +12,16 @@ from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
-import geopandas as pd
 
+def build_geometry(Entity, footprint=True):
+	"""Builds a geometry given an instance"""
 
-def build_geometry(width,length):
-	"""Builds a rectangle geometry given a width and a length"""
-	geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
+	if footprint:
+		width = Entity.width*10
+		length = Entity.length*10
+		geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
+	else:
+		geometry = load_wkt(Entity.geometry)
 	return geometry
 
 
@@ -28,11 +32,11 @@ def create_blueprint(Facility,max_attempts=20):
 	Keyword arguments:
 	max_attempts -- the maximum number attempts to be made
 	"""
-	Facility.build_footprint()
+	Facility.build_geometry()
 
 	# place features
 	for feature in Facility.features:
-		placed = place_feature(feature, Facility.footprint,max_attempts=max_attempts)
+		placed = place_feature(feature, Facility.geometry,max_attempts=max_attempts)
 		if placed:
 			continue
 		else:
@@ -46,7 +50,7 @@ def create_plan(Site,max_attempts=20):
 	Keyword arguments:
 	max_attempts -- the maximum number attempts to be made
 	"""
-	Site.build_footprint()
+	Site.build_geometry()
 	facilities = Site.facilities
 
 	for facility in facilities:
@@ -65,7 +69,7 @@ def assess_blueprint(Facility):
 	# build a shape stack by level
 	for feature in Facility.features:
 		for shape in feature.shapes:
-			geometry = shape.build_footprint(geometry='placed')
+			geometry = shape.build_geometry()
 			if shape.level in shape_stack:
 				shape_stack[shape.level].append(geometry)
 			else:
@@ -93,14 +97,14 @@ def check_disjoints(shapes):
 	return True
 
 
-def posit_point(footprint):
-	"""Generates a random point within a footprint"""
+def posit_point(geometry):
+	"""Generates a random point within a geometry"""
 	
-	# define the footprint boundary
-	length = footprint.bounds[-2]
-	width = footprint.bounds[-1]
+	# define the geometry boundary
+	length = geometry.bounds[-2]
+	width = geometry.bounds[-1]
 
-	# create a random point within footprint
+	# create a random point within geometry
 	posited_point = Point(randint(0,width+1), randint(0,length+1))
 
 	return posited_point
@@ -112,10 +116,10 @@ def place(Entity,placement,ContextEntity=None):
 	placed_y = placement.coords.xy[1][0]
 
 	if ContextEntity:
-		location = ContextEntity.build_footprint()
-		geometry = Entity.build_footprint(geometry='placed')
+		location = ContextEntity.build_geometry()
+		geometry = Entity.build_geometry()
 	else:
-		geometry = Entity.build_footprint(geometry='abstract')
+		geometry = Entity.build_geometry()
 		location = geometry
 
 	shape_x = location.centroid.coords.xy[0][0]
@@ -134,24 +138,24 @@ def place(Entity,placement,ContextEntity=None):
 	if ContextEntity:
 		Entity.focus = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
 	else:
-		Entity.placement = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
+		Entity.wkt = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
 	
 	return Entity
 
 
-def place_feature(Feature,footprint,max_attempts=20):
-	"""Places a feature within a footprint and checks typology of shapes"""
+def place_feature(Feature,geometry,max_attempts=20):
+	"""Places a feature within a geometry and checks typology of shapes"""
 	
 	attempts = 0
 	while attempts<max_attempts:
 
-		posited_point = posit_point(footprint)
+		posited_point = posit_point(geometry)
 
 		typology_checks = list()
 		for shape in Feature.shapes:
 			place(shape,posited_point)
-			placement = shape.build_footprint(geometry='placed')
-			typology_checks.append(placement.within(footprint))
+			placement = shape.build_geometry()
+			typology_checks.append(placement.within(geometry))
 
 		if False not in typology_checks:
 			return True
@@ -162,17 +166,17 @@ def place_feature(Feature,footprint,max_attempts=20):
 	return False
 
 
-def place_facility(Facility,footprint,max_attempts=20):
-	"""Places a facility within a site footprint and checks typology"""
+def place_facility(Facility,geometry,max_attempts=20):
+	"""Places a facility within a site geometry and checks typology"""
 	
 	attempts = 0
 	while attempts<max_attempts:
 
-		posited_point = posit_point(footprint)
+		posited_point = posit_point(geometry)
 
 		place(Facility,posited_point)
-		placement = Facility.build_footprint(geometry='placed')
-		typology_check = placement.within(footprint)
+		placement = Facility.build_geometry()
+		typology_check = placement.within(geometry)
 
 		if typology_check:
 			return True

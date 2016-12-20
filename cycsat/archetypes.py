@@ -51,10 +51,6 @@ class Satellite(Base):
 	width = Column(Integer)
 	length = Column(Integer)
 
-	def build_ifov(self):
-		self.ifov = build_geometry(self.width*10,self.length*10)
-		return self.ifov
-
 	__mapper_args__ = {'polymorphic_on': prototype}
 
 
@@ -78,9 +74,9 @@ class Instrument(Base):
 	satellite = relationship(Satellite, back_populates='instruments')
 		
 
-	def build_ifov(self):
-		self.ifov = build_geometry(self.width*10,self.length*10)
-		return self.ifov
+	def build_geometry(self):
+		self.geometry = build_geometry(self)
+		return self.geometry
 
 
 	def target(self,Facility):
@@ -161,10 +157,6 @@ class Site(Base):
 	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
 	mission = relationship(Mission, back_populates='sites')
 
-	def build_footprint(self):
-		self.footprint = build_geometry(self.width*10,self.length*10)
-		return self.footprint
-
 
 Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
@@ -182,20 +174,19 @@ class Facility(Base):
 	terrain = Column(BLOB)
 	prototype = Column(String)
 	defined = Column(Boolean,default=False)
-	placement = Column(String)
+	wkt = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 	
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
-	def build_footprint(self,placed=False):
-		if placed:
-			return load_wkt(self.placement)
+	def build_geometry(self):
+		if self.wkt:
+			self.geometry = load_wkt(self.geometry)
 		else:
-			self.footprint = build_geometry(self.width*10,self.length*10)
-			return self.footprint
-
+			self.geometry = build_geometry(self)
+		return self.geometry
 
 	def build(self):
 		"""Randomly places all the features of a facility"""	
@@ -286,28 +277,15 @@ class Shape(Base):
 	material_code = Column(Integer)
 	rgb = Column(String)
 
-	# geometry relative to facility layout
-	placement = Column(String)
-	# geometry relative to last instrument
-	focus = Column(String)
-
 	__mapper_args__ = {'polymorphic_on': prototype}
 	
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-
-	def build_footprint(self,geometry='abstract'):
+	def build_geometry(self):
 		"""Returns a shapely geometry"""
-		if geometry == 'abstract':
-			return load_wkt(self.geometry)
-		elif geometry == 'placed':
-			return load_wkt(self.placement)
-		elif geometry == 'focused':
-			return load_wkt(self.focus)
-		else:
-			return load_wkt(self.geometry)
-
+		self.geometry = load_wkt(self.wkt)
+		return self.geometry
 
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
 

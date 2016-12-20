@@ -35,7 +35,7 @@ class Sensor(object):
 
 		width = Instrument.width*10
 		length = Instrument.length*10
-		self.ifov = Instrument.build_ifov()
+		self.ifov = Instrument.geometry()
 		
 		self.name = Instrument.name
 		self.mmu = Instrument.mmu
@@ -64,7 +64,7 @@ class Sensor(object):
 			for shape in feature.shapes:
 				self.shapes.append(shape)
 
-		cross_hairs = self.ifov.centroid
+		cross_hairs = self.geometry.centroid
 		
 		for shape in self.shapes:
 			place(shape,cross_hairs,Facility)

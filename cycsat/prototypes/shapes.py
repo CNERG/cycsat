@@ -24,11 +24,11 @@ class Circle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.geometry = Point(xoff,yoff).buffer(self.radius).wkt
+        self.wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
     @declared_attr
-    def geometry(self):
-    	return Shape.__table__.c.get('geometry', Column(String))
+    def wkt(self):
+    	return Shape.__table__.c.get('wkt', Column(String))
 
 
 class Rectangle(Shape):
@@ -43,11 +43,11 @@ class Rectangle(Shape):
         self.xoff = xoff
         self.yoff = yoff
 
-        self.geometry = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
+        self.wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
 
     @declared_attr
-    def geometry(self):
-    	return Shape.__table__.c.get('geometry', Column(String))
+    def wkt(self):
+    	return Shape.__table__.c.get('wkt', Column(String))
 
 
 class Plume(Shape):
@@ -62,12 +62,12 @@ class Plume(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.geometry = Point(xoff,yoff).buffer(self.radius).wkt
+        self.wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
         self.rules = [
         Rule(table='TimeSeriesPower',oper='greater than',value=0)
         ]
 
     @declared_attr
-    def geometry(self):
-        return Shape.__table__.c.get('geometry', Column(String))
+    def wkt(self):
+        return Shape.__table__.c.get('wkt', Column(String))
