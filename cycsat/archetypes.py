@@ -247,6 +247,7 @@ class Feature(Base):
 	name = Column(String)
 	visibility = Column(Integer)
 	prototype = Column(String)
+	wkt = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 

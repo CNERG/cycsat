@@ -4,8 +4,10 @@ terrain.py
 import numpy as np
 import math
 
+from cycsat.archetypes import Shape, Rule
 
-class Terrain(object):
+
+class LandCover(Shape):
 	"""
 	"""
 	def __init__(self,width,length):

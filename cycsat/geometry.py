@@ -13,6 +13,30 @@ from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
 
+# =============================================================================
+# Vectorized spatial analysis functions
+# =============================================================================
+
+def within_geometry(geometry,bounds):
+	"""Checks if a geometry is within a bounds."""
+	return geometry.within(bounds)
+
+def intersect_geometry(geometry,bounds):
+	"""Checks if a geometry intersects a bounds."""
+	return geometry.interset(bounds)
+
+def disjoint_geometry(geometry,bounds):
+	"""Checks if a geometry intersects a bounds."""
+	return geometry.disjoint(bounds)
+
+within = np.vectorize(within_geometry)
+interset = np.vectorize(intersect_geometry)
+disjoint = np.vectorize(disjoint_geometry)
+
+# =============================================================================
+# General
+# =============================================================================
+
 def build_geometry(Entity):
 	"""Builds a geometry given an instance"""
 
@@ -25,6 +49,34 @@ def build_geometry(Entity):
 		
 	return geometry
 
+
+def check_disjoints(shapes):
+	"""Checks if there are any overlaps in a list of shapes"""
+
+	for a, b in itertools.combinations(shapes, 2):
+		if a.disjoint(b):
+			continue
+		else:
+			return False
+
+	return True
+
+
+def posit_point(geometry):
+	"""Generates a random point within a geometry"""
+	
+	# define the geometry boundary
+	length = geometry.bounds[-2]
+	width = geometry.bounds[-1]
+
+	# create a random point within geometry
+	posited_point = Point(randint(0,width+1), randint(0,length+1))
+
+	return posited_point
+
+# =============================================================================
+# Facility construction
+# =============================================================================
 
 def create_blueprint(Facility,max_attempts=20):
 	"""Creates a random layout for all the features of a facility and 
@@ -85,31 +137,9 @@ def assess_blueprint(Facility):
 	else:
 		return True
 
-
-def check_disjoints(shapes):
-	"""Checks if there are any overlaps in a list of shapes"""
-
-	for a, b in itertools.combinations(shapes, 2):
-		if a.disjoint(b):
-			continue
-		else:
-			return False
-
-	return True
-
-
-def posit_point(geometry):
-	"""Generates a random point within a geometry"""
-	
-	# define the geometry boundary
-	length = geometry.bounds[-2]
-	width = geometry.bounds[-1]
-
-	# create a random point within geometry
-	posited_point = Point(randint(0,width+1), randint(0,length+1))
-
-	return posited_point
-
+# =============================================================================
+# Placement
+# =============================================================================
 
 def place(Entity,placement,ContextEntity=None):
 	"""Places a shape to a coordinate position"""
@@ -152,13 +182,17 @@ def place_feature(Feature,geometry,max_attempts=20):
 
 		posited_point = posit_point(geometry)
 
+		placed_shapes = list()
 		typology_checks = list()
 		for shape in Feature.shapes:
 			place(shape,posited_point)
 			placement = shape.build_geometry()
+
+			placed_shapes.append(placement)
 			typology_checks.append(placement.within(geometry))
 
 		if False not in typology_checks:
+			Feature.wkt = cascaded_union(placed_shapes).wkt
 			return True
 		else:
 			attempts+=1

@@ -12,6 +12,7 @@ from scipy import ndimage as ndi
 from scipy.stats import rankdata
 
 from osgeo import ogr, gdal, osr
+from geopandas import gpd
 
 # generate terrain
 print('generate')
@@ -23,14 +24,14 @@ y = range(data.shape[1])
 X,Y = np.meshgrid(x,y)
 
 # distance = ndi.distance_transform_edt(data)
-print('edges')
+#print('edges')
 #sob = sobel(data)
 
 print('filling')
 x,y = np.unravel_index(data.argmin(),data.shape)
 mask = np.where(data < data.mean(),1,0)
 flood = floodFill(x,y,mask)
-write_array(flood+1,'poop')
+write_array(flood+1,'test')
 write_array(data,'data')
 
 
@@ -41,21 +42,24 @@ write_array(data,'data')
 # # ax1.contourf(X, Y, flood,cmap=cm.coolwarm_r)
 # plt.show()
 
-ds = gdal.Open('poop.tif')
+ds = gdal.Open('test.tif')
 band = ds.GetRasterBand(1)
 
-drv = ogr.GetDriverByName("ESRI Shapefile")
+drv = ogr.GetDriverByName("GeoJSON")
 
 srs = osr.SpatialReference()
 srs.ImportFromWkt(ds.GetProjectionRef())
 
-out = drv.CreateDataSource('test.shp')
+out = drv.CreateDataSource('test.geojson')
 out_layer = out.CreateLayer('new',srs=None)
 
 fd = ogr.FieldDefn("DN",ogr.OFTInteger)
 out_layer.CreateField(fd)
 
 gdal.Polygonize(band,None,out_layer,0,[],callback=None)
+out = None
+
+gdf = gpd.read_file('test.geojson')
 
 
 
