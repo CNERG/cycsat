@@ -277,7 +277,6 @@ class Shape(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	facility_id = Column(Integer)
 	level = Column(Integer,default=0)
 	visibility = Column(Integer, default=100)
 	prototype = Column(String)

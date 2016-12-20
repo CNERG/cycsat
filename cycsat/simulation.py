@@ -2,7 +2,7 @@
 simulation.py
 """
 from .prototypes import samples
-from .archetypes import Facility
+from .archetypes import Facility, Instrument, Feature, Shape
 from .archetypes import Base
 
 from random import randint
@@ -39,7 +39,7 @@ class Cysat(object):
 		Base.metadata.create_all(self.engine)
 
 		# connect using pandas
-		self.reader = sqlite3.connect(self.world.database)
+		self.reader = sqlite3.connect(self.database)
 
 	# create the database
 	def read(self,sql):
@@ -53,28 +53,21 @@ class Cysat(object):
 		
 		instances = list()
 		for archetype in archetypes:
-			records = self.session.query(archetype).filter().order_by(Archetype.id).all()
+			records = self.session.query(archetype).all()
 			for record in records:
-				instance = {'object_id':record.id,
-							'class':archetype.__name__,
+				print(record.name)
+				instance = {'archetype_id':getattr(record,'id'),
+							'archetype':archetype.__name__,
 							'instance':archetype}
 				instances.append(instance)
-
-
-
-
-
-
-
-
-
-
+		self.gis = pd.DataFrame(instances)
+		return self.gis
 
 
 class World(object):
 	"""Interface for managing the facility geometry (i.e. the "world)"""
 
-		def __init__(self,database):
+	def __init__(self,database):
 		global Session
 		global Base
 		
