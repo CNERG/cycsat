@@ -7,8 +7,6 @@ from .geometry import build_geometry
 
 from .laboratory import materialize
 
-from .terrain import build_terrain
-
 import pandas as pd
 import numpy as np
 
@@ -192,8 +190,6 @@ class Facility(Base):
 	site = relationship(Site, back_populates='facilities')
 
 	def build_footprint(self,placed=False):
-
-		
 		if placed:
 			return load_wkt(self.placement)
 		else:
@@ -281,6 +277,7 @@ class Shape(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	facility_id = Column(Integer)
 	level = Column(Integer,default=0)
 	visibility = Column(Integer, default=100)
 	prototype = Column(String)
@@ -299,6 +296,7 @@ class Shape(Base):
 	
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
+
 
 	def build_footprint(self,geometry='abstract'):
 		"""Returns a shapely geometry"""

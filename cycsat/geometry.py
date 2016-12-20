@@ -15,8 +15,6 @@ from shapely.ops import cascaded_union
 import geopandas as pd
 
 
-
-
 def build_geometry(width,length):
 	"""Builds a rectangle geometry given a width and a length"""
 	geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])

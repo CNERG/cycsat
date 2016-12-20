@@ -2,7 +2,6 @@
 simulation.py
 """
 from .prototypes import samples
-
 from .archetypes import Facility
 from .archetypes import Base
 
@@ -20,14 +19,62 @@ from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import geopandas
+
 
 Session = sessionmaker()
+
+class Cysat(object):
+	"""
+	"""
+	def __init__(self,database):
+		global Session
+		global Base
+
+		# connect using SQLAlchemy
+		self.database = database
+		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=False)
+		Session.configure(bind=self.engine)
+		self.session = Session()
+		Base.metadata.create_all(self.engine)
+
+		# connect using pandas
+		self.reader = sqlite3.connect(self.world.database)
+
+	# create the database
+	def read(self,sql):
+		"""Read sql query as pandas dataframe"""
+		df = pd.read_sql_query(sql,self.reader)
+		return df
+
+	def build_gis(self):
+		"""Builds a pandas index for key tables."""
+		archetypes = [Instrument,Facility,Feature,Shape]
+		
+		instances = list()
+		for archetype in archetypes:
+			records = self.session.query(archetype).filter().order_by(Archetype.id).all()
+			for record in records:
+				instance = {'object_id':record.id,
+							'class':archetype.__name__,
+							'instance':archetype}
+				instances.append(instance)
+
+
+
+
+
+
+
+
+
+
 
 
 class World(object):
 	"""Interface for managing the facility geometry (i.e. the "world)"""
 
-	def __init__(self,database):
+		def __init__(self,database):
 		global Session
 		global Base
 		
@@ -127,6 +174,7 @@ class Simulator(object):
 
 	def launch(self,sql='',min_timestep=None,max_timestep=None):
 		"""Collect images for all facilities using a satellite"""
+		
 		facilities = self.world.select(Facility,sql=sql,first=False)
 
 		start = 0
