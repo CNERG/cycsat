@@ -5,28 +5,26 @@ import numpy as np
 import math
 
 
-def get_corners(array):
-	"""Returns the corners of an array."""
-	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
-	return corners
+class Terrain(object):
+	"""
+	"""
+	def __init__(self,width,length):
+		n = math.ceil(math.log(width,2))
+		dem = mpd(n)
+		clip = dem[0:width,0:length]
+		flat = clip.ravel()
 
-
+		return flat.tostring()
 
 
 # =============================================================================
 # Terrain generation
 # =============================================================================
 
-
-def build_terrain(width,length,method='mpd'):
-	"""
-	"""
-	n = math.ceil(math.log(width,2))
-	land = mpd(n)
-	clip = land[0:width,0:length]
-	flat = clip.ravel()
-
-	return flat.tostring()
+def get_corners(array):
+	"""Returns the corners of an array."""
+	corners = array[tuple(slice(None, None, j-1) for j in array.shape)]
+	return corners
 
 
 def jitter(x,high=10):
@@ -113,11 +111,10 @@ def quarter_array(array):
 # 	Flooding
 # =============================================================================
 
-from skimage.morphology import watershed
-
 
 def floodFill(c,r,mask,value=1):
-	"""Fills water from the lowest corner."""
+	"""Fills water."""
+	
 	# cells already filled
 	filled = set()
 	# cells to fill
