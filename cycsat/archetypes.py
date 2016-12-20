@@ -199,7 +199,7 @@ class Facility(Base):
 
 	def simulate(self,timestep,reader,world):
 		"""Evaluates the rules for dynamic shapes at a given timestep and
-		generates events
+		generates events.
 
 		Keyword arguments:
 		timestep -- the timestep for simulation
@@ -270,6 +270,7 @@ class Shape(Base):
 	prototype = Column(String)
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)
+	wkt = Column(String)
 
 	material_code = Column(Integer)
 	rgb = Column(String)
@@ -324,8 +325,6 @@ Facility.events = relationship('Event',order_by=Event.id,back_populates='facilit
 
 
 class Scene(Base):
-	'''
-	'''
 	__tablename__ = 'CycSat_Scene'
 
 	id = Column(Integer, primary_key=True)
@@ -344,3 +343,27 @@ class Scene(Base):
 Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
 Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
 Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
+
+
+class Terrain(Base):
+	"""A geometry with rules"""
+
+	__tablename__ = 'CycSat_Terrain'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+	level = Column(Integer,default=0)
+	material_code = Column(Integer)
+	rgb = Column(String)
+	wkt = Column(String)
+	
+	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+	facility = relationship(Feature, back_populates='terrains')
+
+	def build_geometry(self):
+		"""Returns a shapely geometry"""
+		self.geometry = load_wkt(self.wkt)
+		return self.geometry
+
+Facility.terrains = relationship('Terrain', order_by=Terrain.id,back_populates='facility')
+

@@ -35,7 +35,6 @@ write_array(flood,'test')
 write_array(data,'data')
 
 
-
 ds = gdal.Open('test.tif')
 band = ds.GetRasterBand(1)
 
@@ -72,4 +71,3 @@ largest = flood.area.sort_values(ascending=False).head(5).index
 gdf.ix[largest].plot(ax=ax3,column='DN')
 
 plt.show()
-

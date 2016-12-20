@@ -11,24 +11,24 @@ from cycsat.archetypes import Shape, Rule, Base
 # Terrain generation
 # =============================================================================
 
-# class Terrain(Base):
-# 	"""
-# 	"""
-# 	def __init__(self,width,length):
-# 		self.width = width
-# 		self.length = length
+class Terrain(Base):
+	"""
+	"""
+	def __init__(self,width,length):
+		self.width = width
+		self.length = length
 		
-# 		n = math.ceil(math.log(width,2))
-# 		data = mpd(n)
-# 		self.dem = data[0:width,0:length]
+		n = math.ceil(math.log(width,2))
+		data = mpd(n)
+		self.dem = data[0:width,0:length]
 	
-# 	def flatten(self):
-# 		flat = clip.ravel()
-# 		return flat.tostring()
+	def flatten(self):
+		flat = clip.ravel()
+		return flat.tostring()
 
 
-# class Cover(object):
-# 	"""A shape with a material."""
+class Cover(object):
+	"""A shape with a material."""
 
 
 # =============================================================================
