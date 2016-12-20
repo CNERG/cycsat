@@ -4,19 +4,31 @@ terrain.py
 import numpy as np
 import math
 
-from cycsat.archetypes import Shape, Rule
+from cycsat.archetypes import Shape, Rule, Base
 
 
-class LandCover(Shape):
-	"""
-	"""
-	def __init__(self,width,length):
-		n = math.ceil(math.log(width,2))
-		dem = mpd(n)
-		clip = dem[0:width,0:length]
-		flat = clip.ravel()
+# =============================================================================
+# Terrain generation
+# =============================================================================
 
-		return flat.tostring()
+# class Terrain(Base):
+# 	"""
+# 	"""
+# 	def __init__(self,width,length):
+# 		self.width = width
+# 		self.length = length
+		
+# 		n = math.ceil(math.log(width,2))
+# 		data = mpd(n)
+# 		self.dem = data[0:width,0:length]
+	
+# 	def flatten(self):
+# 		flat = clip.ravel()
+# 		return flat.tostring()
+
+
+# class Cover(object):
+# 	"""A shape with a material."""
 
 
 # =============================================================================
@@ -114,8 +126,14 @@ def quarter_array(array):
 # =============================================================================
 
 
+def terrain_min(terrain):
+	"""Takes a terrain and returns the coordinates of the minimum point."""
+	x,y = np.unravel_index(terrain.argmin(),terrain.shape)
+	return (x,y)
+
+
 def floodFill(c,r,mask,value=1):
-	"""Fills water."""
+	"""Fills water at given pour point."""
 	
 	# cells already filled
 	filled = set()
