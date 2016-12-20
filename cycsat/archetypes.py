@@ -76,7 +76,6 @@ class Instrument(Base):
 
 	def build_geometry(self):
 		self.geometry = build_geometry(self)
-		return self.geometry
 
 
 	def target(self,Facility):
@@ -182,11 +181,8 @@ class Facility(Base):
 	site = relationship(Site, back_populates='facilities')
 
 	def build_geometry(self):
-		if self.wkt:
-			self.geometry = load_wkt(self.geometry)
-		else:
-			self.geometry = build_geometry(self)
-		return self.geometry
+		self.geometry = build_geometry(self)
+
 
 	def build(self):
 		"""Randomly places all the features of a facility"""	

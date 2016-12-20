@@ -24,6 +24,7 @@ import geopandas
 
 Session = sessionmaker()
 
+
 class Cysat(object):
 	"""
 	"""
@@ -58,9 +59,10 @@ class Cysat(object):
 				print(record.name)
 				instance = {'archetype_id':getattr(record,'id'),
 							'archetype':archetype.__name__,
-							'instance':archetype}
+							'instance':record}
 				instances.append(instance)
 		self.gis = pd.DataFrame(instances)
+
 		return self.gis
 
 

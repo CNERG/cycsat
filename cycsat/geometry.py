@@ -13,15 +13,16 @@ from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
 
-def build_geometry(Entity, footprint=True):
+def build_geometry(Entity):
 	"""Builds a geometry given an instance"""
 
-	if footprint:
+	if Entity.wkt:
+		geometry = load_wkt(Entity.wkt)
+	else:
 		width = Entity.width*10
 		length = Entity.length*10
 		geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
-	else:
-		geometry = load_wkt(Entity.geometry)
+		
 	return geometry
 
 

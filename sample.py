@@ -10,7 +10,7 @@ copyfile(src, dst)
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
 
-from cycsat.simulation import Simulator
+from cycsat.simulation import Simulator, Cysat
 from cycsat.archetypes import Mission, Facility, Site, Satellite
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
@@ -19,6 +19,9 @@ from cycsat.image import Sensor
 # initialize the simulator object and build the world
 sim = Simulator('reactor_test_sample.sqlite')
 sim.build(AgentId=20)
+
+sim = Cysat('reactor_test_sample.sqlite')
+sim.build_gis()
 
 # # generate events table
 # sim.simulate()
