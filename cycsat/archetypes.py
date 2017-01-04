@@ -346,7 +346,7 @@ Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission
 
 
 class Terrain(Base):
-	"""A geometry with rules"""
+	"""A geometry for the base terrain of a facility"""
 
 	__tablename__ = 'CycSat_Terrain'
 
@@ -358,7 +358,7 @@ class Terrain(Base):
 	wkt = Column(String)
 	
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Feature, back_populates='terrains')
+	facility = relationship(Facility, back_populates='terrains')
 
 	def build_geometry(self):
 		"""Returns a shapely geometry"""

@@ -5,30 +5,45 @@ import numpy as np
 import math
 
 from cycsat.archetypes import Shape, Rule, Base
+from cycsat.image import write_array
+
+from osgeo import ogr, gdal, osr
+from geopandas import gpd
 
 
-# =============================================================================
-# Terrain generation
-# =============================================================================
-
-class Terrain(Base):
+def define_terrain(width,length):
 	"""
 	"""
-	def __init__(self,width,length):
-		self.width = width
-		self.length = length
-		
-		n = math.ceil(math.log(width,2))
-		data = mpd(n)
-		self.dem = data[0:width,0:length]
+	n = math.ceil(math.log(width,2))
+	data = mpd(n)
+	dem = data[0:width,0:length]
+
+	x,y = terrain_min(dem)
+	mask = np.where(dem < dem.mean(),1,0)
+	flood = floodFill(x,y,mask)
+
+	out_number = str(np.random.randint(low=100000,high=999999))
+	out_raster = 'temp/'+out_number
+	out_shp = 'temp/'+out_number+'.shp'
 	
-	def flatten(self):
-		flat = clip.ravel()
-		return flat.tostring()
+	write_array(flood,out_raster)
 
+	ds = gdal.Open(out_raster+'.tif')
+	band = ds.GetRasterBand(1)
 
-class Cover(object):
-	"""A shape with a material."""
+	drv = ogr.GetDriverByName("ESRI Shapefile")
+
+	out = drv.CreateDataSource(out_shp)
+	out_layer = out.CreateLayer('terrains',srs=None)
+
+	fd = ogr.FieldDefn("DN",ogr.OFTInteger)
+	out_layer.CreateField(fd)
+
+	gdal.Polygonize(band,None,out_layer,0,[],callback=None)
+	out = None
+
+	gdf = gpd.read_file(out_shp)
+	return gdf
 
 
 # =============================================================================
@@ -49,7 +64,7 @@ def jitter(x,high=10):
 def init_corners(array):
 	"""Sets the corners of an array to a random value"""
 	corners = get_corners(array)
-	corners+= np.random.randint(0,255,(2,2))
+	corners+= np.random.randint(0,100,(2,2))
 	return array
 
 
@@ -67,7 +82,7 @@ def midpoints(array,jit):
 	return array
 
 
-def mpd(n=3,jit=5):
+def mpd(n=3,jit=0):
 	"""Midpoint distance replacement"""
 
 	size = (2**n)+1
