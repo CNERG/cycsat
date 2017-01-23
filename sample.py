@@ -17,6 +17,9 @@ from cycsat.prototypes.reactor import SampleReactor
 from cycsat.prototypes.shapes import Circle
 from cycsat.image import Sensor
 
+
+gis = Cysat('reactor_test_sample.sqlite')
+
 # # initialize the simulator object and build the world
 # sim = Simulator('reactor_test_sample.sqlite')
 # sim.build(AgentId=20)

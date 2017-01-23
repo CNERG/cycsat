@@ -28,12 +28,12 @@ X,Y = np.meshgrid(x,y)
 #sob = sobel(data)
 
 print('filling')
+
 x,y = np.unravel_index(data.argmin(),data.shape)
 mask = np.where(data < data.mean(),1,0)
 flood = floodFill(x,y,mask)
 write_array(flood,'test')
 write_array(data,'data')
-
 
 ds = gdal.Open('test.tif')
 band = ds.GetRasterBand(1)
