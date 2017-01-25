@@ -56,7 +56,7 @@ def get_corners(array):
 	return corners
 
 
-def jitter(x,high=5):
+def jitter(x,high=0):
 	noise = np.random.normal(0,high)
 	return int(x+noise)
 
@@ -68,21 +68,21 @@ def init_corners(array):
 	return array
 
 
-def midpoints(array,jit):
+def midpoints(array):
 	"""Sets the edges to the mean of the corners"""
 	midpoint = int(array.shape[0]/2)
 	corners = get_corners(array)
 
-	array[0,midpoint] = jitter(corners[0,:].mean())
-	array[midpoint,-1] = jitter(corners[-1,:].mean())
-	array[-1,midpoint] = jitter(corners[:,-1].mean())
-	array[midpoint,0] = jitter(corners[:,0].mean())
-	array[midpoint,midpoint] = jitter(corners.mean())
+	array[0,midpoint] = corners[0,:].mean()
+	array[midpoint,-1] = corners[-1,:].mean()
+	array[-1,midpoint] = corners[:,-1].mean()
+	array[midpoint,0] = corners[:,0].mean()
+	array[midpoint,midpoint] = corners.mean()
 
 	return array
 
 
-def mpd(n=3,jit=0):
+def mpd(n=3):
 	"""Midpoint distance replacement"""
 
 	size = (2**n)+1
@@ -90,13 +90,13 @@ def mpd(n=3,jit=0):
 	
 	# initialize corners and midpoints (pass 1)
 	init_corners(heightmap)
-	midpoints(heightmap,jit)
+	midpoints(heightmap)
 
 	slices = nested_quarters(n,heightmap)
 
 	for level in sorted(slices):
 		for array in sorted(slices[level]):
-			midpoints(slices[level][array],jit)
+			midpoints(slices[level][array])
 
 	return heightmap
 	
