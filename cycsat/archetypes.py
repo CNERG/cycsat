@@ -198,13 +198,14 @@ class Facility(Base):
 				pass
 
 	def simulate(self,timestep,reader,world):
-		"""Evaluates the rules for dynamic shapes at a given timestep and
+		"""Evaluates the conditions for dynamic shapes at a given timestep and
 		generates events.
 
 		Keyword arguments:
 		timestep -- the timestep for simulation
 		reader -- a reader connection for reading data from the database
 		"""
+		
 		dynamic_shapes = []
 		for feature in self.features:
 			for shape in [s for s in feature.shapes if s.visibility!=100]:
@@ -213,12 +214,12 @@ class Facility(Base):
 		events = []
 		for shape in dynamic_shapes:
 			evaluations = []
-			for rule in shape.rules:
-				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (rule.table,self.AgentId,timestep)
+			for condition in shape.conditions:
+				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (condition.table,self.AgentId,timestep)
 				df = pd.read_sql_query(qry,reader)
 				value = df['Value'][0]
 
-				if operations[rule.oper](value,rule.value):
+				if operations[condition.oper](value,condition.value):
 					evaluations.append(True)
 				else:
 					evaluations.append(False)
@@ -259,7 +260,7 @@ Facility.features = relationship('Feature', order_by=Feature.id,back_populates='
 
 
 class Shape(Base):
-	"""A geometry with rules"""
+	"""A geometry with condtions and rules"""
 
 	__tablename__ = 'CycSat_Shape'
 
@@ -288,15 +289,31 @@ class Shape(Base):
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
 
 
-class Rule(Base):
-	"""Condition for a shape to appear to have an event in a timestep"""
+class Condition(Base):
+	"""Condition for a shape to have an event (appear) in a timestep (scene)"""
 	
-	__tablename__ = 'CycSat_Rule'
+	__tablename__ = 'CycSat_Condition'
 
 	id = Column(Integer, primary_key=True)
 	table = Column(String)
 	oper = Column(String)
 	value = Column(Integer)
+
+	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
+	shape = relationship(Shape, back_populates='conditions')
+
+
+Shape.conditions = relationship('Condition', order_by=Condition.id,back_populates='shape')
+
+
+class Rule(Base):
+	"""Spatial rule for where a shape can appear"""
+	
+	__tablename__ = 'CycSat_Rule'
+
+	id = Column(Integer, primary_key=True)
+	operation = Column(String) # e.g. within, disjoint, near etc.
+	area = Column(Integer)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='rules')

@@ -56,7 +56,7 @@ def get_corners(array):
 	return corners
 
 
-def jitter(x,high=10):
+def jitter(x,high=5):
 	noise = np.random.normal(0,high)
 	return int(x+noise)
 
