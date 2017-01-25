@@ -42,11 +42,43 @@ class Cysat(object):
 		# connect using pandas
 		self.reader = sqlite3.connect(self.database)
 
-	# create the database
+	def select(self,Entity):
+		"""Selects entities from database"""
+		result = self.session.query(Entity).all()
+		return result
+
+	def write(self,Entities):
+		"""Writes archetype instances to database"""
+
+		if isinstance(Entities, list):
+			self.session.add_all(Entities)
+		else:
+			self.session.add(Entities)
+		self.session.commit()
+
 	def read(self,sql):
 		"""Read sql query as pandas dataframe"""
 		df = pd.read_sql_query(sql,self.reader)
 		return df
+
+	def build(self,AgentId=None):
+		"""Builds all the facilities in an output database from cyclus"""
+
+		facilities = list()
+
+		sql = 'select * from AgentEntry'
+		if AgentId:
+			sql = 'select * from AgentEntry where AgentId='+str(AgentId)
+		AgentEntry = self.read(sql)
+		
+		for agent in AgentEntry.iterrows():
+			prototype = agent[1]['Spec'][10:]
+
+			if agent[1]['Kind']=='Facility':
+				facility = samples[prototype](AgentId=agent[1]['AgentId'])
+				facility.build()
+				facilities.append(facility)
+		self.write(facilities)
 
 	def build_gis(self):
 		"""Builds a pandas index for key tables."""
@@ -65,43 +97,17 @@ class Cysat(object):
 
 		return self.gis
 
+	def simulate(self):
+		"""Generates events for all facilties"""
 
-class World(object):
-	"""Interface for managing the facility geometry (i.e. the "world)"""
-
-	def __init__(self,database):
-		global Session
-		global Base
-		
-		self.database = database
-		self.engine = create_engine('sqlite+pysqlite:///'+self.database, module=sqlite3.dbapi2,echo=False)
-		Session.configure(bind=self.engine)
-		self.session = Session()
-		Base.metadata.create_all(self.engine)
-
-	def select(self,Archetype,sql='',first=True):
-		"""Selects archetype instances from database
-
-		Keyword arguments:
-		Archetype -- the archetype class to select
-		sql -- the sql query
-
-		"""
-		query = self.session.query(Archetype).filter(text(sql)).order_by(Archetype.id)
-		if first:
-			return query.first()
-		else:
-			return query.all()
-
-
-	def write(self,Entities):
-		"""Writes archetype instances to database"""
-
-		if isinstance(Entities, list):
-			self.session.add_all(Entities)
-		else:
-			self.session.add(Entities)
-		self.session.commit()
+		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
+		facilities = self.select(Facility)
+		for facility in facilities:
+			for timestep in range(self.duration):
+				try:
+					facility.simulate(timestep,self.reader,self)
+				except:
+					continue
 
 
 class Simulator(object):
