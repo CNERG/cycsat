@@ -11,8 +11,8 @@ from osgeo import ogr, gdal, osr
 from geopandas import gpd
 
 
-def simple_terrain(width,length):
-	"""Creates a simple land and water terrain"""
+def simple(width,length):
+	"""Creates a simple land and water terrain returns terrain shapes"""
 	n = math.ceil(math.log(width,2))
 	data = mpd(n)
 	terrain = data[0:width,0:length]
@@ -40,8 +40,23 @@ def simple_terrain(width,length):
 	out = None
 
 	gdf = gpd.read_file(out_shp)
+	gdf['area'] = gdf.area
 
-	return gdf
+	land = Shape(category='Terrain',
+				 name='Land',
+				 wkt=gdf.sort_values('area',ascending=False).iloc[0]['geometry'].wkt,
+				 level=0)
+
+	water_shapes = list()
+	water_bodies= gdf.sort_values('area',ascending=False).iloc[1:]['geometry'].tolist()
+	for body in water_bodies:
+		water_shape = Shape(category='Terrain',
+			                name='Water',
+			                wkt=body.wkt,
+			                level=0)
+		water_shapes.append(water_shape)
+
+	return [land]+water_shapes
 
 
 # =============================================================================

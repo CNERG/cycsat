@@ -6,6 +6,20 @@ from cycsat.archetypes import Shape, Feature
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
 
+class SitePad(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'lawn'}
+
+    def __init__(self,name='site pad',visibility=100):
+        
+        self.name = name
+        self.visibility = visibility
+
+        # define shapes
+        self.shapes = [
+        Rectangle(width=5000,length=5000,material_code=1)
+        ]
+
+
 class Lawn(Feature):
     __mapper_args__ = {'polymorphic_identity': 'lawn'}
 

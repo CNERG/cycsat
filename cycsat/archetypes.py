@@ -246,6 +246,7 @@ class Feature(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	order = Column(Integer)
 	visibility = Column(Integer)
 	prototype = Column(String)
 	wkt = Column(String)
@@ -266,6 +267,7 @@ class Shape(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
+	category = Column(String)
 	level = Column(Integer,default=0)
 	visibility = Column(Integer, default=100)
 	prototype = Column(String)
@@ -360,27 +362,4 @@ class Scene(Base):
 Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
 Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
 Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
-
-
-class Terrain(Base):
-	"""A geometry for the base terrain of a facility"""
-
-	__tablename__ = 'CycSat_Terrain'
-
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	level = Column(Integer,default=0)
-	material_code = Column(Integer)
-	rgb = Column(String)
-	wkt = Column(String)
-	
-	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Facility, back_populates='terrains')
-
-	def build_geometry(self):
-		"""Returns a shapely geometry"""
-		self.geometry = load_wkt(self.wkt)
-		return self.geometry
-
-Facility.terrains = relationship('Terrain', order_by=Terrain.id,back_populates='facility')
 

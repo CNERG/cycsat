@@ -74,6 +74,28 @@ def posit_point(geometry):
 
 	return posited_point
 
+
+# =============================================================================
+# Site construction
+# =============================================================================
+
+def create_plan(Site,max_attempts=20):
+	"""Creates a random layout for all the features of a facility and 
+	gives each feature a placed geometry
+
+	Keyword arguments:
+	max_attempts -- the maximum number attempts to be made
+	"""
+	Site.build_geometry()
+	facilities = Site.facilities
+
+	for facility in facilities:
+		placed = place_facility(facility,Site.footprint)
+		if placed:
+			continue
+		else:
+			print('site plan failed')
+
 # =============================================================================
 # Facility construction
 # =============================================================================
@@ -94,24 +116,6 @@ def create_blueprint(Facility,max_attempts=20):
 			continue
 		else:
 			print('blueprint failed')
-
-
-def create_plan(Site,max_attempts=20):
-	"""Creates a random layout for all the features of a facility and 
-	gives each feature a placed geometry
-
-	Keyword arguments:
-	max_attempts -- the maximum number attempts to be made
-	"""
-	Site.build_geometry()
-	facilities = Site.facilities
-
-	for facility in facilities:
-		placed = place_facility(facility,Site.footprint)
-		if placed:
-			continue
-		else:
-			print('site plan failed')
 
 
 def assess_blueprint(Facility):
