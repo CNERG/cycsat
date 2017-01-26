@@ -11,43 +11,41 @@ from osgeo import ogr, gdal, osr
 from geopandas import gpd
 
 
-def define_terrain(width,length):
-	"""
-	"""
+def simple_terrain(width,length):
+	"""Creates a simple land and water terrain"""
 	n = math.ceil(math.log(width,2))
 	data = mpd(n)
-	dem = data[0:width,0:length]
+	terrain = data[0:width,0:length]
 
-	x,y = terrain_min(dem)
-	mask = np.where(dem < dem.mean(),1,0)
-	flood = floodFill(x,y,mask)
+	mask = np.where(terrain < terrain.mean(),1,0)
 
+	# create temporary storage names
 	out_number = str(np.random.randint(low=100000,high=999999))
 	out_raster = 'temp/'+out_number
 	out_shp = 'temp/'+out_number+'.shp'
-	
-	write_array(flood,out_raster)
 
+	# write out a raster file
+	write_array(mask,out_raster)
 	ds = gdal.Open(out_raster+'.tif')
 	band = ds.GetRasterBand(1)
 
-	drv = ogr.GetDriverByName("ESRI Shapefile")
-
+	drv = ogr.GetDriverByName('ESRI Shapefile')
 	out = drv.CreateDataSource(out_shp)
 	out_layer = out.CreateLayer('terrains',srs=None)
 
-	fd = ogr.FieldDefn("DN",ogr.OFTInteger)
+	fd = ogr.FieldDefn('DN',ogr.OFTInteger)
 	out_layer.CreateField(fd)
 
 	gdal.Polygonize(band,None,out_layer,0,[],callback=None)
 	out = None
 
 	gdf = gpd.read_file(out_shp)
+
 	return gdf
 
 
 # =============================================================================
-# Terrain generation
+# Terrain generation: Mid-point distance replacement
 # =============================================================================
 
 def get_corners(array):
@@ -184,6 +182,40 @@ def floodFill(c,r,mask,value=1):
 				fill.add(south)
 
 	return flood
+
+def define_terrain_defunct(width,length):
+	"""
+	"""
+	n = math.ceil(math.log(width,2))
+	data = mpd(n)
+	dem = data[0:width,0:length]
+
+	x,y = terrain_min(dem)
+	mask = np.where(dem < dem.mean(),1,0)
+	flood = floodFill(x,y,mask)
+
+	out_number = str(np.random.randint(low=100000,high=999999))
+	out_raster = 'temp/'+out_number
+	out_shp = 'temp/'+out_number+'.shp'
+	
+	write_array(flood,out_raster)
+
+	ds = gdal.Open(out_raster+'.tif')
+	band = ds.GetRasterBand(1)
+
+	drv = ogr.GetDriverByName("ESRI Shapefile")
+
+	out = drv.CreateDataSource(out_shp)
+	out_layer = out.CreateLayer('terrains',srs=None)
+
+	fd = ogr.FieldDefn("DN",ogr.OFTInteger)
+	out_layer.CreateField(fd)
+
+	gdal.Polygonize(band,None,out_layer,0,[],callback=None)
+	out = None
+
+	gdf = gpd.read_file(out_shp)
+	return band
 
 
 
