@@ -1,6 +1,5 @@
 """
 prototpyes/feature.py
-
 """
 from cycsat.archetypes import Shape, Feature
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume

@@ -33,7 +33,7 @@ axes[0,0].set_ylim([0,10000])
 
 ax_l = axes.flatten()
 
-for patch,ax in zip(a,ax_l[1:]):
+for patch,ax in zip(a,ax_l):
 	p = PolygonPatch(patch)
 	ax.add_patch(p)
 

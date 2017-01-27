@@ -126,7 +126,10 @@ def create_blueprint(Facility,max_attempts=20):
 			continue
 		else:
 			print('blueprint failed')
+			return False
 
+	bounds = placement_bounds(bounds,placed_features)
+	test_bounds.append(bounds)
 	return test_bounds
 
 
@@ -159,8 +162,8 @@ def build_facility(Facility):
 	built = 0
 	while (built == 0):
 		tbs = create_blueprint(Facility)
-		valid = assess_blueprint(Facility)
-		if valid:
+		# valid = assess_blueprint(Facility)
+		if tbs:
 			built = 1
 			Facility.defined = True
 			return tbs
