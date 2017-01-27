@@ -51,6 +51,13 @@ def build_geometry(Entity):
 	return geometry
 
 
+def build_feature_footprint(Feature):
+	"""Returns a geometry that is the union of all a feature's static shapes"""
+	shapes = [shape.build_geometry() for shape in Feature.shapes if shape.visibility==100]
+	union = cascaded_union(shapes)
+	return union
+
+
 def check_disjoints(shapes):
 	"""Checks if there are any overlaps in a list of shapes"""
 
@@ -104,13 +111,14 @@ def create_plan(Site,max_attempts=20):
 
 def create_blueprint(Facility,max_attempts=20):
 	"""Creates a random layout for all the features of a facility and 
-	gives each feature a placed geometry
+	gives each feature a placed geometry.
 
 	Keyword arguments:
-	max_attempts -- the maximum number attempts to be made
+	max_attempts -- the maximum number attempts to be made.
 	"""
 	bounds = Facility.build_geometry()
 
+	# this is for visual tests
 	test_bounds = list()
 	test_bounds.append(bounds)
 
@@ -119,8 +127,11 @@ def create_blueprint(Facility,max_attempts=20):
 	for feature in Facility.features:
 		if placed_features:
 			bounds = placement_bounds(bounds,placed_features)
-			test_bounds.append(bounds)
+			test_bounds.append(bounds) # for visual testing
+		
 		placed = place_feature(feature,bounds,max_attempts=max_attempts)
+		
+
 		if placed:
 			placed_features.append(placed)
 			continue
@@ -131,30 +142,6 @@ def create_blueprint(Facility,max_attempts=20):
 	bounds = placement_bounds(bounds,placed_features)
 	test_bounds.append(bounds)
 	return test_bounds
-
-
-def assess_blueprint(Facility):
-	"""Checks to see the blueprint has any illegal overlaps"""
-
-	shape_stack = dict()
-
-	# build a shape stack by level
-	for feature in Facility.features:
-		for shape in feature.shapes:
-			geometry = shape.build_geometry()
-			if shape.level in shape_stack:
-				shape_stack[shape.level].append(geometry)
-			else:
-				shape_stack[shape.level] = [geometry]
-
-	level_overlaps = []
-	for level in shape_stack:
-		level_overlaps.append(check_disjoints(shape_stack[level]))
-
-	if False in level_overlaps:
-		return False
-	else:
-		return True
 
 
 def build_facility(Facility):
@@ -237,17 +224,22 @@ def place_feature(Feature,geometry,max_attempts=20):
 	return False
 
 
-def placement_bounds(footprint,placed_features):
+def placement_bounds(facility_footprint,placed_features):
 	"""Takes a list of placed features and a facility footprint 
-	and generates a geometry of all possible locations to be placed"""
+	and generates a geometry of all possible locations to be placed."""
 
-	placed_shapes = list()
+	placed_footprints = list()
 	for feature in placed_features:
-		feature_shapes = [x.build_geometry() for x in feature.shapes if x.visibility==100]
-		placed_shapes+=feature_shapes
+
+		# check Rules
+
+
+
+		feature_footprint = build_feature_footprint(feature)
+		placed_footprints.append(feature_footprint)
 	
-	union_shapes = cascaded_union(placed_shapes)
-	bounds = footprint.difference(union_shapes)
+	union_footprints = cascaded_union(placed_footprints)
+	bounds = facility_footprint.difference(union_footprints)
 
 	return bounds
 
@@ -272,3 +264,31 @@ def place_facility(Facility,geometry,max_attempts=20):
 	print(Facility.id,'facility placement failed after',max_attempts,'attempts.')
 	return False
 
+
+
+# =============================================================================
+# Retired functions
+# =============================================================================
+
+def assess_blueprint(Facility):
+	"""Checks to see the blueprint has any illegal overlaps"""
+
+	shape_stack = dict()
+
+	# build a shape stack by level
+	for feature in Facility.features:
+		for shape in feature.shapes:
+			geometry = shape.build_geometry()
+			if shape.level in shape_stack:
+				shape_stack[shape.level].append(geometry)
+			else:
+				shape_stack[shape.level] = [geometry]
+
+	level_overlaps = []
+	for level in shape_stack:
+		level_overlaps.append(check_disjoints(shape_stack[level]))
+
+	if False in level_overlaps:
+		return False
+	else:
+		return True
