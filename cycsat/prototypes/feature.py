@@ -6,20 +6,6 @@ from cycsat.archetypes import Shape, Feature
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
 
-class SitePad(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'SitePad'}
-
-    def __init__(self,name='site pad',visibility=100):
-        
-        self.name = name
-        self.visibility = visibility
-
-        # define shapes
-        self.shapes = [
-        Rectangle(width=5000,length=5000,material_code=1)
-        ]
-
-
 class Lawn(Feature):
     __mapper_args__ = {'polymorphic_identity': 'lawn'}
 
@@ -48,13 +34,12 @@ class Truck(Feature):
         ]
 
 
-class SampleCoolingTower(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample cooling tower'}
+class SampleCoolingTower1(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'sample cooling tower 1'}
 
-    def __init__(self,name='sample cooling tower',visibility=100):
+    def __init__(self,name='sample cooling tower 1'):
         
         self.name = name
-        self.visibility = visibility
 
         # define shapes
         self.shapes = [
@@ -62,6 +47,23 @@ class SampleCoolingTower(Feature):
         Circle(level=1,radius=620,material_code=24),
         Plume(level=2,radius=800,rgb=[255,255,255],xoff=500,yoff=500)
         ]
+
+
+class SampleCoolingTower2(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'sample cooling tower 2'}
+
+    def __init__(self,name='sample cooling tower 2'):
+        
+        self.name = name
+
+        # define shapes
+        self.shapes = [
+        Circle(radius=900,material_code=23),
+        Circle(level=1,radius=620,material_code=24),
+        Plume(level=2,radius=800,rgb=[255,255,255],xoff=500,yoff=500)
+        ]
+
+        self.rules = []
 
 
 class SampleContainment(Feature):

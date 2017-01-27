@@ -7,6 +7,7 @@ from random import randint
 import itertools
 
 import numpy as np
+
 from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
@@ -100,6 +101,7 @@ def create_plan(Site,max_attempts=20):
 # Facility construction
 # =============================================================================
 
+
 def create_blueprint(Facility,max_attempts=20):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry
@@ -141,9 +143,25 @@ def assess_blueprint(Facility):
 	else:
 		return True
 
+
+def build_facility(Facility):
+	"""Randomly places all the features of a facility"""	
+	built = 0
+	while (built == 0):
+		create_blueprint(Facility)
+		valid = assess_blueprint(Facility)
+		if valid:
+			built = 1
+			Facility.defined = True
+		else:
+			Facility.defined = False
+			pass
+
+
 # =============================================================================
 # Placement
 # =============================================================================
+
 
 def place(Entity,placement,ContextEntity=None):
 	"""Places a shape to a coordinate position"""
@@ -203,6 +221,20 @@ def place_feature(Feature,geometry,max_attempts=20):
 
 	print(Feature.id,'placement failed after',max_attempts,'attempts.')
 	return False
+
+
+def determine_bounds(footprint,placed_features):
+	"""Takes a list of placed features and a facility footprint 
+	and generates a geometry of all possible locations to be placed"""
+
+	placed_shapes = list()
+	for feature in placed_features:
+		placed_shapes+=feature.shapes
+	
+	union_shapes = cascaded_union(placed_features)
+	bounds = footprint.difference(union_shapes)
+
+	return bounds
 
 
 def place_facility(Facility,geometry,max_attempts=20):

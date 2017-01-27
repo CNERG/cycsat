@@ -18,4 +18,8 @@ from cycsat.prototypes.shapes import Circle
 from cycsat.image import Sensor
 
 
-sim = Cysat('reactor_test_sample.sqlite')
+# sim = Cysat('reactor_test_sample.sqlite')
+
+s = SampleReactor()
+
+

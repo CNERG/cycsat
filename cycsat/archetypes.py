@@ -183,7 +183,6 @@ class Facility(Base):
 	def build_geometry(self):
 		self.geometry = build_geometry(self)
 
-
 	def build(self):
 		"""Randomly places all the features of a facility"""	
 		built = 0
@@ -313,19 +312,23 @@ Feature.conditions = relationship('Condition', order_by=Condition.id,back_popula
 
 
 class Rule(Base):
-	"""Spatial rule for where a shape can appear"""
+	"""Spatial rule for where a feature or shape can appear."""
 	
 	__tablename__ = 'CycSat_Rule'
 
 	id = Column(Integer, primary_key=True)
-	operation = Column(String) # e.g. within, disjoint, near etc.
-	area = Column(Integer)
+	oper = Column(String) # e.g. within, disjoint, near etc.
+	target = Column(Integer)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='rules')
 
+	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+	feature = relationship(Feature, back_populates='rules')
+
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
+Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')
 
 
 class Event(Base):

@@ -2,8 +2,8 @@
 prototypes/reactor.py
 """
 from cycsat.archetypes import Facility, Feature
-from cycsat.prototypes.feature import SampleCoolingTower, SampleContainment
-from cycsat.prototypes.feature import SampleTurbine, Lawn, SitePad
+from cycsat.prototypes.feature import SampleCoolingTower1, SampleContainment
+from cycsat.prototypes.feature import SampleTurbine
 
 
 class SampleReactor(Facility):
@@ -18,8 +18,8 @@ class SampleReactor(Facility):
 
         self.features = [
         SitePad(order=1),
-        SampleCoolingTower(order=2),
-        SampleCoolingTower(order=2),
+        SampleCoolingTower1(order=2),
+        SampleCoolingTower1(order=2),
         SampleContainment(order=2),
         SampleContainment(order=2),
         SampleTurbine(order=2)
