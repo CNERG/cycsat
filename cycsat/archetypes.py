@@ -320,6 +320,7 @@ class Rule(Base):
 	id = Column(Integer, primary_key=True)
 	oper = Column(String) # e.g. within, disjoint, near etc.
 	target = Column(Integer)
+	inout = Column(Integer) # can be here or cannot be here
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='rules')

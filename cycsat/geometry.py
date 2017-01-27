@@ -265,6 +265,15 @@ def place_facility(Facility,geometry,max_attempts=20):
 	return False
 
 
+def evaluate_rule(Rule,facility_footprint,placed_features):
+	"""Evaluates a spatial rule and returns a boundary geometry"""
+
+	targets = [feature for feature in placed_features if name==Rule.target]
+
+	if Rule.operation=='within':
+
+
+
 
 # =============================================================================
 # Retired functions
