@@ -10,8 +10,8 @@ copyfile(src, dst)
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
 
-from cycsat.simulation import Simulator, Cysat
-from cycsat.archetypes import Mission, Facility, Site, Satellite, Terrain, Shape
+from cycsat.simulation import Cysat
+from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
 from cycsat.prototypes.shapes import Circle

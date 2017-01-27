@@ -7,7 +7,7 @@ from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
 
 class SitePad(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'lawn'}
+    __mapper_args__ = {'polymorphic_identity': 'SitePad'}
 
     def __init__(self,name='site pad',visibility=100):
         

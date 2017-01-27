@@ -1,6 +1,5 @@
 """
 prototypes/reactor.py
-
 """
 from cycsat.archetypes import Facility, Feature
 from cycsat.prototypes.feature import SampleCoolingTower, SampleContainment

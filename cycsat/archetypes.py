@@ -292,7 +292,7 @@ Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature
 
 
 class Condition(Base):
-	"""Condition for a shape to have an event (appear) in a timestep (scene)"""
+	"""Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
 	
 	__tablename__ = 'CycSat_Condition'
 
@@ -304,8 +304,12 @@ class Condition(Base):
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='conditions')
 
+	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+	feature = relationship(Feature, back_populates='conditions')
+
 
 Shape.conditions = relationship('Condition', order_by=Condition.id,back_populates='shape')
+Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature')
 
 
 class Rule(Base):
