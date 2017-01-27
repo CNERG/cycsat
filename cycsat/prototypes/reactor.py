@@ -17,11 +17,10 @@ class SampleReactor(Facility):
         self.length = 862
 
         self.features = [
-        SitePad(order=1),
-        SampleCoolingTower1(order=2),
-        SampleCoolingTower1(order=2),
-        SampleContainment(order=2),
-        SampleContainment(order=2),
-        SampleTurbine(order=2)
+        SampleCoolingTower1(),
+        SampleCoolingTower1(),
+        SampleContainment(),
+        SampleContainment(),
+        SampleTurbine()
         ]
 

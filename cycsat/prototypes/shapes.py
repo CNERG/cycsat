@@ -8,7 +8,7 @@ from sqlalchemy import Column, String
 
 from shapely.geometry import Polygon, Point
 
-from cycsat.archetypes import Shape, Rule
+from cycsat.archetypes import Shape, Rule, Condition
 from cycsat.laboratory import Material
 
 
@@ -34,7 +34,7 @@ class Circle(Shape):
 class Rectangle(Shape):
     __mapper_args__ = {'polymorphic_identity': 'rectangle'}
 
-    def __init__(self,material_code=None,rgb=[255,255,255],width=300,length=400,level=0,xoff=0,yoff=0,rotation=0):
+    def __init__(self,material_code=None,rgb=[255,255,255],width=300,length=400,level=0,xoff=0,yoff=0,rotation=0,visibility=100):
         self.width = width
         self.length = length
         self.level = level
@@ -42,6 +42,7 @@ class Rectangle(Shape):
         self.rgb = str(rgb)
         self.xoff = xoff
         self.yoff = yoff
+        self.visibility = visibility
 
         self.wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
 
@@ -64,8 +65,8 @@ class Plume(Shape):
 
         self.wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
-        self.rules = [
-        Rule(table='TimeSeriesPower',oper='greater than',value=0)
+        self.conditions = [
+        Condition(table='TimeSeriesPower',oper='greater than',value=0)
         ]
 
     @declared_attr

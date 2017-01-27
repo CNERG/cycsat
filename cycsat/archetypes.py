@@ -182,6 +182,7 @@ class Facility(Base):
 
 	def build_geometry(self):
 		self.geometry = build_geometry(self)
+		return self.geometry
 
 	def build(self):
 		"""Randomly places all the features of a facility"""	

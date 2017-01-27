@@ -109,15 +109,25 @@ def create_blueprint(Facility,max_attempts=20):
 	Keyword arguments:
 	max_attempts -- the maximum number attempts to be made
 	"""
-	Facility.build_geometry()
+	bounds = Facility.build_geometry()
+
+	test_bounds = list()
+	test_bounds.append(bounds)
 
 	# place features
+	placed_features = list()
 	for feature in Facility.features:
-		placed = place_feature(feature, Facility.geometry,max_attempts=max_attempts)
+		if placed_features:
+			bounds = placement_bounds(bounds,placed_features)
+			test_bounds.append(bounds)
+		placed = place_feature(feature,bounds,max_attempts=max_attempts)
 		if placed:
+			placed_features.append(placed)
 			continue
 		else:
 			print('blueprint failed')
+
+	return test_bounds
 
 
 def assess_blueprint(Facility):
@@ -148,11 +158,12 @@ def build_facility(Facility):
 	"""Randomly places all the features of a facility"""	
 	built = 0
 	while (built == 0):
-		create_blueprint(Facility)
+		tbs = create_blueprint(Facility)
 		valid = assess_blueprint(Facility)
 		if valid:
 			built = 1
 			Facility.defined = True
+			return tbs
 		else:
 			Facility.defined = False
 			pass
@@ -215,7 +226,7 @@ def place_feature(Feature,geometry,max_attempts=20):
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
-			return True
+			return Feature
 		else:
 			attempts+=1
 
@@ -223,15 +234,16 @@ def place_feature(Feature,geometry,max_attempts=20):
 	return False
 
 
-def determine_bounds(footprint,placed_features):
+def placement_bounds(footprint,placed_features):
 	"""Takes a list of placed features and a facility footprint 
 	and generates a geometry of all possible locations to be placed"""
 
 	placed_shapes = list()
 	for feature in placed_features:
-		placed_shapes+=feature.shapes
+		feature_shapes = [x.build_geometry() for x in feature.shapes if x.visibility==100]
+		placed_shapes+=feature_shapes
 	
-	union_shapes = cascaded_union(placed_features)
+	union_shapes = cascaded_union(placed_shapes)
 	bounds = footprint.difference(union_shapes)
 
 	return bounds

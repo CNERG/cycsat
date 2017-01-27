@@ -114,6 +114,7 @@ class Cysat(object):
 # Facility simulation
 # =============================================================================
 
+
 def simulate_facility(Facility,timestep,reader,world):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
 		generates events.
@@ -151,6 +152,11 @@ def simulate_facility(Facility,timestep,reader,world):
 				world.write(shape)
 
 		world.write(Facility)
+
+
+
+
+
 
 
 
