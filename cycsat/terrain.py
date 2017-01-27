@@ -56,7 +56,7 @@ def simple(width,length):
 			                level=0)
 		water_shapes.append(water_shape)
 
-	return [land]+water_shapes
+	return gdf #[land]+water_shapes
 
 
 # =============================================================================
