@@ -3,7 +3,7 @@ archetypes.py
 """
 from .image import Sensor
 from .geometry import create_blueprint, assess_blueprint, place
-from .geometry import build_geometry
+from .geometry import build_geometry, build_feature_footprint
 
 from .laboratory import materialize
 
@@ -255,6 +255,11 @@ class Feature(Base):
 
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
+
+	def build_geometry(self):
+		"""Returns a shapely geometry of the static shapes"""
+		self.geometry = build_feature_footprint(self)
+		return self.geometry
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
