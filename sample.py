@@ -47,30 +47,23 @@ def near(feature,target,distance):
 	feature_geometry = feature.build_geometry()
 	
 	# buffer the target geometry by the provided distance
-	buff = target_geometry.buffer(distance)
+	first_buffer = target_geometry.buffer(distance)
 
 	bounds = feature_geometry.bounds
-	bound_box = box(bounds[0],bounds[1],bounds[2],bounds[3])
+	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
+	buffer_value = diagaonal_dist+(diagaonal_dist*0.10)
+	second_buffer = first_buffer.buffer(buffer_value)
 
 	# find all coords in feature to be placed
 	# coords = list(feature_geometry.exterior.coords)
 	# feature_center = buff.centroid()
 
-	xs = buff.exterior.xy[0]
-	ys = buff.exterior.xy[1]
-	index = random.randint(0,len(xs)-1)
-
-	x = xs[index]
-	y = ys[index]
-
-	p = Point(x,y)
-
-	return [buff, p, bound_box]
+	return [first_buffer, second_buffer]
 
 
 
 
-buff, point, bbox = near(c1,c2,100)
+buff, sec_buff = near(c1,c2,500)
 
 p = PolygonPatch(buff)
 
@@ -81,11 +74,11 @@ ax.set_ylim([0,10000])
 
 c1p = PolygonPatch(c1.build_geometry())
 c2p = PolygonPatch(c2.build_geometry())
+c2p.set_color('green')
 
+ax.add_patch(PolygonPatch(sec_buff))
 p.set_color('red')
 ax.add_patch(p)
-
-ax.add_patch(PolygonPatch(bbox))
 
 ax.add_patch(c1p)
 ax.add_patch(c2p)
