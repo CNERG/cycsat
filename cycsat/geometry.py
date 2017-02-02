@@ -3,7 +3,7 @@ geometry.py
 """
 from sqlalchemy import Column, Integer, String
 
-from random import randint
+import random
 import itertools
 
 import numpy as np
@@ -70,29 +70,33 @@ def check_disjoints(shapes):
 	return True
 
 
-def posit_point(geometry):
+def posit_point(geometry,attempts=100):
 	"""Generates a random point within a geometry"""
 	
-	# define the geometry boundary
-	length = geometry.bounds[-2]
-	width = geometry.bounds[-1]
+	for i in range(attempts):
 
-	# create a random point within geometry
-	posited_point = Point(randint(0,width+1), randint(0,length+1))
+		# define the geometry boundary
+		x_min, y_min, x_max, y_max = geometry.bounds
+		
+		# create a random point within geometry
+		posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
 
-	return posited_point
+		if posited_point.within(geometry):
+			return posited_point
+	print('placement failed after {',attempts,'} attempts.')
+	return False
 
 
 # =============================================================================
 # Site construction
 # =============================================================================
 
-def create_plan(Site,max_attempts=20):
+def create_plan(Site,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry
 
 	Keyword arguments:
-	max_attempts -- the maximum number attempts to be made
+	attempts -- the maximum number attempts to be made
 	"""
 	Site.build_geometry()
 	facilities = Site.facilities
@@ -109,12 +113,12 @@ def create_plan(Site,max_attempts=20):
 # =============================================================================
 
 
-def create_blueprint(Facility,max_attempts=20):
+def create_blueprint(Facility,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry.
 
 	Keyword arguments:
-	max_attempts -- the maximum number attempts to be made.
+	attempts -- the maximum number attempts to be made.
 	"""
 	bounds = Facility.build_geometry()
 
@@ -129,7 +133,7 @@ def create_blueprint(Facility,max_attempts=20):
 			bounds = placement_bounds(bounds,placed_features)
 			test_bounds.append(bounds) # for visual testing
 		
-		placed = place_feature(feature,bounds,max_attempts=max_attempts)
+		placed = place_feature(feature,bounds,attempts=attempts)
 		
 
 		if placed:
@@ -197,30 +201,40 @@ def place(Entity,placement,ContextEntity=None):
 	return Entity
 
 
-def place_feature(Feature,geometry,max_attempts=20):
-	"""Places a feature within a geometry and checks typology of shapes"""
-	
-	attempts = 0
-	while attempts<max_attempts:
+def place_feature(Feature,geometry,random=True,location=False,attempts=100):
+	"""Places a feature within a geometry and checks typology of shapes
 
-		posited_point = posit_point(geometry)
+	Keyword arguments:
+	Feature -- feature to place
+	geometry -- containing geometry
+	random -- if 'True', placement is random, else Point feaure is required
+	location -- centroid location to place Feature
+	attempts -- the maximum number attempts to be made.
+	"""
+	
+	for i in range(attempts):
+
+		if random:
+			posited_point = posit_point(geometry)
+		else:
+			posited_point = location
+		if not posited_point:
+			print('Point feature required for placement.')
+			break
 
 		placed_shapes = list()
 		typology_checks = list()
 		for shape in Feature.shapes:
 			place(shape,posited_point)
 			placement = shape.build_geometry()
-
 			placed_shapes.append(placement)
 			typology_checks.append(placement.within(geometry))
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
 			return Feature
-		else:
-			attempts+=1
 
-	print(Feature.id,'placement failed after',max_attempts,'attempts.')
+	print(Feature.id,'placement failed after {',attempts,'} attempts.')
 	return False
 
 
@@ -244,11 +258,11 @@ def placement_bounds(facility_footprint,placed_features):
 	return bounds
 
 
-def place_facility(Facility,geometry,max_attempts=20):
+def place_facility(Facility,geometry,attempts=100):
 	"""Places a facility within a site geometry and checks typology"""
 	
 	attempts = 0
-	while attempts<max_attempts:
+	while attempts<attempts:
 
 		posited_point = posit_point(geometry)
 
@@ -261,7 +275,7 @@ def place_facility(Facility,geometry,max_attempts=20):
 		else:
 			attempts+=1
 
-	print(Facility.id,'facility placement failed after',max_attempts,'attempts.')
+	print(Facility.id,'facility placement failed after',attempts,'attempts.')
 	return False
 
 
