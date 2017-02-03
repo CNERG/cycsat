@@ -19,7 +19,9 @@ from cycsat.prototypes.reactor import SampleReactor
 from cycsat.image import Sensor
 
 from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
+from cycsat.geometry import pointilize
 from shapely.geometry import box
+from shapely.affinity import translate as shift_shape
 
 # sim = Cysat('reactor_test_sample.sqlite')
 
@@ -31,25 +33,34 @@ s.build_geometry()
 c1 = s.features[0]
 c2 = s.features[1]
 
-def near(feature,target,distance):
-	""""""
+def near(feature,target,footprint,distance,cushion=0.0,threshold=100,attempts=20):
+	"""Places a feature a specified distance to a target feature."""
+	
 	# build geometry of both features
 	target_geometry = target.build_geometry()
 	feature_geometry = feature.build_geometry()
 	
 	# buffer the target geometry by the provided distance
-	first_buffer = target_geometry.buffer(distance)
+	inner_buffer = target_geometry.buffer(distance)
 
 	bounds = feature_geometry.bounds
 	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
-	buffer_value = diagaonal_dist+(diagaonal_dist*0.50)
-	second_buffer = first_buffer.buffer(buffer_value)
+	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
+	second_buffer = inner_buffer.buffer(buffer_value)
 
-	final = second_buffer.difference(first_buffer)
+	bounds = second_buffer.difference(inner_buffer)
+	bounds = bounds.intersection(footprint)
 
-	return final
+	attempt = 0
+	offset = threshold
+	while (offset >= threshold) and (attempt < attempts):
+		attempt+=1
+		placed = place_feature(feature,bounds,random=True)
+		offset = placed.build_geometry().distance(inner_buffer)
 
-buff = near(c1,c2,500)
+	return [bounds,inner_buffer,placed]
+
+buff,inner_buffer,placed = near(c1,c2,s.build_geometry(),500)
 p = PolygonPatch(buff)
 
 fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
@@ -60,8 +71,12 @@ ax.set_ylim([0,10000])
 p.set_color('blue')
 ax.add_patch(p)
 
-placed = place_feature(c1,buff,random=True)
-print(placed)
+print(placed.build_geometry().distance(inner_buffer))
+
 placed = PolygonPatch(placed.build_geometry())
 placed.set_color('green')
 ax.add_patch(placed)
+
+target = PolygonPatch(c2.build_geometry())
+target.set_color('green')
+ax.add_patch(target)

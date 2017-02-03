@@ -13,26 +13,21 @@ from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.ops import cascaded_union
 
-
 # =============================================================================
-# Vectorized spatial analysis functions
+# Spatial analysis functions
 # =============================================================================
 
-def within_geometry(geometry,bounds):
-	"""Checks if a geometry is within a bounds."""
-	return geometry.within(bounds)
+def pointilize(feature):
+	"""Turns a Polygon into a array of Points"""
+	x,y = feature.exterior.xy
+	coords = [Point(x,y) for x,y in zip(x,y)]
+	return coords
 
-def intersect_geometry(geometry,bounds):
-	"""Checks if a geometry intersects a bounds."""
-	return geometry.interset(bounds)
-
-def disjoint_geometry(geometry,bounds):
-	"""Checks if a geometry intersects a bounds."""
-	return geometry.disjoint(bounds)
-
-within = np.vectorize(within_geometry)
-interset = np.vectorize(intersect_geometry)
-disjoint = np.vectorize(disjoint_geometry)
+# def shift_towards(feature,target,increment=1):
+# 	"""Shifts a shape towards a target shape until they cross."""
+# 	target_centroid = target.centroid
+# 	cross = False
+# 	while not cross:
 
 # =============================================================================
 # General
