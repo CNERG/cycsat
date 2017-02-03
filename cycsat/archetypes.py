@@ -3,7 +3,7 @@ archetypes.py
 """
 from .image import Sensor
 from .geometry import create_blueprint, assess_blueprint, place
-from .geometry import build_geometry, build_feature_footprint
+from .geometry import build_geometry, build_feature_footprint, near
 
 from .laboratory import materialize
 
@@ -17,6 +17,7 @@ import ast
 
 from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
+from shapely.ops import cascaded_union
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
@@ -261,6 +262,11 @@ class Feature(Base):
 		self.geometry = build_feature_footprint(self)
 		return self.geometry
 
+	def evaluate_rules(self,footprint):
+		for rule in self.rules:
+			footprint = rule.evaluate(footprint,self.facility)
+		return footprint
+
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
 
@@ -332,6 +338,26 @@ class Rule(Base):
 
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='rules')
+
+
+	def evaluate(self,footprint,Facility):
+		"""Evaluates a spatial rule and returns a boundary geometry."""
+
+		targets = [feature.build_geometry() for feature in Facility.features if feature.name==self.target]
+		target_union = cascaded_union(targets)
+
+		if self.oper=='within':
+			return footprint
+	
+		elif self.oper=='near':
+			print('near')
+			return near(self.feature,target_union,footprint,self.value)
+
+		elif self.oper=='distant':
+			return footprint
+	
+		else:
+			return footprint
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')

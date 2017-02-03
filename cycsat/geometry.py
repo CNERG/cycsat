@@ -128,9 +128,10 @@ def create_blueprint(Facility,attempts=100):
 			bounds = placement_bounds(bounds,placed_features)
 			test_bounds.append(bounds) # for visual testing
 		
-		placed = place_feature(feature,bounds,attempts=attempts)
+		# evalutes rules and combines with place features
+		defined_bounds = feature.evaluate_rules(bounds)
+		placed = place_feature(feature,defined_bounds,attempts=attempts)
 		
-
 		if placed:
 			placed_features.append(placed)
 			continue
@@ -239,11 +240,6 @@ def placement_bounds(facility_footprint,placed_features):
 
 	placed_footprints = list()
 	for feature in placed_features:
-
-		# check Rules
-
-
-
 		feature_footprint = build_feature_footprint(feature)
 		placed_footprints.append(feature_footprint)
 	
@@ -274,30 +270,29 @@ def place_facility(Facility,geometry,attempts=100):
 	return False
 
 
-# def evaluate_rule(Rule,feature_footprint,facility_footprint,placed_features):
-# 	"""Evaluates a spatial rule and returns a boundary geometry"""
-
-# 	targets = [feature for feature in placed_features if name==Rule.target]
-# 	target_union = cascaded_union(targets)
-
-# 	if Rule.operation=='within':
-# 		return target_union
-	
-# 	elif Rule.operation=='near':
-# 		target_union
-
-# 	elif Rule.operation=='distant':
-# 		pass
-	
-# 	else:
-# 		pass
-
-
 # =============================================================================
 # Placement testing
 # =============================================================================
 
 
+def near(feature,target_geometry,footprint,distance,cushion=0.0,threshold=100,attempts=20):
+	"""Places a feature a specified distance to a target feature."""
+	
+	# build geometry of both features
+	feature_geometry = feature.build_geometry()
+	
+	# buffer the target geometry by the provided distance
+	inner_buffer = target_geometry.buffer(distance)
+
+	bounds = feature_geometry.bounds
+	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
+	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
+	second_buffer = inner_buffer.buffer(buffer_value)
+
+	bounds = second_buffer.difference(inner_buffer)
+	bounds = bounds.intersection(footprint)
+
+	return bounds
 
 
 # =============================================================================
@@ -326,3 +321,31 @@ def assess_blueprint(Facility):
 		return False
 	else:
 		return True
+
+
+def near_draw(feature,target,footprint,distance,cushion=0.0,threshold=100,attempts=20):
+	"""Places a feature a specified distance to a target feature."""
+	
+	# build geometry of both features
+	target_geometry = target.build_geometry()
+	feature_geometry = feature.build_geometry()
+	
+	# buffer the target geometry by the provided distance
+	inner_buffer = target_geometry.buffer(distance)
+
+	bounds = feature_geometry.bounds
+	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
+	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
+	second_buffer = inner_buffer.buffer(buffer_value)
+
+	bounds = second_buffer.difference(inner_buffer)
+	bounds = bounds.intersection(footprint)
+
+	attempt = 0
+	offset = threshold
+	while (offset >= threshold) and (attempt < attempts):
+		attempt+=1
+		placed = place_feature(feature,bounds,random=True)
+		offset = placed.build_geometry().distance(inner_buffer)
+
+	return [bounds,inner_buffer,placed]

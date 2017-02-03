@@ -33,50 +33,16 @@ s.build_geometry()
 c1 = s.features[0]
 c2 = s.features[1]
 
-def near(feature,target,footprint,distance,cushion=0.0,threshold=100,attempts=20):
-	"""Places a feature a specified distance to a target feature."""
-	
-	# build geometry of both features
-	target_geometry = target.build_geometry()
-	feature_geometry = feature.build_geometry()
-	
-	# buffer the target geometry by the provided distance
-	inner_buffer = target_geometry.buffer(distance)
 
-	bounds = feature_geometry.bounds
-	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
-	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
-	second_buffer = inner_buffer.buffer(buffer_value)
+def plot_facility(facility):
+	"""plots a facility."""
 
-	bounds = second_buffer.difference(inner_buffer)
-	bounds = bounds.intersection(footprint)
+	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
+	ax.set_xlim([0,facility.width*10])
+	ax.set_ylim([0,facility.length*10])
 
-	attempt = 0
-	offset = threshold
-	while (offset >= threshold) and (attempt < attempts):
-		attempt+=1
-		placed = place_feature(feature,bounds,random=True)
-		offset = placed.build_geometry().distance(inner_buffer)
+	patches = [PolygonPatch(feat.build_geometry()) for feat in facility.features]
+	for patch in patches:
+		ax.add_patch(patch)
 
-	return [bounds,inner_buffer,placed]
-
-buff,inner_buffer,placed = near(c1,c2,s.build_geometry(),500)
-p = PolygonPatch(buff)
-
-fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-
-ax.set_xlim([0,10000])
-ax.set_ylim([0,10000])
-
-p.set_color('blue')
-ax.add_patch(p)
-
-print(placed.build_geometry().distance(inner_buffer))
-
-placed = PolygonPatch(placed.build_geometry())
-placed.set_color('green')
-ax.add_patch(placed)
-
-target = PolygonPatch(c2.build_geometry())
-target.set_color('green')
-ax.add_patch(target)
+plot_facility(s)
