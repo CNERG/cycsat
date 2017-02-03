@@ -63,7 +63,7 @@ class SampleCoolingTower2(Feature):
         ]
 
         self.rules = [
-        Rule(oper='near',target='sample cooling tower 1',value=3000)
+        Rule(oper='near',target='sample cooling tower 1',value=100)
         ]
 
 
