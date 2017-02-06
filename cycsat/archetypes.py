@@ -1,8 +1,12 @@
 """
 archetypes.py
 """
+
+from descartes import PolygonPatch
+from matplotlib import pyplot as plt
+
 from .image import Sensor
-from .geometry import create_blueprint, assess_blueprint, place
+from .geometry import create_blueprint, assess_blueprint, place, build_facility
 from .geometry import build_geometry, build_feature_footprint, near
 
 from .laboratory import materialize
@@ -186,17 +190,9 @@ class Facility(Base):
 		return self.geometry
 
 	def build(self):
-		"""Randomly places all the features of a facility"""	
-		built = 0
-		while (built == 0):
-			create_blueprint(self)
-			valid = assess_blueprint(self)
-			if valid:
-				built = 1
-				self.defined = True
-			else:
-				self.defined = False
-				pass
+		"""Randomly places all the features of a facility"""
+		outcome,fails = build_facility(self)
+		return outcome,fails
 
 	def simulate(self,timestep,reader,world):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
@@ -235,6 +231,21 @@ class Facility(Base):
 				world.write(shape)
 
 		world.write(self)
+
+
+	def plot(self,timestep=None):
+		"""plots a facility and its static features or a timestep."""
+
+		fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
+		ax.set_xlim([0,self.width*10])
+		ax.set_ylim([0,self.length*10])
+		ax.set_axis_bgcolor('green')
+
+		for feature in self.features:
+			patch = PolygonPatch(feature.build_geometry())
+			patch.set_color('grey')
+			ax.add_patch(patch)
+			plt.text(feature.geometry.centroid.x,feature.geometry.centroid.y,feature.name)
 
 
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
@@ -350,8 +361,7 @@ class Rule(Base):
 			return footprint
 	
 		elif self.oper=='near':
-			print('near')
-			return near(self.feature,target_union,footprint,self.value)
+			return near(self.feature,target_union,footprint,distance=self.value)
 
 		elif self.oper=='distant':
 			return footprint

@@ -62,9 +62,9 @@ class SampleCoolingTower2(Feature):
         Plume(level=2,radius=800,rgb=[255,255,255],xoff=500,yoff=500)
         ]
 
-        self.rules = [
-        Rule(oper='near',target='sample cooling tower 1',value=100)
-        ]
+        # self.rules = [
+        # Rule(oper='near',target='sample cooling tower 1',value=100)
+        # ]
 
 
 class SampleContainment(Feature):

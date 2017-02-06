@@ -13,7 +13,7 @@ copyfile(src, dst)
 from descartes import PolygonPatch
 
 from cycsat.simulation import Cysat
-from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape
+from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape, Rule
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
 from cycsat.image import Sensor
@@ -26,23 +26,19 @@ from shapely.affinity import translate as shift_shape
 # sim = Cysat('reactor_test_sample.sqlite')
 
 s = SampleReactor()
-a = build_facility(s)
+for f in s.features[1:]:
+	f.rules.append(Rule(oper='near',target='sample cooling tower 1',value=100))
 
-s.build_geometry()
-
-c1 = s.features[0]
-c2 = s.features[1]
+s.build()
+s.plot()
 
 
-def plot_facility(facility):
-	"""plots a facility."""
-
+def plot_features(features):
 	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-	ax.set_xlim([0,facility.width*10])
-	ax.set_ylim([0,facility.length*10])
+	ax.set_xlim([0,10000])
+	ax.set_ylim([0,10000])
 
-	patches = [PolygonPatch(feat.build_geometry()) for feat in facility.features]
+	patches = [PolygonPatch(feat) for feat in features]
 	for patch in patches:
 		ax.add_patch(patch)
 
-plot_facility(s)

@@ -5,12 +5,17 @@ from sqlalchemy import Column, Integer, String
 
 import random
 import itertools
+import time
+
+from descartes import PolygonPatch
+from matplotlib import pyplot as plt
 
 import numpy as np
 
 from shapely.geometry import Polygon, Point
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
+from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
 # =============================================================================
@@ -121,42 +126,56 @@ def create_blueprint(Facility,attempts=100):
 	test_bounds = list()
 	test_bounds.append(bounds)
 
+	# this is for diagnoistics
+	bounds_collection = list()
+	bounds_collection.append(bounds)
+
 	# place features
 	placed_features = list()
 	for feature in Facility.features:
+		
 		if placed_features:
+
+			# reuse the existing mask
 			bounds = placement_bounds(bounds,placed_features)
 			test_bounds.append(bounds) # for visual testing
 		
 		# evalutes rules and combines with place features
 		defined_bounds = feature.evaluate_rules(bounds)
-		placed = place_feature(feature,defined_bounds,attempts=attempts)
 		
-		if placed:
-			placed_features.append(placed)
+		bounds_collection.append(defined_bounds)
+		placed = place_feature(feature,defined_bounds,attempts=attempts)
+
+		if placed[0]:
+			placed_features.append(placed[1])
 			continue
 		else:
 			print('blueprint failed')
-			return False
+			fail_details = {
+			'bounds_collection':bounds_collection,
+			'feature_failure':feature.name
+			}
+
+			return False,fail_details
 
 	bounds = placement_bounds(bounds,placed_features)
 	test_bounds.append(bounds)
-	return test_bounds
+	return test_bounds,bounds_collection
 
-
-def build_facility(Facility):
+def build_facility(Facility,attempts=10):
 	"""Randomly places all the features of a facility"""	
-	built = 0
-	while (built == 0):
-		tbs = create_blueprint(Facility)
-		# valid = assess_blueprint(Facility)
+	fail_details = list()
+	for x in range(attempts):
+		tbs, fail = create_blueprint(Facility)
 		if tbs:
-			built = 1
 			Facility.defined = True
-			return tbs
+			return tbs,fail_details
 		else:
 			Facility.defined = False
-			pass
+			fail_details.append(fail)
+			continue
+
+	return tbs,fail_details
 
 
 # =============================================================================
@@ -164,17 +183,14 @@ def build_facility(Facility):
 # =============================================================================
 
 
-def place(Entity,placement,ContextEntity=None):
+def place(Entity,placement,rotation=0):
 	"""Places a shape to a coordinate position"""
+	
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 
-	if ContextEntity:
-		location = ContextEntity.build_geometry()
-		geometry = Entity.build_geometry()
-	else:
-		geometry = Entity.build_geometry()
-		location = geometry
+	geometry = Entity.build_geometry()
+	location = geometry
 
 	shape_x = location.centroid.coords.xy[0][0]
 	shape_y = location.centroid.coords.xy[1][0]
@@ -189,15 +205,16 @@ def place(Entity,placement,ContextEntity=None):
 	shift_x = placed_x - shape_x + xoff
 	shift_y = placed_y - shape_y + yoff
 
-	if ContextEntity:
-		Entity.focus = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
-	else:
-		Entity.wkt = shift_shape(geometry,xoff=shift_x,yoff=shift_y).wkt
+	shifted = shift_shape(geometry,xoff=shift_x,yoff=shift_y)
+	if rotation > 0:
+		shifted = rotate(shifted,rotation)
+
+	Entity.wkt = shifted.wkt
 	
 	return Entity
 
 
-def place_feature(Feature,geometry,random=True,location=False,attempts=100):
+def place_feature(Feature,geometry,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
@@ -210,7 +227,7 @@ def place_feature(Feature,geometry,random=True,location=False,attempts=100):
 	
 	for i in range(attempts):
 
-		if random:
+		if rand:
 			posited_point = posit_point(geometry)
 		else:
 			posited_point = location
@@ -218,20 +235,26 @@ def place_feature(Feature,geometry,random=True,location=False,attempts=100):
 			print('Point feature required for placement.')
 			break
 
+		rotation = random.randint(0,180)
+
 		placed_shapes = list()
 		typology_checks = list()
 		for shape in Feature.shapes:
-			place(shape,posited_point)
+			
+			place(shape,posited_point,rotation)
+			
 			placement = shape.build_geometry()
 			placed_shapes.append(placement)
 			typology_checks.append(placement.within(geometry))
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
-			return Feature
+			return True, Feature
 
-	print(Feature.id,'placement failed after {',attempts,'} attempts.')
-	return False
+	failed_shapes = cascaded_union(placed_shapes)
+
+	print(Feature.name,'placement failed after {',attempts,'} attempts.')
+	return False, failed_shapes
 
 
 def placement_bounds(facility_footprint,placed_features):
@@ -275,7 +298,7 @@ def place_facility(Facility,geometry,attempts=100):
 # =============================================================================
 
 
-def near(feature,target_geometry,footprint,distance,cushion=0.0,threshold=100,attempts=20):
+def near(feature,target_geometry,footprint,distance,cushion=0,threshold=100,attempts=20):
 	"""Places a feature a specified distance to a target feature."""
 	
 	# build geometry of both features

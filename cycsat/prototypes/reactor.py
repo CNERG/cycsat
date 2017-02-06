@@ -35,13 +35,11 @@ class SampleReactor(Facility):
         self.length = 862
 
         self.features = [
+        
         SampleCoolingTower1(),
         SampleCoolingTower2(),
         SampleContainment(),
         SampleContainment(),
         SampleTurbine()
         ]
-
-        for f in self.features:
-            f.rules.append(Rule(oper='near',target='sample cooling tower 1',value=100))
 
