@@ -1,6 +1,7 @@
 """
 archetypes.py
 """
+import ast
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
@@ -240,10 +241,11 @@ class Facility(Base):
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
+		ax.set_aspect('equal')
 
 		for feature in self.features:
-			patch = PolygonPatch(feature.build_geometry())
-			patch.set_color('grey')
+			rgb = feature.get_rgb(plotting=True)
+			patch = PolygonPatch(feature.build_geometry(),facecolor=rgb)
 			ax.add_patch(patch)
 			plt.text(feature.geometry.centroid.x,feature.geometry.centroid.y,feature.name)
 
@@ -262,6 +264,7 @@ class Feature(Base):
 	visibility = Column(Integer)
 	prototype = Column(String)
 	wkt = Column(String)
+	rgb = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
@@ -272,6 +275,18 @@ class Feature(Base):
 		"""Returns a shapely geometry of the static shapes"""
 		self.geometry = build_feature_footprint(self)
 		return self.geometry
+
+	def get_rgb(self,plotting=False):
+		"""Returns the RGB be value as a list [RGB] which is stored as text"""
+		try:
+			rgb = ast.literal_eval(self.rgb)
+		except:
+			rgb = self.rgb
+
+		if plotting:
+			return [x/255 for x in rgb]
+		else:
+			return rgb
 
 	def evaluate_rules(self,footprint):
 		for rule in self.rules:
@@ -358,10 +373,18 @@ class Rule(Base):
 		target_union = cascaded_union(targets)
 
 		if self.oper=='within':
-			return footprint
+			if targets:
+				return target_union
+			else:
+				return footprint
 	
 		elif self.oper=='near':
-			return near(self.feature,target_union,footprint,distance=self.value)
+			try:
+				result = near(self.feature,target_union,footprint,distance=self.value)
+				return result
+			except:
+				print('rule failed')
+				return footprint
 
 		elif self.oper=='distant':
 			return footprint

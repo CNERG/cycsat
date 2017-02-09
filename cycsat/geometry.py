@@ -266,6 +266,8 @@ def placement_bounds(facility_footprint,placed_features):
 		feature_footprint = build_feature_footprint(feature)
 		placed_footprints.append(feature_footprint)
 	
+	# this needs to discriminate between within features and not
+
 	union_footprints = cascaded_union(placed_footprints)
 	bounds = facility_footprint.difference(union_footprints)
 

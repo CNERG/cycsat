@@ -28,10 +28,10 @@ from shapely.affinity import translate as shift_shape
 s = SampleReactor()
 for f in s.features[1:]:
 	f.rules.append(Rule(oper='near',target='sample cooling tower 1',value=100))
+	f.rules.append(Rule(oper='within',target='concrete pad',value=100))
 
 s.build()
 s.plot()
-
 
 def plot_features(features):
 	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)

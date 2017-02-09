@@ -5,32 +5,33 @@ from cycsat.archetypes import Shape, Feature, Rule
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
 
-class Lawn(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'lawn'}
+class ConcretePad(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'concrete pad'}
 
-    def __init__(self,name='lawn',visibility=100):
+    def __init__(self,name='concrete pad'):
         
         self.name = name
-        self.visibility = visibility
+        self.visibility = 100
+        self.rgb = [70,70,70]
 
         # define shapes
         self.shapes = [
-        Rectangle(width=500,length=500,material_code=1213)
+        Rectangle(width=5000,length=5000)
         ]
 
 
-class Truck(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'truck'}
+# class Truck(Feature):
+#     __mapper_args__ = {'polymorphic_identity': 'truck'}
 
-    def __init__(self,name='sample truck',visibility=100):
+#     def __init__(self,name='sample truck',visibility=100):
         
-        self.name = name
-        self.visibility = visibility
+#         self.name = name
+#         self.visibility = visibility
 
-        # define shapes
-        self.shapes = [
-        Rectangle(radius=900,material=materialize(rgb=[146,149,1]))
-        ]
+#         # define shapes
+#         self.shapes = [
+#         Rectangle(radius=900,material=materialize(rgb=[146,149,1]))
+#         ]
 
 
 class SampleCoolingTower1(Feature):
@@ -39,6 +40,7 @@ class SampleCoolingTower1(Feature):
     def __init__(self,name='sample cooling tower 1'):
         
         self.name = name
+        self.rgb = [70,70,70]
 
         # define shapes
         self.shapes = [
@@ -54,6 +56,7 @@ class SampleCoolingTower2(Feature):
     def __init__(self,name='sample cooling tower 2'):
         
         self.name = name
+        self.rgb = [70,70,70]
 
         # define shapes
         self.shapes = [
@@ -61,10 +64,6 @@ class SampleCoolingTower2(Feature):
         Circle(level=1,radius=620,material_code=24),
         Plume(level=2,radius=800,rgb=[255,255,255],xoff=500,yoff=500)
         ]
-
-        # self.rules = [
-        # Rule(oper='near',target='sample cooling tower 1',value=100)
-        # ]
 
 
 class SampleContainment(Feature):
@@ -74,6 +73,7 @@ class SampleContainment(Feature):
         
         self.name = name
         self.visibility = visibility
+        self.rgb = [70,70,70]
 
         # define shapes
         self.shapes = [
@@ -88,6 +88,7 @@ class SampleTurbine(Feature):
         
         self.name = name
         self.visibility = visibility
+        self.rgb = [70,70,70]
 
         # define shapes
         self.shapes = [
