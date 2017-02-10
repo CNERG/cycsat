@@ -288,10 +288,36 @@ class Feature(Base):
 		else:
 			return rgb
 
-	def evaluate_rules(self,footprint):
+	def evaluate_rules(self,placed_features):
+
+		self.facility.build_geometry()
+
+		exclude = list()
+		masks = list()
+		
 		for rule in self.rules:
-			footprint = rule.evaluate(footprint,self.facility)
-		return footprint
+			targets, mask = rule.evaluate(placed_features,self.facility)
+			if rule.oper == 'within':
+				exclude.append(targets)
+			masks.append(mask)
+
+		# intersect all the valid areas
+		valid_bounds = masks[0]
+		for mask in masks[1:]:
+			valid_bounds = valid_bounds.intersection(mask)
+
+		# create a list of place features that excludes 'within targets'
+		within_targets = [target for sublist in within_targets for target in sublist]
+		within_target_names = [x.name for x in within_targets]
+		no_overlap = [feature.build_geometry() for feature in placed_features 
+					 if feature.name not in within_target_names]
+		
+		no_overlap = cascaded_union(shapes)
+
+		# create a union mask
+		vb = valid_bounds.difference(no_overlap)
+
+		return vb
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -366,31 +392,35 @@ class Rule(Base):
 	feature = relationship(Feature, back_populates='rules')
 
 
-	def evaluate(self,footprint,Facility):
+	def evaluate(self,placed_features,Facility):
 		"""Evaluates a spatial rule and returns a boundary geometry."""
 
-		targets = [feature.build_geometry() for feature in Facility.features if feature.name==self.target]
-		target_union = cascaded_union(targets)
+		Facility.build_geometry()
+
+		targets = [feature for feature in placed_features if feature.name==self.target]
+		target_shapes = [feature.build_geometry() for feature in targets]
+		target_union = cascaded_union(target_shapes)
 
 		if self.oper=='within':
 			if targets:
-				return target_union
+				result = targets, target_union
 			else:
-				return footprint
-	
+				print('rule failed')
+				result = targets, Facility.geometry
+
 		elif self.oper=='near':
 			try:
-				result = near(self.feature,target_union,footprint,distance=self.value)
-				return result
+				result = targets, near(self.feature,target_union,distance=self.value)
 			except:
 				print('rule failed')
-				return footprint
+				result = targets, Facility.geometry
 
-		elif self.oper=='distant':
-			return footprint
-	
 		else:
-			return footprint
+			result = targets, Facility.geometry
+
+		return result
+
+
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')

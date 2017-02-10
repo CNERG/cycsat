@@ -118,64 +118,43 @@ def create_blueprint(Facility,attempts=100):
 	gives each feature a placed geometry.
 
 	Keyword arguments:
-	attempts -- the maximum number attempts to be made.
+	attempts -- the maximum number attempts to be made to place each feature
 	"""
-	bounds = Facility.build_geometry()
-
-	# this is for visual tests
-	test_bounds = list()
-	test_bounds.append(bounds)
-
-	# this is for diagnoistics
-	bounds_collection = list()
-	bounds_collection.append(bounds)
-
-	# place features
+	# track placed features
 	placed_features = list()
+	
+	# loop through all features of the Facility
 	for feature in Facility.features:
 		
-		if placed_features:
+		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
+		valid_bounds = feature.evaluate_rules(placed_features)
 
-			# reuse the existing mask
-			bounds = placement_bounds(bounds,placed_features)
-			test_bounds.append(bounds) # for visual testing
-		
-		# evalutes rules and combines with place features
-		defined_bounds = feature.evaluate_rules(bounds)
-		
-		bounds_collection.append(defined_bounds)
-		placed = place_feature(feature,defined_bounds,attempts=attempts)
+		print(valid_bounds)
+		# use the 'valid_bounds' to place the feature
+		placed = place_feature(feature,valid_bounds,attempts=attempts)
 
-		if placed[0]:
-			placed_features.append(placed[1])
+		if placed:
+			placed_features.append(feature)
 			continue
 		else:
 			print('blueprint failed')
-			fail_details = {
-			'bounds_collection':bounds_collection,
-			'feature_failure':feature.name
-			}
+			return False
 
-			return False,fail_details
-
-	bounds = placement_bounds(bounds,placed_features)
-	test_bounds.append(bounds)
-	return test_bounds,bounds_collection
+	return True
 
 def build_facility(Facility,attempts=10):
 	"""Randomly places all the features of a facility"""	
 	fail_details = list()
 	for x in range(attempts):
-		tbs, fail = create_blueprint(Facility)
+		tbs = create_blueprint(Facility)
 		if tbs:
 			Facility.defined = True
 			return tbs,fail_details
 		else:
 			Facility.defined = False
-			fail_details.append(fail)
 			continue
 
-	return tbs,fail_details
+	return tbs
 
 
 # =============================================================================
@@ -249,12 +228,12 @@ def place_feature(Feature,geometry,rand=True,location=False,attempts=100):
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
-			return True, Feature
+			return True
 
 	failed_shapes = cascaded_union(placed_shapes)
 
 	print(Feature.name,'placement failed after {',attempts,'} attempts.')
-	return False, failed_shapes
+	return False
 
 
 def placement_bounds(facility_footprint,placed_features):
@@ -300,7 +279,7 @@ def place_facility(Facility,geometry,attempts=100):
 # =============================================================================
 
 
-def near(feature,target_geometry,footprint,distance,cushion=0,threshold=100,attempts=20):
+def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
 	"""Places a feature a specified distance to a target feature."""
 	
 	# build geometry of both features
@@ -315,7 +294,6 @@ def near(feature,target_geometry,footprint,distance,cushion=0,threshold=100,atte
 	second_buffer = inner_buffer.buffer(buffer_value)
 
 	bounds = second_buffer.difference(inner_buffer)
-	bounds = bounds.intersection(footprint)
 
 	return bounds
 
