@@ -12,11 +12,11 @@ class ConcretePad(Feature):
         
         self.name = name
         self.visibility = 100
-        self.rgb = [70,70,70]
+        self.rgb = [155,155,155]
 
         # define shapes
         self.shapes = [
-        Rectangle(width=5000,length=5000)
+        Rectangle(width=6000,length=6000)
         ]
 
 

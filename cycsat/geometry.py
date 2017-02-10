@@ -129,7 +129,6 @@ def create_blueprint(Facility,attempts=100):
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
 		valid_bounds = feature.evaluate_rules(placed_features)
 
-		print(valid_bounds)
 		# use the 'valid_bounds' to place the feature
 		placed = place_feature(feature,valid_bounds,attempts=attempts)
 
