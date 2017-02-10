@@ -69,7 +69,7 @@ class SampleCoolingTower2(Feature):
 class SampleContainment(Feature):
     __mapper_args__ = {'polymorphic_identity': 'sample containment'}
 
-    def __init__(self,name='sample containement',visibility=100):
+    def __init__(self,name='sample containment',visibility=100):
         
         self.name = name
         self.visibility = visibility

@@ -289,15 +289,17 @@ class Feature(Base):
 			return rgb
 
 	def evaluate_rules(self,placed_features):
-		""""""
-		
+		"""Evaluates all the rules of a feature given a list of placed features
+		and returns a geometry where the feature can be drawn."""
+
 		# create the footprint of the facility
 		footprint = self.facility.build_geometry()
 
-		# if there are no rules
+		# if there are no rules return the footprint
 		if not self.rules:
 			return footprint
 		
+		# otherwise evaluate the rules
 		else:
 			targets = list()
 			masks = list()
@@ -309,27 +311,28 @@ class Feature(Base):
 				masks.append(mask)
 
 			# find the intersection of all the masks (if any!)
-			combined_masks = masks.pop(0)
+			valid = masks.pop(0)
 			for mask in masks:
-				combined_masks = combined_masks.intersection(mask)
+				valid = valid.intersection(mask)
 
-			# if the intersection fails
-			if combined_masks.area == 0:
+			# if the intersection fails return False, this feature will
+			# not be drawn
+			if valid.area == 0:
 				print('no possible location for:',self.name)
 				return False, None
 
-		# find all the features that are simply 'obstacles'
+		# find all the other features that are simply 'obstacles'
 		non_targets = [feature.build_geometry() for feature in placed_features
 						if feature.name not in targets]
 
-		# if there are non return the valid geometry
+		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
-			return combined_masks
+			return valid
 
 		overlaps = cascaded_union(non_targets)
-		valid_bounds = combined_masks.difference(overlaps)
+		valid = valid.difference(overlaps)
 
-		return valid_bounds
+		return valid
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -404,28 +407,27 @@ class Rule(Base):
 	feature = relationship(Feature, back_populates='rules')
 
 
-	def evaluate(self,placed_features,bounds):
-		"""Evaluates a spatial rule and returns a boundary geometry.
-		"""
+	def evaluate(self,placed_features,footprint):
+		"""Evaluates a spatial rule and returns a boundary geometry."""
+		
 		# get all the features that are 'targeted' in the rule
 		targets = [feature.build_geometry() for feature in placed_features 
 					if feature.name==self.target]
 
-		# if the list is empty return the facility footprints
+		# if the list is empty return the facility footprint
 		if not targets:
-			return bounds
+			return footprint
 
+		# merge all the targets into one shape
 		target_union = cascaded_union(targets)
 
 		# evaluate the rule based on the operation (oper)
 		if self.oper=='within':
 			valid = target_union
-
 		elif self.oper=='near':
 			valid = near(self.feature,target_union,distance=self.value)
 		else:
-			valid = bounds
-		
+			valid = footprint
 		return valid
 
 
