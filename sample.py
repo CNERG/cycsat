@@ -30,8 +30,23 @@ for f in s.features[1:]:
 	f.rules.append(Rule(oper='near',target='sample cooling tower 1',value=500))
 	f.rules.append(Rule(oper='within',target='concrete pad',value=100))
 
-s.build()
-s.plot()
+# s2 = SampleReactor()
+# s2.features.pop(0s)
+
+# fig, ax = plt.subplots(3,2, sharex=True,sharey=True)
+# for x in ax[:,0]:
+# 	s1.build()
+
+# ims = os.listdir('temp')
+
+# import imageio
+# images = []
+# for filename in filenames:
+#     images.append(imageio.imread(filename))
+# imageio.mimsave('/path/to/movie.gif', images)
+
+# def plot_facilities():
+
 
 def plot_features(features):
 	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)

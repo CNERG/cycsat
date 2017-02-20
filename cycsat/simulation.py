@@ -25,7 +25,7 @@ import geopandas
 Session = sessionmaker()
 
 
-class Cysat(object):
+class Cycsat(object):
 	"""
 	"""
 	def __init__(self,database):
