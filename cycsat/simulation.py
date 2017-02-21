@@ -47,7 +47,7 @@ class Cycsat(object):
 		result = self.session.query(Entity).all()
 		return result
 
-	def write(self,Entities):
+	def save(self,Entities):
 		"""Writes archetype instances to database"""
 
 		if isinstance(Entities, list):
@@ -78,24 +78,7 @@ class Cycsat(object):
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
 				facility.build()
 				facilities.append(facility)
-		self.write(facilities)
-
-	def build_gis(self):
-		"""Builds a pandas index for key tables."""
-		archetypes = [Instrument,Facility,Feature,Shape]
-		
-		instances = list()
-		for archetype in archetypes:
-			records = self.session.query(archetype).all()
-			for record in records:
-				print(record.name)
-				instance = {'archetype_id':getattr(record,'id'),
-							'archetype':archetype.__name__,
-							'instance':record}
-				instances.append(instance)
-		self.gis = pd.DataFrame(instances)
-
-		return self.gis
+		self.save(facilities)
 
 	def simulate(self):
 		"""Generates events for all facilties"""
@@ -108,55 +91,6 @@ class Cycsat(object):
 					facility.simulate(timestep,self.reader,self)
 				except:
 					continue
-
-
-# =============================================================================
-# Facility simulation
-# =============================================================================
-
-
-def simulate_facility(Facility,timestep,reader,world):
-		"""Evaluates the conditions for dynamic shapes at a given timestep and
-		generates events.
-
-		Keyword arguments:
-		timestep -- the timestep for simulation
-		reader -- a reader connection for reading data from the database
-		"""
-		
-		dynamic_shapes = []
-		for feature in Facility.features:
-			for shape in [s for s in feature.shapes if s.visibility!=100]:
-				dynamic_shapes.append(shape)
-
-		events = []
-		for shape in dynamic_shapes:
-			evaluations = []
-			for condition in shape.conditions:
-				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (condition.table,Facility.AgentId,timestep)
-				df = pd.read_sql_query(qry,reader)
-				value = df['Value'][0]
-
-				if operations[condition.oper](value,condition.value):
-					evaluations.append(True)
-				else:
-					evaluations.append(False)
-
-			if False in evaluations:
-				continue
-			else:
-				event = Event(timestep=timestep)
-				shape.events.append(event)
-				Facility.events.append(event)
-
-				world.write(shape)
-
-		world.write(Facility)
-
-
-
-
-
 
 
 

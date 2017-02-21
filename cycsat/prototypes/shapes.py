@@ -24,7 +24,7 @@ class Circle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.wkt = Point(xoff,yoff).buffer(self.radius).wkt
+        self.stable_wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
     @declared_attr
     def wkt(self):
@@ -44,7 +44,7 @@ class Rectangle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
+        self.stable_wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
 
     @declared_attr
     def wkt(self):
@@ -63,7 +63,7 @@ class Plume(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.wkt = Point(xoff,yoff).buffer(self.radius).wkt
+        self.stable_wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
         self.conditions = [
         Condition(table='TimeSeriesPower',oper='greater than',value=0)

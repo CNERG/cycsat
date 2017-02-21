@@ -125,7 +125,7 @@ class Instrument(Base):
 		self.Facility.scenes.append(scene)
 		if Mission:
 			Mission.scenes.append(scene)
-		World.write([Mission,self,self.Facility])
+		World.save([Mission,self,self.Facility])
 		
 		path = path+str(scene.id)
 		self.Sensor.write(path)
@@ -204,15 +204,12 @@ class Facility(Base):
 		reader -- a reader connection for reading data from the database
 		"""
 		
-		dynamic_shapes = []
-		for feature in self.features:
-			for shape in [s for s in feature.shapes if s.visibility!=100]:
-				dynamic_shapes.append(shape)
+		dynamic_features = [feature for feature in self.features if feature.visibility!=100]
 
-		events = []
-		for shape in dynamic_shapes:
+		events = list()
+		for feature in dynamic_features:
 			evaluations = []
-			for condition in shape.conditions:
+			for condition in feature.conditions:
 				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (condition.table,self.AgentId,timestep)
 				df = pd.read_sql_query(qry,reader)
 				value = df['Value'][0]
@@ -226,12 +223,12 @@ class Facility(Base):
 				continue
 			else:
 				event = Event(timestep=timestep)
-				shape.events.append(event)
+				feature.events.append(event)
 				self.events.append(event)
 
-				world.write(shape)
+				world.save(feature)
 
-		world.write(self)
+		world.save(self)
 
 
 	def plot(self,timestep=None):
@@ -242,6 +239,7 @@ class Facility(Base):
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
 		ax.set_aspect('equal')
+		ax.set_title(self.name)
 
 		for feature in self.features:
 			rgb = feature.get_rgb(plotting=True)
@@ -260,11 +258,11 @@ class Feature(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	order = Column(Integer)
 	visibility = Column(Integer)
 	prototype = Column(String)
-	wkt = Column(String)
+	#wkt = Column(String)
 	rgb = Column(String)
+	level = Column(Integer)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
@@ -294,14 +292,14 @@ class Feature(Base):
 
 		# create the footprint of the facility
 		footprint = self.facility.build_geometry()
+		targets = list()
 
 		# if there are no rules return the footprint
 		if not self.rules:
-			return footprint
+			valid_zone = footprint
 		
 		# otherwise evaluate the rules
 		else:
-			targets = list()
 			masks = list()
 
 			# loop through rules to find possible locations
@@ -311,28 +309,30 @@ class Feature(Base):
 				masks.append(mask)
 
 			# find the intersection of all the masks (if any!)
-			valid = masks.pop(0)
+			valid_zone = masks.pop(0)
 			for mask in masks:
-				valid = valid.intersection(mask)
+				valid_zone = valid_zone.intersection(mask)
 
+			
 			# if the intersection fails return False, this feature will
 			# not be drawn
-			if valid.area == 0:
+			if valid_zone.area == 0:
 				print('no possible location for:',self.name)
 				return False, None
 
-		# find all the other features that are simply 'obstacles'
-		non_targets = [feature.build_geometry() for feature in placed_features
-						if feature.name not in targets]
+		# find all the other features that are simply 'obstacles' in the same level
+		non_targets = [feature for feature in placed_features if feature.name not in targets]
+		non_targets = [feature.build_geometry() for feature in non_targets 
+							if feature.level == self.level]
 
 		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
-			return valid
+			return valid_zone
 
 		overlaps = cascaded_union(non_targets)
-		valid = valid.difference(overlaps)
+		valid_zone = valid_zone.difference(overlaps)
 
-		return valid
+		return valid_zone
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -351,7 +351,8 @@ class Shape(Base):
 	prototype = Column(String)
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)
-	wkt = Column(String)
+	placed_wkt = Column(String)
+	stable_wkt = Column(String)
 
 	material_code = Column(Integer)
 	rgb = Column(String)
@@ -361,9 +362,15 @@ class Shape(Base):
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	def build_geometry(self):
+	def build_geometry(self,placed=True):
 		"""Returns a shapely geometry"""
-		self.geometry = load_wkt(self.wkt)
+		
+		if placed:
+			geom = self.placed_wkt
+		else:
+			geom = self.stable_wkt
+
+		self.geometry = load_wkt(geom)
 		return self.geometry
 
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
@@ -398,7 +405,7 @@ class Rule(Base):
 	id = Column(Integer, primary_key=True)
 	oper = Column(String) # e.g. within, disjoint, near etc.
 	target = Column(Integer)
-	value = Column(Integer)
+	value = Column(Integer,default=0)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='rules')
@@ -423,7 +430,7 @@ class Rule(Base):
 
 		# evaluate the rule based on the operation (oper)
 		if self.oper=='within':
-			valid = target_union
+			valid = target_union.buffer(self.value)
 		elif self.oper=='near':
 			valid = near(self.feature,target_union,distance=self.value)
 		else:
@@ -445,14 +452,14 @@ class Event(Base):
 	id = Column(Integer, primary_key=True)
 	timestep = Column(Integer)
 
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape,back_populates='events')
+	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+	feature = relationship(Feature,back_populates='events')
 
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility,back_populates='events')
 
 
-Shape.events = relationship('Event',order_by=Event.id,back_populates='shape')
+Feature.events = relationship('Event',order_by=Event.id,back_populates='feature')
 Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
 
 

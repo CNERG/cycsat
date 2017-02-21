@@ -53,7 +53,7 @@ def build_geometry(Entity):
 
 def build_feature_footprint(Feature):
 	"""Returns a geometry that is the union of all a feature's static shapes"""
-	shapes = [shape.build_geometry() for shape in Feature.shapes if shape.visibility==100]
+	shapes = [shape.build_geometry(placed=True) for shape in Feature.shapes if shape.visibility==100]
 	union = cascaded_union(shapes)
 	return union
 
@@ -122,6 +122,8 @@ def create_blueprint(Facility,attempts=100):
 	"""
 	# track placed features
 	placed_features = list()
+	site_axis = random.randint(-180,180)
+	print('axis',site_axis)
 	
 	# loop through all features of the Facility
 	for feature in Facility.features:
@@ -130,7 +132,7 @@ def create_blueprint(Facility,attempts=100):
 		valid_bounds = feature.evaluate_rules(placed_features)
 
 		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,valid_bounds,attempts=attempts)
+		placed = place_feature(feature,valid_bounds,build=True,rotation=site_axis,attempts=attempts)
 
 		if placed:
 			placed_features.append(feature)
@@ -161,17 +163,23 @@ def build_facility(Facility,attempts=10):
 # =============================================================================
 
 
-def place(Entity,placement,rotation=0):
-	"""Places a shape to a coordinate position"""
+def place(Entity,placement,build=False,center=None,rotation=0):
+	"""Places a shape to a coordinate position
+
+	Keyword arguments:
+	build -- draws from the shapes stable_wkt
+	"""
 	
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 
-	geometry = Entity.build_geometry()
-	location = geometry
+	if build:
+		geometry = Entity.build_geometry(placed=False)
+	else:
+		geometry = Entity.build_geometry(placed=True)
 
-	shape_x = location.centroid.coords.xy[0][0]
-	shape_y = location.centroid.coords.xy[1][0]
+	shape_x = geometry.centroid.coords.xy[0][0]
+	shape_y = geometry.centroid.coords.xy[1][0]
 
 	try:
 		xoff = Entity.xoff
@@ -184,15 +192,15 @@ def place(Entity,placement,rotation=0):
 	shift_y = placed_y - shape_y + yoff
 
 	shifted = shift_shape(geometry,xoff=shift_x,yoff=shift_y)
-	if rotation > 0:
-		shifted = rotate(shifted,rotation)
+	if rotation != 0:
+		shifted = rotate(shifted,rotation,origin=center,use_radians=True)
 
-	Entity.wkt = shifted.wkt
+	Entity.placed_wkt = shifted.wkt
 	
 	return Entity
 
 
-def place_feature(Feature,geometry,rand=True,location=False,attempts=100):
+def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
@@ -200,11 +208,14 @@ def place_feature(Feature,geometry,rand=True,location=False,attempts=100):
 	geometry -- containing geometry
 	random -- if 'True', placement is random, else Point feaure is required
 	location -- centroid location to place Feature
-	attempts -- the maximum number attempts to be made.
+	attempts -- the maximum number attempts to be made
+	build -- draws from the shapes stable_wkt
 	"""
+
+	Feature.facility.build_geometry()
+	center = Feature.facility.geometry.centroid
 	
 	for i in range(attempts):
-
 		if rand:
 			posited_point = posit_point(geometry)
 		else:
@@ -213,15 +224,14 @@ def place_feature(Feature,geometry,rand=True,location=False,attempts=100):
 			print('Point feature required for placement.')
 			break
 
-		rotation = random.randint(0,180)
-
 		placed_shapes = list()
 		typology_checks = list()
 		for shape in Feature.shapes:
 			
-			place(shape,posited_point,rotation)
+			place(shape,posited_point,build,center,rotation)
 			
 			placement = shape.build_geometry()
+			
 			placed_shapes.append(placement)
 			typology_checks.append(placement.within(geometry))
 
