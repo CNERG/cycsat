@@ -3,7 +3,7 @@ prototypes/reactor.py
 """
 from cycsat.archetypes import Facility, Feature, Rule
 from cycsat.prototypes.feature import SampleCoolingTower1, SampleContainment, SampleCoolingTower2
-from cycsat.prototypes.feature import SampleTurbine, ConcretePad, Plume
+from cycsat.prototypes.feature import SampleTurbine, ConcretePad, Plume, SampleFuel
 
 
 class SampleReactor(Facility):
@@ -23,7 +23,9 @@ class SampleReactor(Facility):
         SampleContainment(),
         SampleContainment(),
         SampleTurbine(),
-        Plume()
+        SampleTurbine(),
+        SampleFuel(),
+        #Plume()
         ]
 
         for f in self.features:

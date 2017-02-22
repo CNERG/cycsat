@@ -24,10 +24,11 @@ from cycsat.geometry import pointilize
 from shapely.geometry import box
 from shapely.affinity import translate as shift_shape
 
-sim = Cycsat('reactor_test_sample.sqlite')
+#sim = Cycsat('reactor_test_sample.sqlite')
 
-# s2 = SampleReactor()
-# s2.features.pop(0s)
+s = SampleReactor()
+s.build()
+t = s.features[3]
 
 # fig, ax = plt.subplots(3,2, sharex=True,sharey=True)
 # for x in ax[:,0]:
@@ -41,13 +42,12 @@ sim = Cycsat('reactor_test_sample.sqlite')
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-# def plot_facilities():
-
 
 def plot_features(features):
 	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 	ax.set_xlim([0,10000])
 	ax.set_ylim([0,10000])
+	ax.set_aspect('equal')
 
 	patches = [PolygonPatch(feat) for feat in features]
 	for patch in patches:

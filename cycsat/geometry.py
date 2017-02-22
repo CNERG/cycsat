@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 
 import numpy as np
 
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, LineString
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
@@ -51,9 +51,9 @@ def build_geometry(Entity):
 	return geometry
 
 
-def build_feature_footprint(Feature):
+def build_feature_footprint(Feature,placed=True):
 	"""Returns a geometry that is the union of all a feature's static shapes"""
-	shapes = [shape.build_geometry(placed=True) for shape in Feature.shapes if shape.visibility==100]
+	shapes = [shape.build_geometry(placed=placed) for shape in Feature.shapes if shape.visibility==100]
 	union = cascaded_union(shapes)
 	return union
 
@@ -91,6 +91,19 @@ def posit_point(geometry,attempts=100):
 # Site construction
 # =============================================================================
 
+def axf(m,x,b,invert=False):
+	"""Returns a LineString that represents a linear function."""
+	if invert:
+		return ((-1/m)*x)+b
+	return (m*x)+b
+
+def area_ratio(polygons):
+	"""Returns the area ratio of two polygons"""
+	poly1 = polygons[0].area
+	poly2 = polygons[1].area
+	return poly1/(poly1+poly2)
+
+
 def create_plan(Site,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry
@@ -107,6 +120,40 @@ def create_plan(Site,attempts=100):
 			continue
 		else:
 			print('site plan failed')
+
+
+def prepare_site(Facility,water_cov=0.10):
+	"""    
+	Prepares a Facility's site by creating a central axis and establishing
+	where the water is located.
+
+    Parameters
+    ----------
+    water_cov : integer (1-100)
+        Percent desired water cover.
+    """
+
+	Facility.build_geometry()
+	minx, miny, maxx, maxy = Facility.geometry.bounds
+	b = random.randint(0,round(maxy))
+	m = random.random()*random.choice([-1,1])
+
+	site_axis = LineString([[0,axf(m,0,b)],[maxx,axf(m,maxx,b)]])
+
+	split = list(Facility.geometry.difference(site_axis.buffer(1)).geoms)
+
+	while (area_ratio(split)-water_cov)>0.01
+
+	return split
+
+	# need to shift coast line, return water feature
+
+
+
+
+
+
+
 
 # =============================================================================
 # Facility construction

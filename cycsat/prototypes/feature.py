@@ -21,20 +21,6 @@ class ConcretePad(Feature):
         ]
 
 
-# class Truck(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'truck'}
-
-#     def __init__(self,name='sample truck',visibility=100):
-        
-#         self.name = name
-#         self.visibility = visibility
-
-#         # define shapes
-#         self.shapes = [
-#         Rectangle(radius=900,material=materialize(rgb=[146,149,1]))
-#         ]
-
-
 class SampleCoolingTower1(Feature):
     __mapper_args__ = {'polymorphic_identity': 'sample cooling tower 1'}
 
@@ -73,7 +59,7 @@ class SampleCoolingTower2(Feature):
 class SampleContainment(Feature):
     __mapper_args__ = {'polymorphic_identity': 'sample containment'}
 
-    def __init__(self,name='sample containment',visibility=100):
+    def __init__(self,name='sample containment 1',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -84,6 +70,10 @@ class SampleContainment(Feature):
         self.shapes = [
         Circle(radius=520,rgb=[70,70,70])
         ]
+
+        # self.rules = [
+        # Rule(oper='near',target='sample containment',value=200)
+        # ]
 
 
 class SampleTurbine(Feature):
@@ -99,6 +89,22 @@ class SampleTurbine(Feature):
         # define shapes
         self.shapes = [
         Rectangle(width=580,length=2220,rgb=[208,40,14])
+        ]
+
+
+class SampleFuel(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'sample fuel building'}
+
+    def __init__(self,name='sample fuel building',visibility=100):
+        
+        self.name = name
+        self.visibility = visibility
+        self.rgb = '[70,70,70]'
+        self.level = 0
+
+        # define shapes
+        self.shapes = [
+        Rectangle(width=1000,length=1000,rgb=[208,40,14])
         ]
 
 

@@ -269,9 +269,9 @@ class Feature(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
 
-	def build_geometry(self):
+	def build_geometry(self,placed=True):
 		"""Returns a shapely geometry of the static shapes"""
-		self.geometry = build_feature_footprint(self)
+		self.geometry = build_feature_footprint(self,placed=placed)
 		return self.geometry
 
 	def get_rgb(self,plotting=False):
@@ -312,7 +312,6 @@ class Feature(Base):
 			valid_zone = masks.pop(0)
 			for mask in masks:
 				valid_zone = valid_zone.intersection(mask)
-
 			
 			# if the intersection fails return False, this feature will
 			# not be drawn
