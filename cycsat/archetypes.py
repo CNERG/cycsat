@@ -310,12 +310,14 @@ class Feature(Base):
 		# otherwise evaluate the rules
 		else:
 			masks = list()
+			coords = list()
 
-			# loop through rules to find possible locations
+			# loop through rules to find possible locations and coords
 			for rule in self.rules:
 				targets.append(rule.target)
-				mask = rule.evaluate(placed_features,footprint)
+				mask, coord = rule.evaluate(placed_features,footprint)
 				masks.append(mask)
+				coords+=coord
 
 			# find the intersection of all the masks (if any!)
 			valid_zone = masks.pop(0)
@@ -327,6 +329,8 @@ class Feature(Base):
 			if valid_zone.area == 0:
 				print('no possible location for:',self.name)
 				return False, None
+
+			
 
 		# find all the other features that are simply 'obstacles' in the same level
 		non_targets = [feature for feature in placed_features if feature.name not in targets]
@@ -437,21 +441,21 @@ class Rule(Base):
 		# merge all the targets into one shape
 		target_union = cascaded_union(targets)
 
-		vaild = None
-		coords = list()
+		vaild_bounds = None
+		valid_coords = list()
 
 		# evaluate the rule based on the operation (oper)
 		if self.oper=='within':
-			valid = target_union.buffer(self.value)
+			valid_bounds = target_union.buffer(self.value)
 		elif self.oper=='near':
-			valid = near(self.feature,target_union,distance=self.value)
-		# elif self.oper=='parallel':
-		# 	parallel = axis.parallel_offset(self.value,'left')
-		# 	x,y = line_func(parallel)
+			valid_bounds = near(self.feature,target_union,distance=self.value)
+		elif self.oper=='parallel':
+			parallel = axis.parallel_offset(self.value,'left')
+			valid_coords = line_func(parallel)
 		else:
-			valid = footprint
+			valid_bounds = footprint
 		
-		return valid
+		return valid_bounds, valid_coords
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
