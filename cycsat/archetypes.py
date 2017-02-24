@@ -7,7 +7,7 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import create_blueprint, assess_blueprint, place, build_facility
+from .geometry import create_blueprint, place, build_facility
 from .geometry import build_geometry, build_feature_footprint, near
 
 from .laboratory import materialize
@@ -20,9 +20,10 @@ from random import randint
 import operator
 import ast
 
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon, Point, LineString
 from shapely.wkt import loads as load_wkt
 from shapely.ops import cascaded_union
+from shapely.affinity import rotate, translate
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
@@ -179,6 +180,7 @@ class Facility(Base):
 	terrain = Column(BLOB)
 	prototype = Column(String)
 	defined = Column(Boolean,default=False)
+	ax_angle = Column(Integer)
 	wkt = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
@@ -190,10 +192,20 @@ class Facility(Base):
 		self.geometry = build_geometry(self)
 		return self.geometry
 
-	def build(self):
+	def axis(self):
+		if self.ax_angle:
+			footprint = self.build_geometry()
+			minx, miny, maxx, maxy = footprint.bounds
+			site_axis = LineString([[-maxx,0],[maxx*2,0]])
+			site_axis = rotate(site_axis,self.ax_angle)
+			return site_axis
+		else:
+			print('This facility has not been built. Use the build() method \n'
+				  'before creating the axis.')
+
+	def build(self,attemps=100):
 		"""Randomly places all the features of a facility"""
-		outcome,fails = build_facility(self)
-		return outcome,fails
+		build_facility(self,attempts=100)
 
 	def simulate(self,timestep,reader,world):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
@@ -203,7 +215,6 @@ class Facility(Base):
 		timestep -- the timestep for simulation
 		reader -- a reader connection for reading data from the database
 		"""
-		
 		dynamic_features = [feature for feature in self.features if feature.visibility!=100]
 
 		events = list()
@@ -233,7 +244,6 @@ class Facility(Base):
 
 	def plot(self,timestep=None):
 		"""plots a facility and its static features or a timestep."""
-
 		fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
@@ -286,12 +296,11 @@ class Feature(Base):
 		else:
 			return rgb
 
-	def evaluate_rules(self,placed_features):
+	def evaluate_rules(self,placed_features,footprint):
 		"""Evaluates all the rules of a feature given a list of placed features
 		and returns a geometry where the feature can be drawn."""
 
-		# create the footprint of the facility
-		footprint = self.facility.build_geometry()
+		# track list of targeted features
 		targets = list()
 
 		# if there are no rules return the footprint
@@ -414,7 +423,8 @@ class Rule(Base):
 
 
 	def evaluate(self,placed_features,footprint):
-		"""Evaluates a spatial rule and returns a boundary geometry."""
+		"""Evaluates a spatial rule and returns a boundary geometry 
+		and a list coordinates that must be selected."""
 		
 		# get all the features that are 'targeted' in the rule
 		targets = [feature.build_geometry() for feature in placed_features 
@@ -427,13 +437,20 @@ class Rule(Base):
 		# merge all the targets into one shape
 		target_union = cascaded_union(targets)
 
+		vaild = None
+		coords = list()
+
 		# evaluate the rule based on the operation (oper)
 		if self.oper=='within':
 			valid = target_union.buffer(self.value)
 		elif self.oper=='near':
 			valid = near(self.feature,target_union,distance=self.value)
+		elif self.oper=='parallel':
+			parallel = translate(axis,0,self.value,0)
+
 		else:
 			valid = footprint
+		
 		return valid
 
 

@@ -11,6 +11,14 @@ from osgeo import ogr, gdal, osr
 from geopandas import gpd
 
 
+
+
+	# split = list(Facility.geometry.difference(site_axis.buffer(1)).geoms)
+	# return split
+	# need to shift coast line, return water feature
+
+
+
 def simple(width,length):
 	"""Creates a simple land and water terrain returns terrain shapes"""
 	n = math.ceil(math.log(width,2))

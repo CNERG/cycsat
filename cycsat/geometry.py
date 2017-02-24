@@ -1,6 +1,9 @@
-"""
-geometry.py
-"""
+#------------------------------------------------------------------------------
+# GEOMETRY FUNCTIONS
+#
+#
+#------------------------------------------------------------------------------
+
 from sqlalchemy import Column, Integer, String
 
 import random
@@ -18,9 +21,9 @@ from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
-# =============================================================================
-# Spatial analysis functions
-# =============================================================================
+#------------------------------------------------------------------------------
+# GENERAL FUNCTIONS
+#------------------------------------------------------------------------------
 
 def pointilize(feature):
 	"""Turns a Polygon into a array of Points"""
@@ -28,15 +31,13 @@ def pointilize(feature):
 	coords = [Point(x,y) for x,y in zip(x,y)]
 	return coords
 
+
 # def shift_towards(feature,target,increment=1):
 # 	"""Shifts a shape towards a target shape until they cross."""
 # 	target_centroid = target.centroid
 # 	cross = False
 # 	while not cross:
 
-# =============================================================================
-# General
-# =============================================================================
 
 def build_geometry(Entity):
 	"""Builds a geometry given an instance"""
@@ -87,9 +88,21 @@ def posit_point(geometry,attempts=100):
 	return False
 
 
-# =============================================================================
-# Site construction
-# =============================================================================
+def line_func(line,precision=1):
+	"""Returns point array for a staight line given end coords"""
+	start, end = list(line.coords)
+
+	m = (end[1]-start[1])/(end[0]-start[0])
+	b = start[1]-(m*start[0])
+
+	x = np.arange(start[0],end[0],step=1)
+	y = (m*x)+b
+	
+	return x,y
+
+#------------------------------------------------------------------------------
+# SITE PREP
+#------------------------------------------------------------------------------
 
 def axf(m,x,b,invert=False):
 	"""Returns a LineString that represents a linear function."""
@@ -122,43 +135,16 @@ def create_plan(Site,attempts=100):
 			print('site plan failed')
 
 
-def prepare_site(Facility,water_cov=0.10):
-	"""    
-	Prepares a Facility's site by creating a central axis and establishing
-	where the water is located.
+def site_axis(Facility):
+	"""Generates a site axis."""
+	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
+	rotate(site_axis,random.randint(-180,180))
 
-    Parameters
-    ----------
-    water_cov : integer (1-100)
-        Percent desired water cover.
-    """
+	return site_axis
 
-	Facility.build_geometry()
-	minx, miny, maxx, maxy = Facility.geometry.bounds
-	b = random.randint(0,round(maxy))
-	m = random.random()*random.choice([-1,1])
-
-	site_axis = LineString([[0,axf(m,0,b)],[maxx,axf(m,maxx,b)]])
-
-	split = list(Facility.geometry.difference(site_axis.buffer(1)).geoms)
-
-	while (area_ratio(split)-water_cov)>0.01
-
-	return split
-
-	# need to shift coast line, return water feature
-
-
-
-
-
-
-
-
-# =============================================================================
-# Facility construction
-# =============================================================================
-
+#------------------------------------------------------------------------------
+# FACILITY CONSTRUCTION
+#------------------------------------------------------------------------------
 
 def create_blueprint(Facility,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
@@ -167,19 +153,29 @@ def create_blueprint(Facility,attempts=100):
 	Keyword arguments:
 	attempts -- the maximum number attempts to be made to place each feature
 	"""
+	footprint = Facility.build_geometry()
+	minx, miny, maxx, maxy = Facility.geometry.bounds
+	
+	# create a site axis
+	site_axis = LineString([[-maxx,0],[maxx*2,0]])
+	site_rotation = random.randint(-180,180)
+	site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+
+	Facility.ax_angle = site_rotation
+
 	# track placed features
 	placed_features = list()
-	site_axis = random.randint(-180,180)
-	print('axis',site_axis)
 	
 	# loop through all features of the Facility
 	for feature in Facility.features:
 		
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		valid_bounds = feature.evaluate_rules(placed_features)
+		valid_bounds = feature.evaluate_rules(placed_features,footprint)
+
+		# also return valid locations (centroids) to input into a place can also overide site rotation
 
 		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,valid_bounds,build=True,rotation=site_axis,attempts=attempts)
+		placed = place_feature(feature,valid_bounds,build=True,rotation=site_rotation,attempts=attempts)
 
 		if placed:
 			placed_features.append(feature)
@@ -190,25 +186,22 @@ def create_blueprint(Facility,attempts=100):
 
 	return True
 
-def build_facility(Facility,attempts=10):
+
+def build_facility(Facility,attempts=100):
 	"""Randomly places all the features of a facility"""	
-	fail_details = list()
 	for x in range(attempts):
-		tbs = create_blueprint(Facility)
-		if tbs:
+		result = create_blueprint(Facility)
+		if result:
 			Facility.defined = True
-			return tbs,fail_details
+			break
 		else:
 			Facility.defined = False
 			continue
+	return result
 
-	return tbs
-
-
-# =============================================================================
-# Placement
-# =============================================================================
-
+#------------------------------------------------------------------------------
+# FEATURE PLACEMENT
+#------------------------------------------------------------------------------
 
 def place(Entity,placement,build=False,center=None,rotation=0):
 	"""Places a shape to a coordinate position
@@ -240,7 +233,7 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 
 	shifted = shift_shape(geometry,xoff=shift_x,yoff=shift_y)
 	if rotation != 0:
-		shifted = rotate(shifted,rotation,origin=center,use_radians=True)
+		shifted = rotate(shifted,rotation,origin='center',use_radians=False)
 
 	Entity.placed_wkt = shifted.wkt
 	
@@ -258,9 +251,8 @@ def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=Fal
 	attempts -- the maximum number attempts to be made
 	build -- draws from the shapes stable_wkt
 	"""
-
-	Feature.facility.build_geometry()
-	center = Feature.facility.geometry.centroid
+	footprint = Feature.facility.build_geometry()
+	center = footprint.centroid
 	
 	for i in range(attempts):
 		if rand:
@@ -330,10 +322,9 @@ def place_facility(Facility,geometry,attempts=100):
 	return False
 
 
-# =============================================================================
-# Placement testing
-# =============================================================================
-
+#------------------------------------------------------------------------------
+# RULE EVALUATIONS
+#------------------------------------------------------------------------------
 
 def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
 	"""Places a feature a specified distance to a target feature."""
@@ -352,59 +343,3 @@ def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
 	bounds = second_buffer.difference(inner_buffer)
 
 	return bounds
-
-
-# =============================================================================
-# Retired functions
-# =============================================================================
-
-def assess_blueprint(Facility):
-	"""Checks to see the blueprint has any illegal overlaps"""
-
-	shape_stack = dict()
-
-	# build a shape stack by level
-	for feature in Facility.features:
-		for shape in feature.shapes:
-			geometry = shape.build_geometry()
-			if shape.level in shape_stack:
-				shape_stack[shape.level].append(geometry)
-			else:
-				shape_stack[shape.level] = [geometry]
-
-	level_overlaps = []
-	for level in shape_stack:
-		level_overlaps.append(check_disjoints(shape_stack[level]))
-
-	if False in level_overlaps:
-		return False
-	else:
-		return True
-
-
-def near_draw(feature,target,footprint,distance,cushion=0.0,threshold=100,attempts=20):
-	"""Places a feature a specified distance to a target feature."""
-	
-	# build geometry of both features
-	target_geometry = target.build_geometry()
-	feature_geometry = feature.build_geometry()
-	
-	# buffer the target geometry by the provided distance
-	inner_buffer = target_geometry.buffer(distance)
-
-	bounds = feature_geometry.bounds
-	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
-	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
-	second_buffer = inner_buffer.buffer(buffer_value)
-
-	bounds = second_buffer.difference(inner_buffer)
-	bounds = bounds.intersection(footprint)
-
-	attempt = 0
-	offset = threshold
-	while (offset >= threshold) and (attempt < attempts):
-		attempt+=1
-		placed = place_feature(feature,bounds,random=True)
-		offset = placed.build_geometry().distance(inner_buffer)
-
-	return [bounds,inner_buffer,placed]
