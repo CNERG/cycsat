@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
-from .geometry import build_geometry, build_feature_footprint, near
+from .geometry import build_geometry, build_feature_footprint, near, line_func
 
 from .laboratory import materialize
 
@@ -422,36 +422,38 @@ class Rule(Base):
 	feature = relationship(Feature, back_populates='rules')
 
 
-	def evaluate(self,placed_features,footprint):
+	def evaluate(self,placed_features,footprint,axis):
 		"""Evaluates a spatial rule and returns a boundary geometry 
 		and a list coordinates that must be selected."""
+
+		vaild = footprint
+		coords = []
 		
 		# get all the features that are 'targeted' in the rule
 		targets = [feature.build_geometry() for feature in placed_features 
 					if feature.name==self.target]
 
 		# if the list is empty return the facility footprint
-		if not targets:
-			return footprint
+		if targets:
+			# merge all the targets into one shape
+			target_union = cascaded_union(targets)
 
-		# merge all the targets into one shape
-		target_union = cascaded_union(targets)
-
-		vaild = None
-		coords = list()
-
-		# evaluate the rule based on the operation (oper)
-		if self.oper=='within':
-			valid = target_union.buffer(self.value)
-		elif self.oper=='near':
-			valid = near(self.feature,target_union,distance=self.value)
-		elif self.oper=='parallel':
-			parallel = translate(axis,0,self.value,0)
+			# evaluate the rule based on the operation (oper)
+			if self.oper=='within':
+				valid = target_union.buffer(self.value)
+			elif self.oper=='near':
+				valid = near(self.feature,target_union,distance=self.value)
+			else:
+				valid = footprint
 
 		else:
-			valid = footprint
+			if self.oper=='parallel':
+				parallel = axis.parallel_offest(self.value,'left')
+				coords = line_func(parallel)
+			else:
+				valid = footprint
 		
-		return valid
+		return valid,coords
 
 
 

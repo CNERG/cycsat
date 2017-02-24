@@ -91,6 +91,10 @@ class SampleTurbine(Feature):
         Rectangle(width=580,length=2220,rgb=[208,40,14])
         ]
 
+        self.rules = [
+        Rule(oper='parallel',value=200)
+        ]
+
 
 class SampleFuel(Feature):
     __mapper_args__ = {'polymorphic_identity': 'sample fuel building'}

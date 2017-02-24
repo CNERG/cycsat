@@ -98,7 +98,7 @@ def line_func(line,precision=1):
 	x = np.arange(start[0],end[0],step=1)
 	y = (m*x)+b
 	
-	return x,y
+	return list(zip(x,y))
 
 #------------------------------------------------------------------------------
 # SITE PREP
