@@ -296,7 +296,7 @@ class Feature(Base):
 		else:
 			return rgb
 
-	def evaluate_rules(self,placed_features,footprint):
+	def evaluate_rules(self,placed_features,footprint,axis):
 		"""Evaluates all the rules of a feature given a list of placed features
 		and returns a geometry where the feature can be drawn."""
 
@@ -310,12 +310,14 @@ class Feature(Base):
 		# otherwise evaluate the rules
 		else:
 			masks = list()
+			coord_list = list()
 
 			# loop through rules to find possible locations
 			for rule in self.rules:
 				targets.append(rule.target)
-				mask = rule.evaluate(placed_features,footprint)
+				mask, coords = rule.evaluate(placed_features,footprint,axis)
 				masks.append(mask)
+				coord_list = coord_list+coords
 
 			# find the intersection of all the masks (if any!)
 			valid_zone = masks.pop(0)
@@ -335,12 +337,12 @@ class Feature(Base):
 
 		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
-			return valid_zone
+			return valid_zone, coord_list
 
 		overlaps = cascaded_union(non_targets)
 		valid_zone = valid_zone.difference(overlaps)
 
-		return valid_zone
+		return valid_zone, coord_list
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -426,7 +428,7 @@ class Rule(Base):
 		"""Evaluates a spatial rule and returns a boundary geometry 
 		and a list coordinates that must be selected."""
 
-		vaild = footprint
+		valid = footprint
 		coords = []
 		
 		# get all the features that are 'targeted' in the rule
@@ -448,14 +450,13 @@ class Rule(Base):
 
 		else:
 			if self.oper=='parallel':
-				parallel = axis.parallel_offest(self.value,'left')
+				print('test')
+				parallel = axis.parallel_offset(self.value,'left')
 				coords = line_func(parallel)
 			else:
 				valid = footprint
 		
 		return valid,coords
-
-
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')

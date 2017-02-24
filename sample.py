@@ -27,7 +27,7 @@ from shapely.affinity import translate as shift_shape
 #sim = Cycsat('reactor_test_sample.sqlite')
 
 s = SampleReactor()
-s.build()
+#s.build()
 # t = s.features[3]
 
 # fig, ax = plt.subplots(3,2, sharex=True,sharey=True)

@@ -97,6 +97,8 @@ def line_func(line,precision=1):
 
 	x = np.arange(start[0],end[0],step=1)
 	y = (m*x)+b
+	print(x)
+	print(y)
 	
 	return list(zip(x,y))
 
@@ -170,7 +172,7 @@ def create_blueprint(Facility,attempts=100):
 	for feature in Facility.features:
 		
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		valid_bounds = feature.evaluate_rules(placed_features,footprint)
+		valid_bounds, valid_coords = feature.evaluate_rules(placed_features,footprint,site_axis)
 
 		# also return valid locations (centroids) to input into a place can also overide site rotation
 
