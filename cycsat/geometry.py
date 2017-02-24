@@ -95,10 +95,12 @@ def line_func(line,precision=1):
 	m = (end[1]-start[1])/(end[0]-start[0])
 	b = start[1]-(m*start[0])
 
-	x = np.arange(start[0],end[0],step=1)
+	x = np.linspace(start[0],end[0],round(line.length))
 	y = (m*x)+b
+
+	coords = list(zip(x,y))
 	
-	return x,y
+	return coords
 
 #------------------------------------------------------------------------------
 # SITE PREP

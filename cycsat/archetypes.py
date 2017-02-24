@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
-from .geometry import build_geometry, build_feature_footprint, near
+from .geometry import build_geometry, build_feature_footprint, near, line_func
 
 from .laboratory import materialize
 
@@ -445,15 +445,13 @@ class Rule(Base):
 			valid = target_union.buffer(self.value)
 		elif self.oper=='near':
 			valid = near(self.feature,target_union,distance=self.value)
-		elif self.oper=='parallel':
-			parallel = translate(axis,0,self.value,0)
-
+		# elif self.oper=='parallel':
+		# 	parallel = axis.parallel_offset(self.value,'left')
+		# 	x,y = line_func(parallel)
 		else:
 			valid = footprint
 		
 		return valid
-
-
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
