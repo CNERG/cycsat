@@ -89,17 +89,13 @@ def posit_point(geometry,attempts=100):
 
 
 def line_func(line,precision=1):
-	"""Returns point array for a staight line given end coords"""
+	"""Returns a list of coords for a staight line given end coords"""
 	start, end = list(line.coords)
-
 	m = (end[1]-start[1])/(end[0]-start[0])
 	b = start[1]-(m*start[0])
-
-	x = np.arange(start[0],end[0],step=1)
+	x = np.linspace(start[0],end[0],round(line.length))
 	y = (m*x)+b
-	print(x)
-	print(y)
-	
+	coords = list(zip(x,y))
 	return list(zip(x,y))
 
 #------------------------------------------------------------------------------
