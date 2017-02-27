@@ -71,20 +71,24 @@ def check_disjoints(shapes):
 	return True
 
 
-def posit_point(geometry,attempts=100):
+def posit_point(geometry,points,attempts=100):
 	"""Generates a random point within a geometry"""
 	
 	for i in range(attempts):
 
 		# define the geometry boundary
 		x_min, y_min, x_max, y_max = geometry.bounds
-		
-		# create a random point within geometry
-		posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
+
+		if len(points)>0:
+			posited_point = random.choice(points)
+		else:
+			# create a random point within geometry
+			posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
 
 		if posited_point.within(geometry):
 			return posited_point
-	print('placement failed after {',attempts,'} attempts.')
+	
+	print('point placement failed after {',attempts,'} attempts.')
 	return False
 
 
@@ -95,12 +99,11 @@ def line_func(line,precision=1):
 	b = start[1]-(m*start[0])
 	x = np.linspace(start[0],end[0],round(line.length))
 	y = (m*x)+b
+	
 	coords = list(zip(x,y))
-<<<<<<< HEAD
-	return list(zip(x,y))
-=======
-	return coords
->>>>>>> ee03c4bc865692bfe545ebd8b700495c882e02a0
+	points = [Point(c[0],c[1]) for c in coords]
+
+	return points
 
 #------------------------------------------------------------------------------
 # SITE PREP
@@ -117,7 +120,6 @@ def area_ratio(polygons):
 	poly1 = polygons[0].area
 	poly2 = polygons[1].area
 	return poly1/(poly1+poly2)
-
 
 def create_plan(Site,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
@@ -170,14 +172,16 @@ def create_blueprint(Facility,attempts=100):
 	
 	# loop through all features of the Facility
 	for feature in Facility.features:
+
+		print('placing:',feature.name)
 		
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		valid_bounds, valid_coords = feature.evaluate_rules(placed_features,footprint,site_axis)
+		bounds, coords = feature.evaluate_rules(placed_features,footprint,site_axis)
 
-		# also return valid locations (centroids) to input into a place can also overide site rotation
+		print('valid area:',bounds.area,'| valid points:',len(coords))
 
 		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,valid_bounds,build=True,rotation=site_rotation,attempts=attempts)
+		placed = place_feature(feature,bounds,coords,build=True,rotation=site_rotation,attempts=attempts)
 
 		if placed:
 			placed_features.append(feature)
@@ -242,7 +246,7 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	return Entity
 
 
-def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=False,attempts=100):
+def place_feature(Feature,geometry,coords=[],build=False,rotation=0,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
@@ -258,7 +262,7 @@ def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=Fal
 	
 	for i in range(attempts):
 		if rand:
-			posited_point = posit_point(geometry)
+			posited_point = posit_point(geometry,coords)
 		else:
 			posited_point = location
 		if not posited_point:
@@ -270,7 +274,6 @@ def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=Fal
 		for shape in Feature.shapes:
 			
 			place(shape,posited_point,build,center,rotation)
-			
 			placement = shape.build_geometry()
 			
 			placed_shapes.append(placement)
@@ -280,7 +283,7 @@ def place_feature(Feature,geometry,build=False,rotation=0,rand=True,location=Fal
 			Feature.wkt = cascaded_union(placed_shapes).wkt
 			return True
 
-	failed_shapes = cascaded_union(placed_shapes)
+	#failed_shapes = cascaded_union(placed_shapes)
 
 	print(Feature.name,'placement failed after {',attempts,'} attempts.')
 	return False

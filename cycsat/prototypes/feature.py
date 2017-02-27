@@ -71,10 +71,6 @@ class SampleContainment(Feature):
         Circle(radius=520,rgb=[70,70,70])
         ]
 
-        # self.rules = [
-        # Rule(oper='near',target='sample containment',value=200)
-        # ]
-
 
 class SampleTurbine(Feature):
     __mapper_args__ = {'polymorphic_identity': 'sample turbine'}
@@ -92,7 +88,7 @@ class SampleTurbine(Feature):
         ]
 
         self.rules = [
-        Rule(oper='parallel',value=200)
+        Rule(oper='parallel',value=600)
         ]
 
 
