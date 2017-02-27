@@ -18,13 +18,13 @@ class SampleReactor(Facility):
 
         self.features = [
         ConcretePad(),
+        SampleTurbine(),
+        SampleTurbine(),
         SampleCoolingTower1(),
         SampleCoolingTower2(),
         SampleContainment(),
         SampleContainment(),
-        SampleTurbine(),
-        SampleTurbine(),
-        SampleFuel(),
+        SampleFuel()
         #Plume()
         ]
 

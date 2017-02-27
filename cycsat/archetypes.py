@@ -418,6 +418,7 @@ class Rule(Base):
 	id = Column(Integer, primary_key=True)
 	oper = Column(String) # e.g. within, disjoint, near etc.
 	target = Column(Integer)
+	direction = Column(String)
 	value = Column(Integer,default=0)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
@@ -452,8 +453,8 @@ class Rule(Base):
 				valid = footprint
 
 		else:
-			if self.oper=='parallel':
-				parallel = axis.parallel_offset(self.value,'left')
+			if self.oper=='offset':
+				parallel = axis.parallel_offset(self.value,self.direction)
 				coords = line_func(parallel)
 		
 		return valid, coords

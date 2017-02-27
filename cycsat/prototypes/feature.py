@@ -1,6 +1,7 @@
 """
 prototpyes/feature.py
 """
+import random
 from cycsat.archetypes import Shape, Feature, Rule, Condition
 from cycsat.prototypes.shapes import Circle, Rectangle, Plume
 
@@ -87,8 +88,10 @@ class SampleTurbine(Feature):
         Rectangle(width=580,length=2220,rgb=[208,40,14])
         ]
 
+        d = random.choice(['left','right'])
+        
         self.rules = [
-        Rule(oper='parallel',value=600)
+        Rule(oper='offset',direction=d,value=600)
         ]
 
 
