@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
-from .geometry import build_geometry, build_feature_footprint, near, line_func
+from .geometry import build_geometry, build_footprint, near, line_func
 
 from .laboratory import materialize
 
@@ -188,13 +188,16 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
-	def build_geometry(self):
-		self.geometry = build_geometry(self)
-		return self.geometry
+	def geometry(self):
+		self.geo = build_geometry(self)
+		return self.geo
+
+	def footprint(self):
+		return build_footprint(self)
 
 	def axis(self):
 		if self.ax_angle:
-			footprint = self.build_geometry()
+			footprint = self.geometry()
 			minx, miny, maxx, maxy = footprint.bounds
 			site_axis = LineString([[-maxx,0],[maxx*2,0]])
 			site_axis = rotate(site_axis,self.ax_angle)
@@ -253,9 +256,9 @@ class Facility(Base):
 
 		for feature in self.features:
 			rgb = feature.get_rgb(plotting=True)
-			patch = PolygonPatch(feature.build_geometry(),facecolor=rgb)
+			patch = PolygonPatch(feature.footprint(),facecolor=rgb)
 			ax.add_patch(patch)
-			plt.text(feature.geometry.centroid.x,feature.geometry.centroid.y,feature.name)
+			plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
 
 
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
@@ -279,10 +282,10 @@ class Feature(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
 
-	def build_geometry(self,placed=True):
+	def footprint(self):
 		"""Returns a shapely geometry of the static shapes"""
-		self.geometry = build_feature_footprint(self,placed=placed)
-		return self.geometry
+		self.geo = build_footprint(self)
+		return self.geo
 
 	def get_rgb(self,plotting=False):
 		"""Returns the RGB be value as a list [RGB] which is stored as text"""
@@ -332,7 +335,7 @@ class Feature(Base):
 
 		# find all the other features that are simply 'obstacles' in the same level
 		non_targets = [feature for feature in placed_features if feature.name not in targets]
-		non_targets = [feature.build_geometry() for feature in non_targets 
+		non_targets = [feature.footprint() for feature in non_targets 
 							if feature.level == self.level]
 
 		# if there are no 'non-targets' return the valid geometry
@@ -374,16 +377,15 @@ class Shape(Base):
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
 
-	def build_geometry(self,placed=True):
+	def geometry(self,placed=True):
 		"""Returns a shapely geometry"""
-		
 		if placed:
 			geom = self.placed_wkt
 		else:
 			geom = self.stable_wkt
 
-		self.geometry = load_wkt(geom)
-		return self.geometry
+		self.geo = load_wkt(geom)
+		return self.geo
 
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
 
@@ -434,7 +436,7 @@ class Rule(Base):
 		coords = []
 		
 		# get all the features that are 'targeted' in the rule
-		targets = [feature.build_geometry() for feature in placed_features 
+		targets = [feature.footprint() for feature in placed_features 
 					if feature.name==self.target]
 
 		# if the list is empty return the facility footprint
@@ -456,6 +458,7 @@ class Rule(Base):
 				parallel = axis.parallel_offset(self.value,direction)
 				coords = line_func(parallel)
 			elif self.oper=='offset':
+				pass
 		
 		return valid, coords
 

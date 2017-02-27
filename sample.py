@@ -20,9 +20,8 @@ from cycsat.prototypes.feature import SampleTurbine
 from cycsat.image import Sensor
 
 from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
-from cycsat.geometry import line_func
-from shapely.geometry import box
-from shapely.affinity import translate as shift_shape
+from cycsat.geometry import line_func, rotate_facility
+
 
 #sim = Cycsat('reactor_test_sample.sqlite')
 

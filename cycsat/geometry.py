@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 
 import numpy as np
 
-from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry import Polygon, Point, LineString, box
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
@@ -52,12 +52,18 @@ def build_geometry(Entity):
 	return geometry
 
 
-def build_feature_footprint(Feature,placed=True):
-	"""Returns a geometry that is the union of all a feature's static shapes"""
-	shapes = [shape.build_geometry(placed=placed) for shape in Feature.shapes if shape.visibility==100]
+def build_footprint(Entity,placed=True):
+	"""Returns a geometry that is the union of all a feature's static shapes or
+	all of a facilities static features."""
+	archetype = Entity.__class__.__bases__[0].__name__
+	if archetype == 'Facility':
+		shapes = [feature.footprint() for feature in Entity.features if feature.visibility==100]
+	else:
+		shapes = [shape.geometry(placed=placed) for shape in Entity.shapes if shape.visibility==100]
 	union = cascaded_union(shapes)
+	if union.__class__.__name__ == 'MultiPolygon':
+		return box(union)
 	return union
-
 
 def check_disjoints(shapes):
 	"""Checks if there are any overlaps in a list of shapes"""
@@ -157,31 +163,27 @@ def create_blueprint(Facility,attempts=100):
 	Keyword arguments:
 	attempts -- the maximum number attempts to be made to place each feature
 	"""
-	footprint = Facility.build_geometry()
-	minx, miny, maxx, maxy = Facility.geometry.bounds
+	footprint = Facility.geometry()
+	minx, miny, maxx, maxy = footprint.bounds
 	
 	# create a site axis
-	site_axis = LineString([[-maxx,0],[maxx*2,0]])
-	site_rotation = random.randint(-180,180)
-	site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-
-	Facility.ax_angle = site_rotation
+	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
+	
+	# site_rotation = random.randint(-180,180)
+	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+	# Facility.ax_angle = site_rotation
 
 	# track placed features
 	placed_features = list()
 	
 	# loop through all features of the Facility
 	for feature in Facility.features:
-
 		print('placing:',feature.name)
-		
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
 		bounds, coords = feature.evaluate_rules(placed_features,footprint,site_axis)
-
 		print('valid area:',bounds.area,'| valid points:',len(coords))
-
 		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,bounds,coords,build=True,rotation=site_rotation,attempts=attempts)
+		placed = place_feature(feature,bounds,coords,build=True,attempts=attempts)
 
 		if placed:
 			placed_features.append(feature)
@@ -191,6 +193,15 @@ def create_blueprint(Facility,attempts=100):
 			return False
 
 	return True
+
+
+def rotate_facility(Facility,rotation=None):
+	"""Rotates all the features of a facility."""
+	if not rotation:
+		rotation = random.randint(-180,180)
+
+	for feature in Facility.features:
+		rotate_feature(feature,rotation,Facility.geometry().centroid)
 
 
 def build_facility(Facility,attempts=100):
@@ -209,6 +220,15 @@ def build_facility(Facility,attempts=100):
 # FEATURE PLACEMENT
 #------------------------------------------------------------------------------
 
+def rotate_feature(Feature,rotation,center='center'):
+	"""Rotates a feature."""
+
+	for shape in Feature.shapes:
+		geometry = shape.geometry()
+		rotated = rotate(geometry,rotation,origin=center,use_radians=False)
+		shape.placed_wkt = rotated.wkt
+
+
 def place(Entity,placement,build=False,center=None,rotation=0):
 	"""Places a shape to a coordinate position
 
@@ -220,9 +240,9 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	placed_y = placement.coords.xy[1][0]
 
 	if build:
-		geometry = Entity.build_geometry(placed=False)
+		geometry = Entity.geometry(placed=False)
 	else:
-		geometry = Entity.build_geometry(placed=True)
+		geometry = Entity.geometry(placed=True)
 
 	shape_x = geometry.centroid.coords.xy[0][0]
 	shape_y = geometry.centroid.coords.xy[1][0]
@@ -246,23 +266,23 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	return Entity
 
 
-def place_feature(Feature,geometry,coords=[],build=False,rotation=0,rand=True,location=False,attempts=100):
+def place_feature(Feature,bounds,coords=[],build=False,rotation=0,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
 	Feature -- feature to place
-	geometry -- containing geometry
+	bounds -- containing bounds
 	random -- if 'True', placement is random, else Point feaure is required
 	location -- centroid location to place Feature
 	attempts -- the maximum number attempts to be made
 	build -- draws from the shapes stable_wkt
 	"""
-	footprint = Feature.facility.build_geometry()
+	footprint = Feature.facility.geometry()
 	center = footprint.centroid
 	
 	for i in range(attempts):
 		if rand:
-			posited_point = posit_point(geometry,coords)
+			posited_point = posit_point(bounds,coords)
 		else:
 			posited_point = location
 		if not posited_point:
@@ -274,10 +294,10 @@ def place_feature(Feature,geometry,coords=[],build=False,rotation=0,rand=True,lo
 		for shape in Feature.shapes:
 			
 			place(shape,posited_point,build,center,rotation)
-			placement = shape.build_geometry()
+			placement = shape.geometry()
 			
 			placed_shapes.append(placement)
-			typology_checks.append(placement.within(geometry))
+			typology_checks.append(placement.within(bounds))
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
@@ -293,7 +313,7 @@ def placement_bounds(facility_footprint,placed_features):
 
 	placed_footprints = list()
 	for feature in placed_features:
-		feature_footprint = build_feature_footprint(feature)
+		feature_footprint = build_footprint(feature)
 		placed_footprints.append(feature_footprint)
 	
 	# this needs to discriminate between within features and not
@@ -313,7 +333,7 @@ def place_facility(Facility,geometry,attempts=100):
 		posited_point = posit_point(geometry)
 
 		place(Facility,posited_point)
-		placement = Facility.build_geometry()
+		placement = Facility.geometry()
 		typology_check = placement.within(geometry)
 
 		if typology_check:
@@ -333,7 +353,7 @@ def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
 	"""Places a feature a specified distance to a target feature."""
 	
 	# build geometry of both features
-	feature_geometry = feature.build_geometry()
+	feature_geometry = feature.geometry()
 	
 	# buffer the target geometry by the provided distance
 	inner_buffer = target_geometry.buffer(distance)
