@@ -283,8 +283,6 @@ def place_feature(Feature,geometry,coords=[],build=False,rotation=0,rand=True,lo
 			Feature.wkt = cascaded_union(placed_shapes).wkt
 			return True
 
-	#failed_shapes = cascaded_union(placed_shapes)
-
 	print(Feature.name,'placement failed after {',attempts,'} attempts.')
 	return False
 

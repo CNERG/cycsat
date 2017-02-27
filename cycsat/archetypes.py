@@ -1,7 +1,7 @@
 """
 archetypes.py
 """
-import ast
+import ast, random
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
@@ -311,7 +311,6 @@ class Feature(Base):
 		else:
 			masks = list()
 			coord_list = list()
-			coords = list()
 
 			# loop through rules to find possible locations and coords
 			for rule in self.rules:
@@ -338,12 +337,12 @@ class Feature(Base):
 
 		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
-			#coord_list = [coord for coord in coords if coord.within(valid_zone)]
+			coord_list = [x for x in coord_list if x.within(valid_zone)]
 			return valid_zone, coord_list
 
 		overlaps = cascaded_union(non_targets)
 		valid_zone = valid_zone.difference(overlaps)
-		#coord_list = [coord for coord in coords if coord.within(valid_zone)]
+		coord_list = [x for x in coord_list if x.within(valid_zone)]
 
 		return valid_zone, coord_list
 
@@ -418,7 +417,6 @@ class Rule(Base):
 	id = Column(Integer, primary_key=True)
 	oper = Column(String) # e.g. within, disjoint, near etc.
 	target = Column(Integer)
-	direction = Column(String)
 	value = Column(Integer,default=0)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
@@ -453,9 +451,11 @@ class Rule(Base):
 				valid = footprint
 
 		else:
-			if self.oper=='offset':
-				parallel = axis.parallel_offset(self.value,self.direction)
+			if self.oper=='axis_offset':
+				direction = random.choice(['left','right'])
+				parallel = axis.parallel_offset(self.value,direction)
 				coords = line_func(parallel)
+			elif self.oper=='offset':
 		
 		return valid, coords
 

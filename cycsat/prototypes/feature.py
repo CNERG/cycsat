@@ -87,11 +87,9 @@ class SampleTurbine(Feature):
         self.shapes = [
         Rectangle(width=580,length=2220,rgb=[208,40,14])
         ]
-
-        d = random.choice(['left','right'])
         
         self.rules = [
-        Rule(oper='offset',direction=d,value=600)
+        Rule(oper='axis_offset',value=600)
         ]
 
 
