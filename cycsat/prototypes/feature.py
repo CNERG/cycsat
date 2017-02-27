@@ -89,7 +89,7 @@ class SampleTurbine(Feature):
         ]
         
         self.rules = [
-        Rule(oper='axis_offset',value=600)
+        Rule(oper='AXIS_OFFSET',direction='left',value=600)
         ]
 
 
@@ -125,7 +125,7 @@ class Plume(Feature):
         ]
 
         self.rules = [
-        Rule(oper='within',target='sample cooling tower 1',value=500)
+        Rule(oper='WITHIN',target='sample cooling tower 1',value=500)
         ]
 
         self.conditions = [

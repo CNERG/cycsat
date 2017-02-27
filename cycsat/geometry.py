@@ -1,7 +1,5 @@
 #------------------------------------------------------------------------------
 # GEOMETRY FUNCTIONS
-#
-#
 #------------------------------------------------------------------------------
 
 from sqlalchemy import Column, Integer, String
@@ -22,15 +20,8 @@ from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
 #------------------------------------------------------------------------------
-# GENERAL FUNCTIONS
+# GENERAL
 #------------------------------------------------------------------------------
-
-def pointilize(feature):
-	"""Turns a Polygon into a array of Points"""
-	x,y = feature.exterior.xy
-	coords = [Point(x,y) for x,y in zip(x,y)]
-	return coords
-
 
 # def shift_towards(feature,target,increment=1):
 # 	"""Shifts a shape towards a target shape until they cross."""
@@ -40,7 +31,7 @@ def pointilize(feature):
 
 
 def build_geometry(Entity):
-	"""Builds a geometry given an instance"""
+	"""Builds a geometry given an instance."""
 
 	if Entity.wkt:
 		geometry = load_wkt(Entity.wkt)
@@ -53,8 +44,7 @@ def build_geometry(Entity):
 
 
 def build_footprint(Entity,placed=True):
-	"""Returns a geometry that is the union of all a feature's static shapes or
-	all of a facilities static features."""
+	"""Returns a geometry that is the union of all a feature's static shapes."""
 	archetype = Entity.__class__.__bases__[0].__name__
 	if archetype == 'Facility':
 		shapes = [feature.footprint() for feature in Entity.features if feature.visibility==100]
@@ -65,19 +55,8 @@ def build_footprint(Entity,placed=True):
 		return box(union)
 	return union
 
-def check_disjoints(shapes):
-	"""Checks if there are any overlaps in a list of shapes"""
 
-	for a, b in itertools.combinations(shapes, 2):
-		if a.disjoint(b):
-			continue
-		else:
-			return False
-
-	return True
-
-
-def posit_point(geometry,points,attempts=100):
+def posit_point(geometry,points,axis=None,alignment=None,attempts=100):
 	"""Generates a random point within a geometry"""
 	
 	for i in range(attempts):
@@ -87,8 +66,11 @@ def posit_point(geometry,points,attempts=100):
 
 		if len(points)>0:
 			posited_point = random.choice(points)
+		elif axis == 'X':
+			posited_point = Point(alignment, random.uniform(y_min,y_max+1))
+		elif axis == 'Y':
+			posited_point = Point(random.uniform(y_min,y_max+1), alignment)
 		else:
-			# create a random point within geometry
 			posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
 
 		if posited_point.within(geometry):
@@ -96,6 +78,18 @@ def posit_point(geometry,points,attempts=100):
 	
 	print('point placement failed after {',attempts,'} attempts.')
 	return False
+
+
+# def grid_line(Feature,axis='X'):
+# 	"""Returns list of points of a grid line for an axis for a target feature."""
+	
+# 	footprint = Feature.facility.geometry()
+# 	x_min, y_min, x_max, y_max = geometry.bounds
+	
+# 	x,y = Feature.geometry().centroid.xy
+
+# 	if 'X':
+# 		xs = np.empty(round((y_max-y_min/0.5))
 
 
 def line_func(line,precision=1):
@@ -180,7 +174,7 @@ def create_blueprint(Facility,attempts=100):
 	for feature in Facility.features:
 		print('placing:',feature.name)
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		bounds, coords = feature.evaluate_rules(placed_features,footprint,site_axis)
+		bounds, coords, alignment = feature.evaluate_rules(placed_features,footprint,site_axis)
 		print('valid area:',bounds.area,'| valid points:',len(coords))
 		# use the 'valid_bounds' to place the feature
 		placed = place_feature(feature,bounds,coords,build=True,attempts=attempts)
@@ -195,13 +189,13 @@ def create_blueprint(Facility,attempts=100):
 	return True
 
 
-def rotate_facility(Facility,rotation=None):
+def rotate_facility(Facility,degrees=None):
 	"""Rotates all the features of a facility."""
-	if not rotation:
-		rotation = random.randint(-180,180)
+	if not degrees:
+		degrees = random.randint(-180,180)+0.01
 
 	for feature in Facility.features:
-		rotate_feature(feature,rotation,Facility.geometry().centroid)
+		rotate_feature(feature,degrees,Facility.geometry().centroid)
 
 
 def build_facility(Facility,attempts=100):
@@ -219,6 +213,21 @@ def build_facility(Facility,attempts=100):
 #------------------------------------------------------------------------------
 # FEATURE PLACEMENT
 #------------------------------------------------------------------------------
+
+def list_bearings(Feature):
+	"""List the bearings of the feature (N,E,S,W) as points."""
+	footprint = Feature.footprint()
+	minx, miny, maxx, maxy = footprint.bounds
+	halfx = (maxx-minx)/2
+	halfy = (maxy-miny)/2
+	
+	N = Point(minx+halfx,maxy)
+	E = Point(maxx,miny+halfy)
+	S = Point(minx+halfx,miny)
+	W = Point(minx,miny+halfy)
+	
+	return [N,E,S,W]
+
 
 def rotate_feature(Feature,rotation,center='center'):
 	"""Rotates a feature."""

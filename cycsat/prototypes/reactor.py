@@ -29,5 +29,5 @@ class SampleReactor(Facility):
         ]
 
         for f in self.features:
-            f.rules.append(Rule(oper='within',target='concrete pad',value=0))
+            f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
 

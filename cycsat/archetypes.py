@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
 from .geometry import build_geometry, build_footprint, near, line_func
+from .geometry import rotate_facility
 
 from .laboratory import materialize
 
@@ -195,6 +196,9 @@ class Facility(Base):
 	def footprint(self):
 		return build_footprint(self)
 
+	def rotate(self,degrees):
+		rotate_facility(self,degrees)
+
 	def axis(self):
 		if self.ax_angle:
 			footprint = self.geometry()
@@ -314,13 +318,17 @@ class Feature(Base):
 		else:
 			masks = list()
 			coord_list = list()
+			alignment = None
 
 			# loop through rules to find possible locations and coords
 			for rule in self.rules:
 				targets.append(rule.target)
-				mask, coords = rule.evaluate(placed_features,footprint,axis)
+				mask, coords,alignment = rule.evaluate(placed_features,footprint,axis)
 				masks.append(mask)
 				coord_list = coord_list+coords
+
+				if alignment:
+					alignment = alignment
 
 			# find the intersection of all the masks (if any!)
 			valid_zone = masks.pop(0)
@@ -341,13 +349,13 @@ class Feature(Base):
 		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
 			coord_list = [x for x in coord_list if x.within(valid_zone)]
-			return valid_zone, coord_list
+			return valid_zone, coord_list, alignment
 
 		overlaps = cascaded_union(non_targets)
 		valid_zone = valid_zone.difference(overlaps)
 		coord_list = [x for x in coord_list if x.within(valid_zone)]
 
-		return valid_zone, coord_list
+		return valid_zone, coord_list, alignment
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -420,6 +428,7 @@ class Rule(Base):
 	oper = Column(String) # e.g. within, disjoint, near etc.
 	target = Column(Integer)
 	value = Column(Integer,default=0)
+	direction = Column(String)
 
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='rules')
@@ -434,6 +443,7 @@ class Rule(Base):
 
 		valid = footprint
 		coords = []
+		alignment = None
 		
 		# get all the features that are 'targeted' in the rule
 		targets = [feature.footprint() for feature in placed_features 
@@ -445,22 +455,33 @@ class Rule(Base):
 			target_union = cascaded_union(targets)
 
 			# evaluate the rule based on the operation (oper)
-			if self.oper=='within':
+			if self.oper=='WITHIN':
 				valid = target_union.buffer(self.value)
-			elif self.oper=='near':
+			elif self.oper=='NEAR':
 				valid = near(self.feature,target_union,distance=self.value)
+			elif self.oper=='ALINE':
+				x,y = target_union.centroid.xy
+
+				if self.direction == 'X':
+					value = x
+				else:
+					value = y
+				alignment = {'axis':self.direction,'value':value}
 			else:
 				valid = footprint
 
 		else:
-			if self.oper=='axis_offset':
-				direction = random.choice(['left','right'])
+			if self.oper=='AXIS_OFFSET':
+				if not self.direction:
+					direction = random.choice(['left','right'])
+				else:
+					direction = self.direction
 				parallel = axis.parallel_offset(self.value,direction)
 				coords = line_func(parallel)
-			elif self.oper=='offset':
+			else:
 				pass
 		
-		return valid, coords
+		return valid, coords, alignment
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
 Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')
