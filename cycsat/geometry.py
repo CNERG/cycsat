@@ -96,7 +96,11 @@ def line_func(line,precision=1):
 	x = np.linspace(start[0],end[0],round(line.length))
 	y = (m*x)+b
 	coords = list(zip(x,y))
+<<<<<<< HEAD
 	return list(zip(x,y))
+=======
+	return coords
+>>>>>>> ee03c4bc865692bfe545ebd8b700495c882e02a0
 
 #------------------------------------------------------------------------------
 # SITE PREP

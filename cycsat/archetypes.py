@@ -310,14 +310,24 @@ class Feature(Base):
 		# otherwise evaluate the rules
 		else:
 			masks = list()
+<<<<<<< HEAD
 			coord_list = list()
+=======
+			coords = list()
+>>>>>>> ee03c4bc865692bfe545ebd8b700495c882e02a0
 
-			# loop through rules to find possible locations
+			# loop through rules to find possible locations and coords
 			for rule in self.rules:
 				targets.append(rule.target)
+<<<<<<< HEAD
 				mask, coords = rule.evaluate(placed_features,footprint,axis)
 				masks.append(mask)
 				coord_list = coord_list+coords
+=======
+				mask, coord = rule.evaluate(placed_features,footprint)
+				masks.append(mask)
+				coords+=coord
+>>>>>>> ee03c4bc865692bfe545ebd8b700495c882e02a0
 
 			# find the intersection of all the masks (if any!)
 			valid_zone = masks.pop(0)
@@ -329,6 +339,8 @@ class Feature(Base):
 			if valid_zone.area == 0:
 				print('no possible location for:',self.name)
 				return False, None
+
+			
 
 		# find all the other features that are simply 'obstacles' in the same level
 		non_targets = [feature for feature in placed_features if feature.name not in targets]
@@ -436,6 +448,7 @@ class Rule(Base):
 					if feature.name==self.target]
 
 		# if the list is empty return the facility footprint
+<<<<<<< HEAD
 		if targets:
 			# merge all the targets into one shape
 			target_union = cascaded_union(targets)
@@ -457,6 +470,29 @@ class Rule(Base):
 				valid = footprint
 		
 		return valid,coords
+=======
+		if not targets:
+			return footprint
+
+		# merge all the targets into one shape
+		target_union = cascaded_union(targets)
+
+		vaild_bounds = None
+		valid_coords = list()
+
+		# evaluate the rule based on the operation (oper)
+		if self.oper=='within':
+			valid_bounds = target_union.buffer(self.value)
+		elif self.oper=='near':
+			valid_bounds = near(self.feature,target_union,distance=self.value)
+		elif self.oper=='parallel':
+			parallel = axis.parallel_offset(self.value,'left')
+			valid_coords = line_func(parallel)
+		else:
+			valid_bounds = footprint
+		
+		return valid_bounds, valid_coords
+>>>>>>> ee03c4bc865692bfe545ebd8b700495c882e02a0
 
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
