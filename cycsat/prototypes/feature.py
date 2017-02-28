@@ -23,9 +23,9 @@ class ConcretePad(Feature):
 
 
 class SampleCoolingTower1(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample cooling tower 1'}
+    __mapper_args__ = {'polymorphic_identity': 'cooling tower 1'}
 
-    def __init__(self,name='sample cooling tower 1'):
+    def __init__(self,name='cooling tower 1'):
         
         self.name = name
         self.rgb = '[70,70,70]'
@@ -40,9 +40,9 @@ class SampleCoolingTower1(Feature):
 
 
 class SampleCoolingTower2(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample cooling tower 2'}
+    __mapper_args__ = {'polymorphic_identity': 'cooling tower 2'}
 
-    def __init__(self,name='sample cooling tower 2'):
+    def __init__(self,name='cooling tower 2'):
         
         self.name = name
         self.rgb = '[70,70,70]'
@@ -58,9 +58,9 @@ class SampleCoolingTower2(Feature):
 
 
 class SampleContainment(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample containment'}
+    __mapper_args__ = {'polymorphic_identity': 'containment'}
 
-    def __init__(self,name='sample containment 1',visibility=100):
+    def __init__(self,name='containment',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -74,9 +74,9 @@ class SampleContainment(Feature):
 
 
 class SampleTurbine(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample turbine'}
+    __mapper_args__ = {'polymorphic_identity': 'turbine'}
 
-    def __init__(self,name='sample turbine',visibility=100):
+    def __init__(self,name='turbine',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -89,14 +89,14 @@ class SampleTurbine(Feature):
         ]
         
         self.rules = [
-        Rule(oper='AXIS_OFFSET',direction='left',value=600)
+        Rule(oper='ALINE',direction='X',target='turbine')
         ]
 
 
 class SampleFuel(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'sample fuel building'}
+    __mapper_args__ = {'polymorphic_identity': 'fuel building'}
 
-    def __init__(self,name='sample fuel building',visibility=100):
+    def __init__(self,name='fuel building',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -125,7 +125,7 @@ class Plume(Feature):
         ]
 
         self.rules = [
-        Rule(oper='WITHIN',target='sample cooling tower 1',value=500)
+        Rule(oper='WITHIN',target='cooling tower 1',value=500)
         ]
 
         self.conditions = [

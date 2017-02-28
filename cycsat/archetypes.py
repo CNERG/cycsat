@@ -303,41 +303,45 @@ class Feature(Base):
 		else:
 			return rgb
 
-	def evaluate_rules(self,placed_features,footprint,axis):
+	def evaluate_rules(self,placed_features):
 		"""Evaluates all the rules of a feature given a list of placed features
 		and returns a geometry where the feature can be drawn."""
+
+		evaluation = {
+		'bounds': self.facility.geometry(),
+		'coords': list(),
+		'alignment': None
+		}
 
 		# track list of targeted features
 		targets = list()
 
 		# if there are no rules return the footprint
 		if not self.rules:
-			valid_zone = footprint
+			evaluation['bounds'] = footprint
 		
 		# otherwise evaluate the rules
 		else:
 			masks = list()
-			coord_list = list()
-			alignment = None
 
 			# loop through rules to find possible locations and coords
 			for rule in self.rules:
 				targets.append(rule.target)
-				mask, coords,alignment = rule.evaluate(placed_features,footprint,axis)
-				masks.append(mask)
-				coord_list = coord_list+coords
+				rule_eval = rule.evaluate(placed_features,evaluation['bounds'])
+				masks.append(rule_eval['bounds'])
+				evaluation['coords'] = rule_eval['coords']+evaluation['coords']
 
-				if alignment:
-					alignment = alignment
+				if rule_eval['alignment']:
+					evaluation['alignment'] = rule_eval['alignment']
 
 			# find the intersection of all the masks (if any!)
-			valid_zone = masks.pop(0)
+			evaluation['bounds'] = masks.pop(0)
 			for mask in masks:
-				valid_zone = valid_zone.intersection(mask)
+				evaluation['bounds'] = evaluation['bounds'].intersection(mask)
 			
 			# if the intersection fails return False, this feature will
 			# not be drawn
-			if valid_zone.area == 0:
+			if evaluation['bounds'].area == 0:
 				print('no possible location for:',self.name)
 				return False, None
 
@@ -348,14 +352,14 @@ class Feature(Base):
 
 		# if there are no 'non-targets' return the valid geometry
 		if not non_targets:
-			coord_list = [x for x in coord_list if x.within(valid_zone)]
-			return valid_zone, coord_list, alignment
+			evaluation['coords'] = [x for x in evaluation['coords'] if x.within(evaluation['bounds'])]
+			return evaluation
 
 		overlaps = cascaded_union(non_targets)
-		valid_zone = valid_zone.difference(overlaps)
-		coord_list = [x for x in coord_list if x.within(valid_zone)]
+		evaluation['bounds'] = evaluation['bounds'].difference(overlaps)
+		evaluation['coords'] = [x for x in evaluation['coords'] if x.within(evaluation['bounds'])]
 
-		return valid_zone, coord_list, alignment
+		return evaluation
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -437,13 +441,15 @@ class Rule(Base):
 	feature = relationship(Feature, back_populates='rules')
 
 
-	def evaluate(self,placed_features,footprint,axis):
+	def evaluate(self,placed_features,footprint):
 		"""Evaluates a spatial rule and returns a boundary geometry 
 		and a list coordinates that must be selected."""
 
-		valid = footprint
-		coords = []
-		alignment = None
+		evaluation = {
+		'bounds': footprint,
+		'coords': list(),
+		'alignment': None
+		}
 		
 		# get all the features that are 'targeted' in the rule
 		targets = [feature.footprint() for feature in placed_features 
@@ -456,32 +462,30 @@ class Rule(Base):
 
 			# evaluate the rule based on the operation (oper)
 			if self.oper=='WITHIN':
-				valid = target_union.buffer(self.value)
+				evaluation['bounds'] = target_union.buffer(self.value)
 			elif self.oper=='NEAR':
-				valid = near(self.feature,target_union,distance=self.value)
+				evaluation['bounds'] = near(self.feature,target_union,distance=self.value)
 			elif self.oper=='ALINE':
 				x,y = target_union.centroid.xy
-
 				if self.direction == 'X':
 					value = x
 				else:
 					value = y
-				alignment = {'axis':self.direction,'value':value}
+				evaluation['alignment'] = {'axis':self.direction,'value':value}
 			else:
-				valid = footprint
+				evaluation['bounds'] = footprint
 
 		else:
-			if self.oper=='AXIS_OFFSET':
-				if not self.direction:
-					direction = random.choice(['left','right'])
-				else:
-					direction = self.direction
-				parallel = axis.parallel_offset(self.value,direction)
-				coords = line_func(parallel)
-			else:
-				pass
+			# if self.oper=='AXIS_OFFSET':
+			# 	if not self.direction:
+			# 		direction = random.choice(['left','right'])
+			# 	else:
+			# 		direction = self.direction
+			# 	parallel = axis.parallel_offset(self.value,direction)
+			# 	evaluation['coords'] = line_func(parallel)
+			pass
 		
-		return valid, coords, alignment
+		return evaluation
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
 Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')

@@ -56,9 +56,9 @@ def build_footprint(Entity,placed=True):
 	return union
 
 
-def posit_point(geometry,points,axis=None,alignment=None,attempts=100):
+def posit_point(geometry,points=[],alignment=None,attempts=100):
 	"""Generates a random point within a geometry"""
-	
+
 	for i in range(attempts):
 
 		# define the geometry boundary
@@ -66,10 +66,11 @@ def posit_point(geometry,points,axis=None,alignment=None,attempts=100):
 
 		if len(points)>0:
 			posited_point = random.choice(points)
-		elif axis == 'X':
-			posited_point = Point(alignment, random.uniform(y_min,y_max+1))
-		elif axis == 'Y':
-			posited_point = Point(random.uniform(y_min,y_max+1), alignment)
+		elif alignment:
+			if alignment['axis'] == 'X':
+				posited_point = Point(float(alignment['value'][0]), random.uniform(y_min,y_max+1))
+			else:
+				posited_point = Point(random.uniform(y_min,y_max+1), float(alignment['value'][0]))
 		else:
 			posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
 
@@ -163,9 +164,9 @@ def create_blueprint(Facility,attempts=100):
 	# create a site axis
 	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
 	
-	# site_rotation = random.randint(-180,180)
-	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-	# Facility.ax_angle = site_rotation
+	site_rotation = random.randint(-180,180)
+	site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+	Facility.ax_angle = site_rotation
 
 	# track placed features
 	placed_features = list()
@@ -174,10 +175,11 @@ def create_blueprint(Facility,attempts=100):
 	for feature in Facility.features:
 		print('placing:',feature.name)
 		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		bounds, coords, alignment = feature.evaluate_rules(placed_features,footprint,site_axis)
-		print('valid area:',bounds.area,'| valid points:',len(coords))
+		define = feature.evaluate_rules(placed_features)
+		print('valid area:',define['bounds'].area,'| valid points:',len(define['coords']))
+		
 		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,bounds,coords,build=True,attempts=attempts)
+		placed = place_feature(feature,define,build=True,attempts=attempts)
 
 		if placed:
 			placed_features.append(feature)
@@ -275,7 +277,7 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	return Entity
 
 
-def place_feature(Feature,bounds,coords=[],build=False,rotation=0,rand=True,location=False,attempts=100):
+def place_feature(Feature,definition,build=False,rotation=0,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
@@ -288,15 +290,14 @@ def place_feature(Feature,bounds,coords=[],build=False,rotation=0,rand=True,loca
 	"""
 	footprint = Feature.facility.geometry()
 	center = footprint.centroid
+
+	bounds = definition['bounds']
+	coords = definition['coords']
+	alignment = definition['alignment']
 	
 	for i in range(attempts):
-		if rand:
-			posited_point = posit_point(bounds,coords)
-		else:
-			posited_point = location
-		if not posited_point:
-			print('Point feature required for placement.')
-			break
+
+		posited_point = posit_point(bounds,coords,alignment)
 
 		placed_shapes = list()
 		typology_checks = list()
