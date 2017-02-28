@@ -249,9 +249,13 @@ class Facility(Base):
 		world.save(self)
 
 
-	def plot(self,timestep=None):
+	def plot(self,axis=None,timestep=None):
 		"""plots a facility and its static features or a timestep."""
-		fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
+		if axis:
+			ax = axis
+		else:
+			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
+		
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
@@ -286,9 +290,9 @@ class Feature(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
 
-	def footprint(self):
+	def footprint(self,placed=True):
 		"""Returns a shapely geometry of the static shapes"""
-		self.geo = build_footprint(self)
+		self.geo = build_footprint(self,placed=placed)
 		return self.geo
 
 	def get_rgb(self,plotting=False):
@@ -303,6 +307,7 @@ class Feature(Base):
 		else:
 			return rgb
 
+	
 	def evaluate_rules(self,placed_features):
 		"""Evaluates all the rules of a feature given a list of placed features
 		and returns a geometry where the feature can be drawn."""
@@ -358,6 +363,8 @@ class Feature(Base):
 		overlaps = cascaded_union(non_targets)
 		evaluation['bounds'] = evaluation['bounds'].difference(overlaps)
 		evaluation['coords'] = [x for x in evaluation['coords'] if x.within(evaluation['bounds'])]
+
+		print(evaluation)
 
 		return evaluation
 

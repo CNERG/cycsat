@@ -41,6 +41,8 @@ s = SampleReactor()
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
+#fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
+
 
 def plot_features(features):
 	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)

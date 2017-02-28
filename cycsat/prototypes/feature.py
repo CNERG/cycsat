@@ -89,7 +89,9 @@ class SampleTurbine(Feature):
         ]
         
         self.rules = [
-        Rule(oper='ALINE',direction='X',target='turbine')
+        #Rule(oper='ALINE',direction='X',target='turbine'),
+        #Rule(oper='ALINE',direction='Y',target='containment1'),
+        #Rule(oper='NEAR',target='containment1',value=3000)
         ]
 
 

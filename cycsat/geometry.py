@@ -236,6 +236,7 @@ def evaluate_rule(Rule,placed_features,footprint):
 	and a list coordinates that must be selected."""
 
 	evaluation = {
+	'orderid': 0,
 	'bounds': footprint,
 	'coords': list(),
 	'alignment': None
@@ -410,7 +411,7 @@ def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
 	"""Places a feature a specified distance to a target feature."""
 	
 	# build geometry of both features
-	feature_geometry = feature.geometry()
+	feature_geometry = feature.footprint(placed=False)
 	
 	# buffer the target geometry by the provided distance
 	inner_buffer = target_geometry.buffer(distance)
