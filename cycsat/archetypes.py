@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
 from .geometry import build_geometry, build_footprint, near, line_func
-from .geometry import rotate_facility
+from .geometry import rotate_facility, evaluate_rule
 
 from .laboratory import materialize
 
@@ -442,49 +442,7 @@ class Rule(Base):
 
 
 	def evaluate(self,placed_features,footprint):
-		"""Evaluates a spatial rule and returns a boundary geometry 
-		and a list coordinates that must be selected."""
-
-		evaluation = {
-		'bounds': footprint,
-		'coords': list(),
-		'alignment': None
-		}
-		
-		# get all the features that are 'targeted' in the rule
-		targets = [feature.footprint() for feature in placed_features 
-					if feature.name==self.target]
-
-		# if the list is empty return the facility footprint
-		if targets:
-			# merge all the targets into one shape
-			target_union = cascaded_union(targets)
-
-			# evaluate the rule based on the operation (oper)
-			if self.oper=='WITHIN':
-				evaluation['bounds'] = target_union.buffer(self.value)
-			elif self.oper=='NEAR':
-				evaluation['bounds'] = near(self.feature,target_union,distance=self.value)
-			elif self.oper=='ALINE':
-				x,y = target_union.centroid.xy
-				if self.direction == 'X':
-					value = x
-				else:
-					value = y
-				evaluation['alignment'] = {'axis':self.direction,'value':value}
-			else:
-				evaluation['bounds'] = footprint
-
-		else:
-			# if self.oper=='AXIS_OFFSET':
-			# 	if not self.direction:
-			# 		direction = random.choice(['left','right'])
-			# 	else:
-			# 		direction = self.direction
-			# 	parallel = axis.parallel_offset(self.value,direction)
-			# 	evaluation['coords'] = line_func(parallel)
-			pass
-		
+		evaluation = evaluate_rule(self,placed_features,footprint)
 		return evaluation
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')

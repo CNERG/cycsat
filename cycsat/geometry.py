@@ -231,6 +231,53 @@ def list_bearings(Feature):
 	return [N,E,S,W]
 
 
+def evaluate_rule(Rule,placed_features,footprint):
+	"""Evaluates a spatial rule and returns a boundary geometry 
+	and a list coordinates that must be selected."""
+
+	evaluation = {
+	'bounds': footprint,
+	'coords': list(),
+	'alignment': None
+	}
+	
+	# get all the features that are 'targeted' in the rule
+	targets = [feature.footprint() for feature in placed_features 
+				if feature.name==Rule.target]
+
+	# if the list is empty return the facility footprint
+	if targets:
+		# merge all the targets into one shape
+		target_union = cascaded_union(targets)
+
+		# evaluate the rule based on the operation (oper)
+		if Rule.oper=='WITHIN':
+			evaluation['bounds'] = target_union.buffer(Rule.value)
+		elif Rule.oper=='NEAR':
+			evaluation['bounds'] = near(Rule.feature,target_union,distance=Rule.value)
+		elif Rule.oper=='ALINE':
+			x,y = target_union.centroid.xy
+			if Rule.direction == 'X':
+				value = x
+			else:
+				value = y
+			evaluation['alignment'] = {'axis':Rule.direction,'value':value}
+		else:
+			evaluation['bounds'] = footprint
+
+	else:
+		# if Rule.oper=='AXIS_OFFSET':
+		# 	if not Rule.direction:
+		# 		direction = random.choice(['left','right'])
+		# 	else:
+		# 		direction = Rule.direction
+		# 	parallel = axis.parallel_offset(Rule.value,direction)
+		# 	evaluation['coords'] = line_func(parallel)
+		pass
+	
+	return evaluation
+
+
 def rotate_feature(Feature,rotation,center='center'):
 	"""Rotates a feature."""
 
