@@ -26,7 +26,6 @@ from shapely.ops import cascaded_union
 
 def build_geometry(Entity):
 	"""Builds a geometry given an instance."""
-
 	if Entity.wkt:
 		geometry = load_wkt(Entity.wkt)
 	else:
@@ -50,27 +49,33 @@ def build_footprint(Entity,placed=True):
 	return union
 
 
-def posit_point(definition,attempts=100):
+def posit_point(definition,attempts=1000):
 	"""Generates a random point given a defintion of contraints. Currently a 'mask' and an 'alignment'
 	(or axis).
 	"""
-	bounds = definition['mask']
-	axis = definition['']
+	mask = definition['mask']
+	align = definition['align']
+	axis = None
+
+	if align:
+		align = align[0]
+		axis = align['axis']
+		value = align['value']
+
+	x_min, y_min, x_max, y_max = mask.bounds
 
 	for i in range(attempts):
-		x_min, y_min, x_max, y_max = geometry.bounds
+		x = random.uniform(x_min,x_max+1)
+		y = random.uniform(y_min,y_max+1)
 
-		if len(points)>0:
-			posited_point = random.choice(points)
-		elif alignment:
-			if alignment['axis'] == 'X':
-				posited_point = Point(float(alignment['value'][0]), random.uniform(y_min,y_max+1))
-			else:
-				posited_point = Point(random.uniform(y_min,y_max+1), float(alignment['value'][0]))
-		else:
-			posited_point = Point(random.uniform(x_min,x_max+1), random.uniform(y_min,y_max+1))
+		if axis=='X':
+			x = value
+		if axis=='Y':
+			y = value
 
-		if posited_point.within(geometry):
+		posited_point = Point(x,y)
+			
+		if posited_point.within(mask):
 			return posited_point
 	
 	print('point placement failed after {',attempts,'} attempts.')
@@ -186,14 +191,14 @@ def create_blueprint(Facility,attempts=100):
 	# 	# use the 'valid_bounds' to place the feature
 	# 	placed = place_feature(feature,define,build=True,attempts=attempts)
 
-	# 	if placed:
-	# 		placed_features.append(feature)
-	# 		continue
-	# 	else:
-	# 		print('blueprint failed')
-	# 		return False
+		if placed:
+			placed_features.append(feature)
+			continue
+		else:
+			print('blueprint failed')
+			return False
 
-	# return True
+	return True
 
 
 def rotate_facility(Facility,degrees=None):
@@ -262,6 +267,8 @@ def evaluate_rules(Feature,mask=None):
 		for mask in results['mask']:
 			combined_mask = combined_mask.intersection(mask)
 		results['mask'] = combined_mask
+	else:
+		results['mask'] = mask
 
 	return results
 
@@ -327,10 +334,14 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 	center = Feature.facility.geometry().centroid
 
 	# evalute the rules of the facility
-	defs = Feature.eval_rules(mask=mask)
+	definition = Feature.eval_rules(mask=mask)
+	mask = definition['mask']
 	
 	for i in range(attempts):
-		posited_point = posit_point(defs['mask'],defs[''])
+		posited_point = posit_point(definition)
+		print(posited_point)
+		if not posited_point:
+			return False
 
 		placed_shapes = list()
 		typology_checks = list()
@@ -340,7 +351,7 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 			placement = shape.geometry()
 			
 			placed_shapes.append(placement)
-			typology_checks.append(placement.within(bounds))
+			typology_checks.append(placement.within(mask))
 
 		if False not in typology_checks:
 			Feature.wkt = cascaded_union(placed_shapes).wkt
