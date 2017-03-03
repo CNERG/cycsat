@@ -56,6 +56,10 @@ class SampleCoolingTower2(Feature):
         Circle(level=1,radius=620,material_code=24)
         ]
 
+        self.rules = [
+        Rule(oper='NEAR',target='cooling tower 1',value=10)
+        ]
+
 
 class SampleContainment(Feature):
     __mapper_args__ = {'polymorphic_identity': 'containment'}
@@ -113,7 +117,7 @@ class Turbine2(Feature):
         self.rules = [
         Rule(oper='AXIS',direction='X',target='turbine1'),
         #Rule(oper='ALINE',direction='Y',target='containment1'),
-        Rule(oper='NEAR',target='containment1',value=3000)
+        #Rule(oper='NEAR',target='containment1',value=3000)
         ]
 
 

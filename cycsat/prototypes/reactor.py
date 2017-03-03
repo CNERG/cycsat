@@ -18,14 +18,14 @@ class SampleReactor(Facility):
 
         self.features = [
         ConcretePad(),
-        SampleContainment(),
-        SampleContainment(name='containment1'),
-        Turbine1(),
-        Turbine2(),
+        #SampleContainment(),
+        #SampleContainment(name='containment1'),
+        #Turbine1(),
+        #Turbine2(),
         SampleCoolingTower1(),
         SampleCoolingTower2(),
-        SampleFuel(),
-        Plume()
+        #SampleFuel(),
+        #Plume()
         ]
 
         for f in self.features[1:]:
