@@ -8,8 +8,8 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import create_blueprint, place, build_facility
-from .geometry import build_geometry, build_footprint, near, line_func
-from .geometry import rotate_facility, evaluate_rule
+from .geometry import build_geometry, build_footprint, near_rule, line_func
+from .geometry import rotate_facility, evaluate_rules
 
 from .laboratory import materialize
 
@@ -210,9 +210,39 @@ class Facility(Base):
 			print('This facility has not been built. Use the build() method \n'
 				  'before creating the axis.')
 
-	def build(self,attemps=100):
+	def dep_graph(self):
+		# create dictionary of features with dependencies
+		graph = dict((f.name, f.depends()) for f in self.features)
+		name_to_instance = dict( (f.name, f) for f in self.features )
+
+		# where to store the batches
+		batches = list()
+
+		while graph:
+			# Get all features with no dependencies
+			ready = {name for name, deps in graph.items() if not deps}
+
+			if not ready:
+				msg  = "Circular dependencies found!\n"
+				raise ValueError(msg)
+
+			# Remove them from the dependency graph
+			for name in ready:
+				graph.pop(name)
+			for deps in graph.values():
+				deps.difference_update(ready)
+
+			# Add the batch to the list
+			batches.append( [name_to_instance[name] for name in ready] )
+
+		# Return the list of batches
+		return batches
+
+
+	def build(self,attempts=100):
 		"""Randomly places all the features of a facility"""
-		build_facility(self,attempts=100)
+		rules = build_facility(self,attempts=attempts)
+		return rules
 
 	def simulate(self,timestep,reader,world):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
@@ -307,66 +337,14 @@ class Feature(Base):
 		else:
 			return rgb
 
-	
-	def evaluate_rules(self,placed_features):
-		"""Evaluates all the rules of a feature given a list of placed features
-		and returns a geometry where the feature can be drawn."""
+	def depends(self,mask=None):
+		deps = set()
+		for rule in self.rules:
+			deps.add(rule.target)
+		return deps
 
-		evaluation = {
-		'bounds': self.facility.geometry(),
-		'coords': list(),
-		'alignment': None
-		}
-
-		# track list of targeted features
-		targets = list()
-
-		# if there are no rules return the footprint
-		if not self.rules:
-			evaluation['bounds'] = footprint
-		
-		# otherwise evaluate the rules
-		else:
-			masks = list()
-
-			# loop through rules to find possible locations and coords
-			for rule in self.rules:
-				targets.append(rule.target)
-				rule_eval = rule.evaluate(placed_features,evaluation['bounds'])
-				masks.append(rule_eval['bounds'])
-				evaluation['coords'] = rule_eval['coords']+evaluation['coords']
-
-				if rule_eval['alignment']:
-					evaluation['alignment'] = rule_eval['alignment']
-
-			# find the intersection of all the masks (if any!)
-			evaluation['bounds'] = masks.pop(0)
-			for mask in masks:
-				evaluation['bounds'] = evaluation['bounds'].intersection(mask)
-			
-			# if the intersection fails return False, this feature will
-			# not be drawn
-			if evaluation['bounds'].area == 0:
-				print('no possible location for:',self.name)
-				return False, None
-
-		# find all the other features that are simply 'obstacles' in the same level
-		non_targets = [feature for feature in placed_features if feature.name not in targets]
-		non_targets = [feature.footprint() for feature in non_targets 
-							if feature.level == self.level]
-
-		# if there are no 'non-targets' return the valid geometry
-		if not non_targets:
-			evaluation['coords'] = [x for x in evaluation['coords'] if x.within(evaluation['bounds'])]
-			return evaluation
-
-		overlaps = cascaded_union(non_targets)
-		evaluation['bounds'] = evaluation['bounds'].difference(overlaps)
-		evaluation['coords'] = [x for x in evaluation['coords'] if x.within(evaluation['bounds'])]
-
-		print(evaluation)
-
-		return evaluation
+	def eval_rules(self,mask=None):
+		return evaluate_rules(self,mask)
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
@@ -398,10 +376,13 @@ class Shape(Base):
 
 	def geometry(self,placed=True):
 		"""Returns a shapely geometry"""
-		if placed:
-			geom = self.placed_wkt
-		else:
+		if not self.placed_wkt:
 			geom = self.stable_wkt
+		else:
+			if placed:
+				geom = self.placed_wkt
+			else:
+				geom = self.stable_wkt
 
 		self.geo = load_wkt(geom)
 		return self.geo
@@ -451,6 +432,9 @@ class Rule(Base):
 	def evaluate(self,placed_features,footprint):
 		evaluation = evaluate_rule(self,placed_features,footprint)
 		return evaluation
+
+	def describe(self):
+		print(self.oper,self.value,self.target,self.direction)
 
 Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
 Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')

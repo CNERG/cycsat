@@ -2,6 +2,7 @@
 # GEOMETRY FUNCTIONS
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
 from sqlalchemy import Column, Integer, String
 
 import random
@@ -22,13 +23,6 @@ from shapely.ops import cascaded_union
 #------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
-
-# def shift_towards(feature,target,increment=1):
-# 	"""Shifts a shape towards a target shape until they cross."""
-# 	target_centroid = target.centroid
-# 	cross = False
-# 	while not cross:
-
 
 def build_geometry(Entity):
 	"""Builds a geometry given an instance."""
@@ -56,12 +50,14 @@ def build_footprint(Entity,placed=True):
 	return union
 
 
-def posit_point(geometry,points=[],alignment=None,attempts=100):
-	"""Generates a random point within a geometry"""
+def posit_point(definition,attempts=100):
+	"""Generates a random point given a defintion of contraints. Currently a 'mask' and an 'alignment'
+	(or axis).
+	"""
+	bounds = definition['mask']
+	axis = definition['']
 
 	for i in range(attempts):
-
-		# define the geometry boundary
 		x_min, y_min, x_max, y_max = geometry.bounds
 
 		if len(points)>0:
@@ -116,11 +112,13 @@ def axf(m,x,b,invert=False):
 		return ((-1/m)*x)+b
 	return (m*x)+b
 
+
 def area_ratio(polygons):
 	"""Returns the area ratio of two polygons"""
 	poly1 = polygons[0].area
 	poly2 = polygons[1].area
 	return poly1/(poly1+poly2)
+
 
 def create_plan(Site,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
@@ -170,25 +168,32 @@ def create_blueprint(Facility,attempts=100):
 
 	# track placed features
 	placed_features = list()
-	
-	# loop through all features of the Facility
-	for feature in Facility.features:
-		print('placing:',feature.name)
-		# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-		define = feature.evaluate_rules(placed_features)
-		print('valid area:',define['bounds'].area,'| valid points:',len(define['coords']))
+
+	# dependency groups
+	dep_grps = Facility.dep_graph()
+
+	for group in dep_grps:
+		for feature in group:
+			print('placing:',feature.name)
+			
+			definition = feature.eval_rules(mask=footprint)
+			placed = place_feature(feature,footprint)
+
+	# 	# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
+	# 	define = feature.evaluate_rules(placed_features)
+	# 	print('valid area:',define['bounds'].area,'| valid points:',len(define['coords']))
 		
-		# use the 'valid_bounds' to place the feature
-		placed = place_feature(feature,define,build=True,attempts=attempts)
+	# 	# use the 'valid_bounds' to place the feature
+	# 	placed = place_feature(feature,define,build=True,attempts=attempts)
 
-		if placed:
-			placed_features.append(feature)
-			continue
-		else:
-			print('blueprint failed')
-			return False
+	# 	if placed:
+	# 		placed_features.append(feature)
+	# 		continue
+	# 	else:
+	# 		print('blueprint failed')
+	# 		return False
 
-	return True
+	# return True
 
 
 def rotate_facility(Facility,degrees=None):
@@ -231,52 +236,34 @@ def list_bearings(Feature):
 	return [N,E,S,W]
 
 
-def evaluate_rule(Rule,placed_features,footprint):
-	"""Evaluates a spatial rule and returns a boundary geometry 
-	and a list coordinates that must be selected."""
+def evaluate_rules(Feature,mask=None):
+	"""Evaluates a a feature's rules and returns instructions."""
 
-	evaluation = {
-	'orderid': 0,
-	'bounds': footprint,
-	'coords': list(),
-	'alignment': None
-	}
-	
-	# get all the features that are 'targeted' in the rule
-	targets = [feature.footprint() for feature in placed_features 
-				if feature.name==Rule.target]
+	# if no mask is provided make the facility bounds the mask
+	if not mask:
+		mask = Feature.facility.geometry()
 
-	# if the list is empty return the facility footprint
-	if targets:
-		# merge all the targets into one shape
-		target_union = cascaded_union(targets)
+	results = defaultdict(list)
 
-		# evaluate the rule based on the operation (oper)
-		if Rule.oper=='WITHIN':
-			evaluation['bounds'] = target_union.buffer(Rule.value)
-		elif Rule.oper=='NEAR':
-			evaluation['bounds'] = near(Rule.feature,target_union,distance=Rule.value)
-		elif Rule.oper=='ALINE':
-			x,y = target_union.centroid.xy
-			if Rule.direction == 'X':
-				value = x
-			else:
-				value = y
-			evaluation['alignment'] = {'axis':Rule.direction,'value':value}
-		else:
-			evaluation['bounds'] = footprint
+	for rule in Feature.rules:
+		# get all the features 'targeted' in the rule
+		targets = [feature.footprint(placed=True) for feature in Feature.facility.features 
+					if (feature.name==rule.target)]
 
-	else:
-		# if Rule.oper=='AXIS_OFFSET':
-		# 	if not Rule.direction:
-		# 		direction = random.choice(['left','right'])
-		# 	else:
-		# 		direction = Rule.direction
-		# 	parallel = axis.parallel_offset(Rule.value,direction)
-		# 	evaluation['coords'] = line_func(parallel)
-		pass
-	
-	return evaluation
+		target_geometry = cascaded_union(targets)
+		direction = rule.direction
+		result = rules[rule.oper](Feature,target_geometry,rule.value,direction)
+
+		for kind, data in result.items():
+			results[kind].append(data)
+
+	if results['mask']:
+		combined_mask = results['mask'].pop(0)
+		for mask in results['mask']:
+			combined_mask = combined_mask.intersection(mask)
+		results['mask'] = combined_mask
+
+	return results
 
 
 def rotate_feature(Feature,rotation,center='center'):
@@ -325,7 +312,7 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	return Entity
 
 
-def place_feature(Feature,definition,build=False,rotation=0,rand=True,location=False,attempts=100):
+def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempts=100):
 	"""Places a feature within a geometry and checks typology of shapes
 
 	Keyword arguments:
@@ -336,22 +323,20 @@ def place_feature(Feature,definition,build=False,rotation=0,rand=True,location=F
 	attempts -- the maximum number attempts to be made
 	build -- draws from the shapes stable_wkt
 	"""
-	footprint = Feature.facility.geometry()
-	center = footprint.centroid
+	# the center for the facility for a center point for rotation
+	center = Feature.facility.geometry().centroid
 
-	bounds = definition['bounds']
-	coords = definition['coords']
-	alignment = definition['alignment']
+	# evalute the rules of the facility
+	defs = Feature.eval_rules(mask=mask)
 	
 	for i in range(attempts):
-
-		posited_point = posit_point(bounds,coords,alignment)
+		posited_point = posit_point(defs['mask'],defs[''])
 
 		placed_shapes = list()
 		typology_checks = list()
 		for shape in Feature.shapes:
 			
-			place(shape,posited_point,build,center,rotation)
+			place(shape,posited_point,build,center)
 			placement = shape.geometry()
 			
 			placed_shapes.append(placement)
@@ -404,23 +389,43 @@ def place_facility(Facility,geometry,attempts=100):
 
 
 #------------------------------------------------------------------------------
-# RULE EVALUATIONS
+# PLACMENT RULES (returns either a mask, position, or alignment)
 #------------------------------------------------------------------------------
 
-def near(feature,target_geometry,distance,cushion=0,threshold=100,attempts=20):
-	"""Places a feature a specified distance to a target feature."""
-	
-	# build geometry of both features
-	feature_geometry = feature.footprint(placed=False)
-	
-	# buffer the target geometry by the provided distance
-	inner_buffer = target_geometry.buffer(distance)
+def within_rule(feature,target_geometry,value,*unused):
+	mask = target_geometry.buffer(value)
+	return {'mask':mask}
 
-	bounds = feature_geometry.bounds
-	diagaonal_dist = Point(bounds[0:2]).distance(Point(bounds[2:]))
+def near_rule(feature,target_geometry,value,*unused):
+	"""Places a feature a specified value to a target feature."""
+	feature_geometry = feature.footprint(placed=False)
+
+	cushion=0
+	threshold=100
+	
+	# buffer the target geometry by the provided value
+	inner_buffer = target_geometry.buffer(value)
+
+	mask = feature_geometry.bounds
+	diagaonal_dist = Point(mask[0:2]).distance(Point(mask[2:]))
 	buffer_value = diagaonal_dist+(diagaonal_dist*cushion)
 	second_buffer = inner_buffer.buffer(buffer_value)
+	mask = second_buffer.difference(inner_buffer)
+	return {'mask':mask}
 
-	bounds = second_buffer.difference(inner_buffer)
+def axis_rule(feature,target_geometry,value,direction,*unused):
+	x,y = target_geometry.centroid.xy
+	if direction == 'X':
+		value = x[0]
+	elif direction == 'Y':
+		value = y[0]
+	else:
+		return {'align': None}
+	return {'align':{'axis':direction,'value':value}}
 
-	return bounds
+
+rules = {
+	'WITHIN':within_rule,
+	'NEAR':near_rule,
+	'AXIS':axis_rule
+}

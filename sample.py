@@ -16,11 +16,10 @@ from cycsat.simulation import Cycsat
 from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape, Rule
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
-from cycsat.prototypes.feature import SampleTurbine
 from cycsat.image import Sensor
 
 from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
-from cycsat.geometry import line_func, rotate_facility
+from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rules
 
 
 #sim = Cycsat('reactor_test_sample.sqlite')

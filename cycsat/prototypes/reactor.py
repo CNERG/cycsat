@@ -3,7 +3,7 @@ prototypes/reactor.py
 """
 from cycsat.archetypes import Facility, Feature, Rule
 from cycsat.prototypes.feature import SampleCoolingTower1, SampleContainment, SampleCoolingTower2
-from cycsat.prototypes.feature import SampleTurbine, ConcretePad, Plume, SampleFuel
+from cycsat.prototypes.feature import Turbine1, ConcretePad, Plume, SampleFuel, Turbine2
 
 
 class SampleReactor(Facility):
@@ -18,16 +18,16 @@ class SampleReactor(Facility):
 
         self.features = [
         ConcretePad(),
+        SampleContainment(),
         SampleContainment(name='containment1'),
-        SampleContainment(name='containment2'),
-        SampleTurbine(),
-        SampleTurbine(),
+        Turbine1(),
+        Turbine2(),
         SampleCoolingTower1(),
         SampleCoolingTower2(),
         SampleFuel(),
         Plume()
         ]
 
-        for f in self.features:
+        for f in self.features[1:]:
             f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
 

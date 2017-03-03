@@ -73,10 +73,10 @@ class SampleContainment(Feature):
         ]
 
 
-class SampleTurbine(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'turbine'}
+class Turbine1(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'turbine1'}
 
-    def __init__(self,name='turbine',visibility=100):
+    def __init__(self,name='turbine1',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -95,6 +95,29 @@ class SampleTurbine(Feature):
         ]
 
 
+class Turbine2(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'turbine2'}
+
+    def __init__(self,name='turbine2',visibility=100):
+        
+        self.name = name
+        self.visibility = visibility
+        self.rgb = '[70,70,70]'
+        self.level = 0
+
+        # define shapes
+        self.shapes = [
+        Rectangle(width=580,length=2220,rgb=[208,40,14])
+        ]
+        
+        self.rules = [
+        Rule(oper='AXIS',direction='X',target='turbine1'),
+        #Rule(oper='ALINE',direction='Y',target='containment1'),
+        Rule(oper='NEAR',target='containment1',value=3000)
+        ]
+
+
+
 class SampleFuel(Feature):
     __mapper_args__ = {'polymorphic_identity': 'fuel building'}
 
@@ -109,7 +132,6 @@ class SampleFuel(Feature):
         self.shapes = [
         Rectangle(width=1000,length=1000,rgb=[208,40,14])
         ]
-
 
 
 class Plume(Feature):
