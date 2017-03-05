@@ -18,16 +18,16 @@ class SampleReactor(Facility):
 
         self.features = [
         ConcretePad(),
-        #SampleContainment(),
-        #SampleContainment(name='containment1'),
-        #Turbine1(),
-        #Turbine2(),
+        SampleContainment(),
+        SampleContainment(name='containment1'),
+        Turbine1(),
+        Turbine2(),
         SampleCoolingTower1(),
         SampleCoolingTower2(),
-        #SampleFuel(),
+        SampleFuel(),
         #Plume()
         ]
 
         for f in self.features[1:]:
-            f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
+           f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
 

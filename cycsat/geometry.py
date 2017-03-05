@@ -21,6 +21,14 @@ from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
 #------------------------------------------------------------------------------
+# BLUEPRINT OBJECT
+#------------------------------------------------------------------------------
+
+class BluePrint(object):
+	def __init__(self):
+		self.name = None
+
+#------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
 
@@ -179,25 +187,37 @@ def create_blueprint(Facility,attempts=100):
 
 	for group in dep_grps:
 		for feature in group:
-			print('placing:',feature.name)
+
+			print('-'*25)
+			print('placing',feature.name)
+			footprint = Facility.geometry()
+			overlaps = [feat for feat in placed_features if feat.level==feature.level]
+
+			print('CONSTRANING FEATURES')
+			for o in overlaps:
+				print('		',o.name,o.footprint().area)
+
+			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
+
+			overlaps = cascaded_union(overlaps)
+			
+			footprint = footprint.difference(overlaps)
+			
+			print('footprint area:',footprint.area)
 			
 			definition = feature.eval_rules(mask=footprint)
 			placed = place_feature(feature,footprint)
 
-	# 	# evaluate rules of the feature to generate a 'valid_bounds' for where it can be placed
-	# 	define = feature.evaluate_rules(placed_features)
-	# 	print('valid area:',define['bounds'].area,'| valid points:',len(define['coords']))
-		
-	# 	# use the 'valid_bounds' to place the feature
-	# 	placed = place_feature(feature,define,build=True,attempts=attempts)
+			if placed:
+				print(feature.name,'placed')
+				print('-'*25)
+				placed_features.append(feature)
+				continue
+			else:
+				print('blueprint failed')
+				return False
 
-		if placed:
-			placed_features.append(feature)
-			continue
-		else:
-			print('blueprint failed')
-			return False
-
+	Facility.rotate(site_rotation)
 	return True
 
 
@@ -245,8 +265,8 @@ def evaluate_rules(Feature,mask=None):
 	"""Evaluates a a feature's rules and returns instructions."""
 
 	# if no mask is provided make the facility bounds the mask
-	if not mask:
-		mask = Feature.facility.geometry()
+	# if not mask:
+	# 	mask = Feature.facility.geometry()
 
 	results = defaultdict(list)
 
@@ -263,13 +283,14 @@ def evaluate_rules(Feature,mask=None):
 			results[kind].append(data)
 
 	if results['mask']:
-		combined_mask = results['mask'].pop(0)
-		for mask in results['mask']:
-			combined_mask = combined_mask.intersection(mask)
+		combined_mask = mask
+		for m in results['mask']:
+			combined_mask = combined_mask.intersection(m)
 		results['mask'] = combined_mask
 	else:
 		results['mask'] = mask
 
+	print(results['mask'].area)
 	return results
 
 
@@ -339,7 +360,7 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 	
 	for i in range(attempts):
 		posited_point = posit_point(definition)
-		print(posited_point)
+		#print(posited_point)
 		if not posited_point:
 			return False
 

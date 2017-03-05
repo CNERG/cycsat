@@ -279,7 +279,7 @@ class Facility(Base):
 		world.save(self)
 
 
-	def plot(self,axis=None,timestep=None):
+	def plot(self,axis=None,timestep=None,labels=True,title=True):
 		"""plots a facility and its static features or a timestep."""
 		if axis:
 			ax = axis
@@ -289,14 +289,18 @@ class Facility(Base):
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
-		ax.set_aspect('equal')
-		ax.set_title(self.name)
+		plt.axis('equal')
+		#ax.set_aspect('equal')
+
+		if title:
+			ax.set_title(self.name)
 
 		for feature in self.features:
 			rgb = feature.get_rgb(plotting=True)
 			patch = PolygonPatch(feature.footprint(),facecolor=rgb)
 			ax.add_patch(patch)
-			plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
+			if labels:
+				plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
 
 
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')

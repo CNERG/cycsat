@@ -29,7 +29,7 @@ class SampleCoolingTower1(Feature):
         
         self.name = name
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
         self.visibility = 100
 
         # define shapes
@@ -46,7 +46,7 @@ class SampleCoolingTower2(Feature):
         
         self.name = name
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
         self.visibility = 100
 
 
@@ -57,7 +57,7 @@ class SampleCoolingTower2(Feature):
         ]
 
         self.rules = [
-        Rule(oper='NEAR',target='cooling tower 1',value=10)
+        #Rule(oper='NEAR',target='cooling tower 1',value=10)
         ]
 
 
@@ -69,7 +69,7 @@ class SampleContainment(Feature):
         self.name = name
         self.visibility = visibility
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
 
         # define shapes
         self.shapes = [
@@ -85,7 +85,7 @@ class Turbine1(Feature):
         self.name = name
         self.visibility = visibility
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
 
         # define shapes
         self.shapes = [
@@ -107,7 +107,7 @@ class Turbine2(Feature):
         self.name = name
         self.visibility = visibility
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
 
         # define shapes
         self.shapes = [
@@ -115,7 +115,7 @@ class Turbine2(Feature):
         ]
         
         self.rules = [
-        Rule(oper='AXIS',direction='X',target='turbine1'),
+        #Rule(oper='AXIS',direction='X',target='turbine1'),
         #Rule(oper='ALINE',direction='Y',target='containment1'),
         #Rule(oper='NEAR',target='containment1',value=3000)
         ]
@@ -130,7 +130,7 @@ class SampleFuel(Feature):
         self.name = name
         self.visibility = visibility
         self.rgb = '[70,70,70]'
-        self.level = 0
+        self.level = 1
 
         # define shapes
         self.shapes = [

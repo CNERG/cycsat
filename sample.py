@@ -25,8 +25,23 @@ from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rule
 #sim = Cycsat('reactor_test_sample.sqlite')
 
 s = SampleReactor()
+
+fig, axes = plt.subplots(nrows=3,ncols=3,sharex=True,sharey=True,figsize=(8,8))
+for i, ax in enumerate(axes.flat,start=1):
+	#ax.set_xticks([2000,4000,6000,8000,10000])
+	#ax.set_yticks([2000,4000,6000,8000,10000])
+	s.build()
+	s.plot(ax,title=False,labels=False)
+
+
+
+
 #s.build()
 # t = s.features[3]
+
+
+
+
 
 # fig, ax = plt.subplots(3,2, sharex=True,sharey=True)
 # for x in ax[:,0]:
