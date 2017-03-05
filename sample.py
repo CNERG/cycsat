@@ -26,7 +26,7 @@ from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rule
 
 s = SampleReactor()
 
-fig, axes = plt.subplots(nrows=3,ncols=3,sharex=True,sharey=True,figsize=(8,8))
+fig, axes = plt.subplots(nrows=3,ncols=4,sharex=True,sharey=True,figsize=(3,4))
 for i, ax in enumerate(axes.flat,start=1):
 	#ax.set_xticks([2000,4000,6000,8000,10000])
 	#ax.set_yticks([2000,4000,6000,8000,10000])

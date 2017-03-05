@@ -289,8 +289,8 @@ class Facility(Base):
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
-		plt.axis('equal')
-		#ax.set_aspect('equal')
+		#plt.axis('equal')
+		ax.set_aspect('equal')
 
 		if title:
 			ax.set_title(self.name)
@@ -344,7 +344,8 @@ class Feature(Base):
 	def depends(self,mask=None):
 		deps = set()
 		for rule in self.rules:
-			deps.add(rule.target)
+			if rule.target:
+				deps.add(rule.target)
 		return deps
 
 	def eval_rules(self,mask=None):

@@ -206,7 +206,7 @@ def create_blueprint(Facility,attempts=100):
 			print('footprint area:',footprint.area)
 			
 			definition = feature.eval_rules(mask=footprint)
-			placed = place_feature(feature,footprint)
+			placed = place_feature(feature,footprint,build=True)
 
 			if placed:
 				print(feature.name,'placed')
@@ -357,10 +357,15 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 	# evalute the rules of the facility
 	definition = Feature.eval_rules(mask=mask)
 	mask = definition['mask']
+
+	if 'rotate' in definition:
+		rotate = definition['rotate'][0]
+		print('rotate',rotate)
+	else:
+		rotate = random.randint(-180,180)
 	
 	for i in range(attempts):
 		posited_point = posit_point(definition)
-		#print(posited_point)
 		if not posited_point:
 			return False
 
@@ -368,7 +373,7 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 		typology_checks = list()
 		for shape in Feature.shapes:
 			
-			place(shape,posited_point,build,center)
+			place(shape,posited_point,build,center,rotation=rotate)
 			placement = shape.geometry()
 			
 			placed_shapes.append(placement)
@@ -428,6 +433,7 @@ def within_rule(feature,target_geometry,value,*unused):
 	mask = target_geometry.buffer(value)
 	return {'mask':mask}
 
+
 def near_rule(feature,target_geometry,value,*unused):
 	"""Places a feature a specified value to a target feature."""
 	feature_geometry = feature.footprint(placed=False)
@@ -445,6 +451,7 @@ def near_rule(feature,target_geometry,value,*unused):
 	mask = second_buffer.difference(inner_buffer)
 	return {'mask':mask}
 
+
 def axis_rule(feature,target_geometry,value,direction,*unused):
 	x,y = target_geometry.centroid.xy
 	if direction == 'X':
@@ -456,8 +463,14 @@ def axis_rule(feature,target_geometry,value,direction,*unused):
 	return {'align':{'axis':direction,'value':value}}
 
 
+def rotate_rule(feature,target_geometry,value,direction,*unused):
+	return {'rotate':value}
+
+
+
 rules = {
 	'WITHIN':within_rule,
 	'NEAR':near_rule,
-	'AXIS':axis_rule
+	'AXIS':axis_rule,
+	'ROTATE':rotate_rule
 }

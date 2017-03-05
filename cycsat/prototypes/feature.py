@@ -93,7 +93,7 @@ class Turbine1(Feature):
         ]
         
         self.rules = [
-        #Rule(oper='ALINE',direction='X',target='turbine'),
+        #Rule(oper='ROTATE',value=90),
         #Rule(oper='ALINE',direction='Y',target='containment1'),
         #Rule(oper='NEAR',target='containment1',value=3000)
         ]
@@ -116,7 +116,7 @@ class Turbine2(Feature):
         
         self.rules = [
         #Rule(oper='AXIS',direction='X',target='turbine1'),
-        #Rule(oper='ALINE',direction='Y',target='containment1'),
+        #Rule(oper='ROTATE',value=90),
         #Rule(oper='NEAR',target='containment1',value=3000)
         ]
 
