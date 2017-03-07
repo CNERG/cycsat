@@ -173,7 +173,7 @@ class Plume(Feature):
 
     def __init__(self,material_code=None,rgb=[255,255,255],radius=800,level=3,xoff=500,yoff=500,visibility=5):
         self.name = 'Plume'
-        self.level = 1
+        self.level = 2
         self.rgb = '[255,255,255]'
         self.visibility = 99
 
@@ -183,7 +183,7 @@ class Plume(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='WITHIN',target='cooling tower 1',value=500)
+        Rule(oper='WITHIN',target='cooling tower 1',value=500)
         ]
 
         self.conditions = [

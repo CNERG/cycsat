@@ -2,8 +2,8 @@
 simulation.py
 """
 from .prototypes import samples
-from .archetypes import Facility, Instrument, Feature, Shape
-from .archetypes import Base
+from .archetypes import Facility, Instrument, Feature, Shape, Event
+from .archetypes import Base, Satellite, Mission
 
 from random import randint
 import os
@@ -42,14 +42,55 @@ class Cycsat(object):
 		# connect using pandas
 		self.reader = sqlite3.connect(self.database)
 
-	def select(self,Entity):
+	@property
+	def satellites(self):
+		"""Returns a list of facilities."""
+		return self.session.query(Satellite).all()
+
+	@property
+	def facilities(self):
+		"""Returns a list of facilities."""
+		return self.session.query(Facility).all()
+
+	@property
+	def events(self):
 		"""Selects entities from database"""
-		result = self.session.query(Entity).all()
+		result = self.session.query(Event).all()
+		return result	
+
+	@property
+	def features(self):
+		"""Selects entities from database"""
+		result = self.session.query(Feature).all()
 		return result
+
+	@property
+	def instruments(self):
+		"""Selects entities from database"""
+		result = self.session.query(Instrument).all()
+		return result	
+
+	@property
+	def missions(self):
+		"""Selects entities from database"""
+		result = self.session.query(Mission).all()
+		return result	
+
+	def save_all(self):
+		"""Writes archetype instances to database"""
+		classes = [self.satellites,
+				   self.missions,
+				   self.facilities,
+				   self.events,
+				   self.features,
+				   self.instruments]
+
+		for class_list in classes:
+			self.session.add_all(class_list)
+		self.session.commit()
 
 	def save(self,Entities):
 		"""Writes archetype instances to database"""
-
 		if isinstance(Entities, list):
 			self.session.add_all(Entities)
 		else:
@@ -64,6 +105,9 @@ class Cycsat(object):
 	def build(self,AgentId=None):
 		"""Builds all the facilities in an output database from cyclus"""
 
+		if len(self.read('select * from Cycsat_Facility'))==0:
+			pass
+		
 		facilities = list()
 
 		sql = 'select * from AgentEntry'
@@ -84,13 +128,18 @@ class Cycsat(object):
 		"""Generates events for all facilties"""
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
-		facilities = self.select(Facility)
+		facilities = self.facilities
 		for facility in facilities:
 			for timestep in range(self.duration):
 				try:
 					facility.simulate(timestep,self.reader,self)
 				except:
 					continue
+
+
+
+
+
 
 
 

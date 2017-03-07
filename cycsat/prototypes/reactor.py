@@ -25,7 +25,7 @@ class SampleReactor(Facility):
         SampleCoolingTower1(),
         SampleCoolingTower2(),
         SampleFuel(),
-        #Plume()
+        Plume()
         ]
 
         # for f in self.features[1:]:
