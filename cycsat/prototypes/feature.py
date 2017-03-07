@@ -21,6 +21,10 @@ class ConcretePad(Feature):
         Rectangle(width=6000,length=6000)
         ]
 
+        self.rules = [
+        #Rule(oper='ROTATE',value=0)
+        ]
+
 
 class SampleCoolingTower1(Feature):
     __mapper_args__ = {'polymorphic_identity': 'cooling tower 1'}
@@ -57,14 +61,15 @@ class SampleCoolingTower2(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='NEAR',target='cooling tower 1',value=10)
+        #Rule(oper='NEAR',target='cooling tower 1',value=300),
+        #Rule(oper='AXIS',target='cooling tower 1',direction='X'),
         ]
 
 
-class SampleContainment(Feature):
-    __mapper_args__ = {'polymorphic_identity': 'containment'}
+class SampleContainment1(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'containment1'}
 
-    def __init__(self,name='containment',visibility=100):
+    def __init__(self,name='containment1',visibility=100):
         
         self.name = name
         self.visibility = visibility
@@ -74,6 +79,27 @@ class SampleContainment(Feature):
         # define shapes
         self.shapes = [
         Circle(radius=520,rgb=[70,70,70])
+        ]
+
+
+class SampleContainment2(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'containment2'}
+
+    def __init__(self,name='containment2',visibility=100):
+        
+        self.name = name
+        self.visibility = visibility
+        self.rgb = '[70,70,70]'
+        self.level = 1
+
+        # define shapes
+        self.shapes = [
+        Circle(radius=520,rgb=[70,70,70])
+        ]
+
+        self.rules = [
+        #Rule(oper='NEAR',target='containment1',value=100),
+        #Rule(oper='AXIS',target='containment1',direction='X')
         ]
 
 
@@ -93,9 +119,9 @@ class Turbine1(Feature):
         ]
         
         self.rules = [
-        #Rule(oper='ROTATE',value=90),
+        #Rule(oper='ROTATE',value=0)
         #Rule(oper='ALINE',direction='Y',target='containment1'),
-        #Rule(oper='NEAR',target='containment1',value=3000)
+        #Rule(oper='NEAR',target='containment1',value=500)
         ]
 
 
@@ -116,8 +142,8 @@ class Turbine2(Feature):
         
         self.rules = [
         #Rule(oper='AXIS',direction='X',target='turbine1'),
-        #Rule(oper='ROTATE',value=90),
-        #Rule(oper='NEAR',target='containment1',value=3000)
+        #Rule(oper='ROTATE',value=0),
+        #Rule(oper='NEAR',target='turbine1',value=10)
         ]
 
 
@@ -125,16 +151,20 @@ class Turbine2(Feature):
 class SampleFuel(Feature):
     __mapper_args__ = {'polymorphic_identity': 'fuel building'}
 
-    def __init__(self,name='fuel building',visibility=100):
+    def __init__(self,name='pond',visibility=100):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[70,70,70]'
+        self.rgb = '[25,23,143]'
         self.level = 1
 
         # define shapes
         self.shapes = [
         Rectangle(width=1000,length=1000,rgb=[208,40,14])
+        ]
+
+        self.rules = [
+        #Rule(oper='ROTATE',value=0)
         ]
 
 
@@ -153,7 +183,7 @@ class Plume(Feature):
         ]
 
         self.rules = [
-        Rule(oper='WITHIN',target='cooling tower 1',value=500)
+        #Rule(oper='WITHIN',target='cooling tower 1',value=500)
         ]
 
         self.conditions = [

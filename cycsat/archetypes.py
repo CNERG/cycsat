@@ -48,7 +48,7 @@ operations = {
 
 
 class Satellite(Base):
-	"""A collection of instruments"""
+	"""A collection of instruments."""
 
 	__tablename__ = 'CycSat_Satellite'
 
@@ -75,6 +75,7 @@ class Instrument(Base):
 	min_spectrum = Column(String)
 	max_spectrum = Column(String)
 	prototype = Column(String)
+	wkt = Column(String)
 
 	__mapper_args__ = {'polymorphic_on': prototype}
 
@@ -82,8 +83,9 @@ class Instrument(Base):
 	satellite = relationship(Satellite, back_populates='instruments')
 		
 
-	def build_geometry(self):
-		self.geometry = build_geometry(self)
+	def geometry(self):
+		self.geo = build_geometry(self)
+		return self.geo
 
 
 	def target(self,Facility):
@@ -125,9 +127,10 @@ class Instrument(Base):
 		scene = Scene(timestep=timestep)
 		self.scenes.append(scene)
 		self.Facility.scenes.append(scene)
-		if Mission:
-			Mission.scenes.append(scene)
-		World.save([Mission,self,self.Facility])
+		
+		# if Mission:
+		# 	Mission.scenes.append(scene)
+		# World.save([Mission,self,self.Facility])
 		
 		path = path+str(scene.id)
 		self.Sensor.write(path)
@@ -169,7 +172,7 @@ Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
 
 class Facility(Base):
-	"""A collection of features"""
+	"""A collection of features."""
 
 	__tablename__ = 'CycSat_Facility'
 
@@ -283,13 +286,14 @@ class Facility(Base):
 		"""plots a facility and its static features or a timestep."""
 		if axis:
 			ax = axis
+			plt.axis('equal')
 		else:
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
-		#plt.axis('equal')
+
 		ax.set_aspect('equal')
 
 		if title:
@@ -391,6 +395,9 @@ class Shape(Base):
 
 		self.geo = load_wkt(geom)
 		return self.geo
+
+	def materialize(self):
+		materialize(self)
 
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
 

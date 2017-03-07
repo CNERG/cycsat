@@ -25,7 +25,7 @@ extensions = {
 class Sensor(object):
 
 	def __init__(self,Instrument,method=''):
-		"""Initiate a sensor instance
+		"""Initiate a sensor instance.
 
 		Keyword arguments:
 		Instrument -- Instrument instance to draw the image
@@ -64,7 +64,7 @@ class Sensor(object):
 			for shape in feature.shapes:
 				self.shapes.append(shape)
 
-		cross_hairs = self.geometry.centroid
+		cross_hairs = self.ifov.centroid
 		
 		for shape in self.shapes:
 			place(shape,cross_hairs,Facility)
@@ -85,7 +85,8 @@ class Sensor(object):
 
 		for level in sorted(shape_stack):
 			for shape in shape_stack[level]:
-				add_shape(self,shape,geometry='focused',background=True)
+				shape.materialize()
+				add_shape(self,shape,background=True)
 
 
 	def capture_shape(self,Shape,geometry='focused'):
@@ -122,14 +123,14 @@ class Sensor(object):
 
 
 
-def add_shape(Sensor,Shape,geometry='abstract',background=True):
+def add_shape(Sensor,Shape,background=True):
 		"""Adds a shape to the sensor objects image, by default the background image"""
 
 		image = Sensor.foreground
 		if background:
 			image = Sensor.background
 
-		geometry = Shape.build_footprint(geometry=geometry)
+		geometry = Shape.geometry(placed=True)
 		value = Shape.material.measure(wl_min=Sensor.min_spectrum,wl_max=Sensor.max_spectrum)
 
 		# mask = (Sensor.wavelength >= Sensor.min_spectrum) & (Sensor.wavelength <= Sensor.max_spectrum)

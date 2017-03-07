@@ -16,6 +16,7 @@ from cycsat.simulation import Cycsat
 from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape, Rule
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
+from cycsat.prototypes.instrument import Blue, Red, Green
 from cycsat.image import Sensor
 
 from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
@@ -24,16 +25,20 @@ from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rule
 
 #sim = Cycsat('reactor_test_sample.sqlite')
 
-s = SampleReactor()
+f = SampleReactor()
+f.build()
 
-fig, axes = plt.subplots(nrows=3,ncols=4,sharex=True,sharey=True,figsize=(3,4))
-for i, ax in enumerate(axes.flat,start=1):
-	#ax.set_xticks([2000,4000,6000,8000,10000])
-	#ax.set_yticks([2000,4000,6000,8000,10000])
-	s.build()
-	s.plot(ax,title=False,labels=False)
+# fig, axes = plt.subplots(nrows=2,ncols=5,sharex=True,sharey=True,figsize=(15,5))
+# for i, ax in enumerate(axes.flat,start=1):
+# 	#ax.set_xticks([2000,4000,6000,8000,10000])
+# 	#ax.set_yticks([2000,4000,6000,8000,10000])
+# 	f.build()
+# 	f.plot(ax,title=False,labels=False)
 
 
+b = Blue(mmu=1)
+g = Green()
+r = Red()
 
 
 #s.build()
