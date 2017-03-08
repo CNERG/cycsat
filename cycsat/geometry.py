@@ -42,7 +42,7 @@ def build_footprint(Entity,placed=True):
 	if archetype == 'Facility':
 		shapes = [feature.footprint() for feature in Entity.features if feature.visibility==100]
 	else:
-		shapes = [shape.geometry(placed=placed) for shape in Entity.shapes if shape.visibility==100]
+		shapes = [shape.geometry(placed=placed) for shape in Entity.shapes]
 	union = cascaded_union(shapes)
 	if union.__class__.__name__ == 'MultiPolygon':
 		return box(union)
@@ -259,14 +259,14 @@ def list_bearings(Feature):
 
 def evaluate_rules(Feature,mask=None):
 	"""Evaluates a a feature's rules and returns instructions."""
-
-	# if no mask is provided make the facility bounds the mask
-	# if not mask:
-	# 	mask = Feature.facility.geometry()
-
 	results = defaultdict(list)
 
 	for rule in Feature.rules:
+		# get rule attributes
+		direction = rule.direction
+		value = rule.value
+		event = None
+
 		# get all the features 'targeted' in the rule
 		targets = [feature for feature in Feature.facility.features 
 					if (feature.name==rule.target)]
@@ -276,10 +276,6 @@ def evaluate_rules(Feature,mask=None):
 		for target in targets:
 			target_rules+=target.rules
 
-		# get rule attributes
-		direction = rule.direction
-		value = rule.value
-
 		# if the rotate rule has targets use them to align 
 		if rule.oper=='ROTATE':
 			rotation = [r.value for r in target_rules if r.oper=='ROTATE']
@@ -287,11 +283,22 @@ def evaluate_rules(Feature,mask=None):
 				value = rotation[0]
 			else:
 				value = rule.value
+		else:
+			value = rule.value
 
+		# if the rule is self-targeted get the event for placement info
+		if rule.target=="%self%":
+			lag = 0
+			if '%lag' in rule.value:
+				lag = rule.value.split('=')[-1]
+			value = rule.value-lag
+			event = rule.feature.sorted_events()[value]
+
+		# otherwised merge all the targets
 		target_footprints = [target.footprint(placed=True) for target in targets]
 		target_geometry = cascaded_union(target_footprints)
 
-		result = rules[rule.oper](Feature,target_geometry,value,direction)
+		result = rules[rule.oper](Feature,target_geometry,value,direction,event)
 
 		for kind, data in result.items():
 			results[kind].append(data)

@@ -280,6 +280,8 @@ class Facility(Base):
 				else:
 					evaluations.append(False)
 
+			# re-place all static features!
+
 			if False in evaluations:
 				print(feature.name,'False')
 				continue
@@ -378,6 +380,11 @@ class Feature(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility, back_populates='features')
 
+	def sorted_events(self):
+		"""Returns a sorted list (by timestep) of events."""
+		events = dict((event.timestep,event) for event in self.events)
+		return events
+
 	def footprint(self,placed=True):
 		"""Returns a shapely geometry of the static shapes"""
 		self.geo = build_footprint(self,placed=placed)
@@ -417,8 +424,12 @@ class Shape(Base):
 	id = Column(Integer, primary_key=True)
 	level = Column(Integer,default=0)
 	prototype = Column(String)
-	xoff = Column(Integer,default=0)
-	yoff = Column(Integer,default=0)
+	
+	# xoff = Column(Integer,default=0)
+	# yoff = Column(Integer,default=0)
+	#visibility = Column(Integer,default=100)
+	
+	timestep = Column(Integer,default=-1)
 	
 	placed_wkt = Column(String)
 	stable_wkt = Column(String)
@@ -501,7 +512,8 @@ Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')
 
 
 class Event(Base):
-	"""An instance of a non-static shape at a facility for a given timestep"""
+	"""An instance of a non-static Shape at a facility for a given timestep. Modified
+	by rules."""
 
 	__tablename__ = 'CycSat_Event'
 
@@ -514,6 +526,9 @@ class Event(Base):
 
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility,back_populates='events')
+
+	def geometry():
+		return build_geometry(Event)
 
 
 Feature.events = relationship('Event',order_by=Event.id,back_populates='feature')
