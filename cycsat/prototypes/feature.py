@@ -13,16 +13,32 @@ class ConcretePad(Feature):
         
         self.name = name
         self.visibility = 100
-        self.rgb = '[155,155,155]'
         self.level = 0
 
         # define shapes
         self.shapes = [
-        Rectangle(width=6000,length=6000)
+        Rectangle(width=6000,length=6000,rgb=[155,155,155])
         ]
 
         self.rules = [
         Rule(oper='ROTATE',value=0)
+        ]
+
+
+class Truck(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'truck'}
+
+    def __init__(self,name='truck'): 
+        self.name = name
+        self.visibility = 100
+        self.level = 1
+
+        # define shapes
+        self.shapes = [
+        Rectangle(width=20,length=50,rgb=[208,40,14])
+        ]
+
+        self.rules = [
         ]
 
 
@@ -32,14 +48,13 @@ class SampleCoolingTower1(Feature):
     def __init__(self,name='cooling tower 1'):
         
         self.name = name
-        self.rgb = '[70,70,70]'
         self.level = 1
         self.visibility = 100
 
         # define shapes
         self.shapes = [
-        Circle(radius=900,material_code=23),
-        Circle(level=1,radius=620,material_code=24)
+        Circle(radius=900,materiagl_code=23,rgb=[70,70,70]),
+        Circle(level=1,radius=620,material_code=24,rgb=[70,70,70])
         ]
 
 
@@ -49,15 +64,13 @@ class SampleCoolingTower2(Feature):
     def __init__(self,name='cooling tower 2'):
         
         self.name = name
-        self.rgb = '[70,70,70]'
         self.level = 1
         self.visibility = 100
 
-
         # define shapes
         self.shapes = [
-        Circle(radius=900,material_code=23),
-        Circle(level=1,radius=620,material_code=24)
+        Circle(radius=900,material_code=23,rgb=[70,70,70]),
+        Circle(level=1,radius=620,material_code=24,rgb=[70,70,70])
         ]
 
         self.rules = [
@@ -73,7 +86,6 @@ class SampleContainment1(Feature):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[70,70,70]'
         self.level = 1
 
         # define shapes
@@ -89,7 +101,6 @@ class SampleContainment2(Feature):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[70,70,70]'
         self.level = 1
 
         # define shapes
@@ -110,7 +121,6 @@ class Turbine1(Feature):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[70,70,70]'
         self.level = 1
 
         # define shapes
@@ -132,7 +142,6 @@ class Turbine2(Feature):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[70,70,70]'
         self.level = 1
 
         # define shapes
@@ -155,7 +164,6 @@ class SampleFuel(Feature):
         
         self.name = name
         self.visibility = visibility
-        self.rgb = '[25,23,143]'
         self.level = 1
 
         # define shapes
@@ -174,12 +182,11 @@ class Plume(Feature):
     def __init__(self,material_code=None,rgb=[255,255,255],radius=800,level=3,xoff=500,yoff=500,visibility=5):
         self.name = 'Plume'
         self.level = 2
-        self.rgb = '[255,255,255]'
         self.visibility = 99
 
         # define shapes
         self.shapes = [
-        Circle(radius=800,rgb=[255,255,255])
+        Circle(level=3,radius=800,rgb=[255,255,255])
         ]
 
         self.rules = [

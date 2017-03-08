@@ -172,6 +172,7 @@ def dep_graph(features):
 		# Return the list of batches
 		return batches
 
+
 def create_blueprint(Facility,timestep=-1,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry.
@@ -189,7 +190,7 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
 	# Facility.ax_angle = site_rotation
 
-	# determine which features to draw and create a list of ids
+	# determine which features to draw (by timestep) and create a list of ids
 	if timestep > -1:
 		feature_ids = set()
 		events = [event for event in Facility.events if event.timestep==timestep]
@@ -225,9 +226,8 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 			if placed:
 				placed_features.append(feature)
 				# record the new shape location
-				if timestep>-1:
-					for shape in feature.shapes:
-						shape.add_location(timestep,shape.placed_wkt)
+				for shape in feature.shapes:
+					shape.add_location(timestep,shape.placed_wkt)
 				continue
 			else:
 				print('blueprint failed')
@@ -235,28 +235,6 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 
 	#Facility.rotate(site_rotation)
 	return True
-
-
-def place_dynamics(Facility, timestep=0):
-
-
-
-	placed_features = list()
-
-	for feature in features:
-		footprint = Facility.geometry()
-		
-		dyn_overlaps = [feat for feat in placed_features if feat.level==feature.level]
-		static_overlaps = [feat for feat in Facility.features if feat.level]
-
-		overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
-		overlaps = cascaded_union(overlaps)
-		footprint = footprint.difference(overlaps)
-			
-		definition = feature.eval_rules(mask=footprint)
-		placed = place_feature(feature,footprint,build=True)
-
-
 
 
 def rotate_facility(Facility,degrees=None):

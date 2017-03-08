@@ -195,11 +195,6 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
-	def timestep_events(self,timestep=0):
-		"""Returns a list of events at the facility filtered by the given timestep."""
-		events = [event for event in self.events if event.timestep==timestep]
-		return events
-
 	def geometry(self):
 		self.geo = build_geometry(self)
 		return self.geo
@@ -295,8 +290,23 @@ class Facility(Base):
 		
 		build_facility(self,timestep=timestep)
 		simulation.save(self)
-		
 
+
+	def timestep_shapes(self,timestep=0):
+		"""Returns the ordered shapes to draw at a facility for a given timestep."""
+		shapes = list()
+		
+		for feature in self.features:
+			# add all if a static feature
+			if feature.visibility==100:
+				shapes+=[(shape.level,shape) for shape in feature.shapes]
+			else:
+				events = [e for e in feature.events if e.timestep==timestep]
+				if len(events)>0:
+					shapes+=[(shape.level,shape) for shape in feature.shapes]
+		
+		return sorted(shapes,key=lambda x: x[0])
+		
 
 	def plot(self,axis=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
 		"""plots a facility and its static features or a timestep."""
@@ -313,16 +323,18 @@ class Facility(Base):
 		ax.set_title(self.name+'\ntimestep:'+str(timestep))
 		ax.set_aspect('equal')
 
-		for feature in self.features:
-			# check if feature should be drawn at timestep
-			events = [e for e in self.events if (e.feature_id==feature.id) & (e.timestep==timestep)]
-			if feature.visibility != 100:
-				if len(events)==0:
-					continue
+		shapes = self.timestep_shapes(timestep)
+		for shape in shapes:
+			shape = shape[1]
+			if shape.feature.visibility==100:
+				geometry = shape.geometry()
+			else:
+				geometry = shape.geometry(timestep=timestep)
 
-			rgb = feature.get_rgb(plotting=True)
-			patch = PolygonPatch(feature.footprint(),facecolor=rgb)
+			rgb = shape.get_rgb(plotting=True)
+			patch = PolygonPatch(geometry,facecolor=rgb)
 			ax.add_patch(patch)
+			
 			if labels:
 				plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
 
@@ -450,8 +462,25 @@ class Shape(Base):
 		loc = Location(timestep=timestep,wkt=self.placed_wkt)
 		self.locations.append(loc)
 
-	def geometry(self,placed=True):
+	def get_rgb(self,plotting=False):
+		"""Returns the RGB be value as a list [RGB] which is stored as text"""
+		try:
+			rgb = ast.literal_eval(self.rgb)
+		except:
+			rgb = self.rgb
+
+		if plotting:
+			return [x/255 for x in rgb]
+		else:
+			return rgb
+
+	def geometry(self,placed=True,timestep=None):
 		"""Returns a shapely geometry"""
+		if timestep:
+			locations = [loc for loc in self.locations if loc.timestep==timestep]
+			if locations:
+				return load_wkt(locations[0].wkt)
+
 		if not self.placed_wkt:
 			geom = self.stable_wkt
 		else:
