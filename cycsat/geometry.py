@@ -21,14 +21,6 @@ from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
 #------------------------------------------------------------------------------
-# BLUEPRINT OBJECT
-#------------------------------------------------------------------------------
-
-class BluePrint(object):
-	def __init__(self):
-		self.name = None
-
-#------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
 
@@ -88,18 +80,6 @@ def posit_point(definition,attempts=1000):
 	
 	print('point placement failed after {',attempts,'} attempts.')
 	return False
-
-
-# def grid_line(Feature,axis='X'):
-# 	"""Returns list of points of a grid line for an axis for a target feature."""
-	
-# 	footprint = Feature.facility.geometry()
-# 	x_min, y_min, x_max, y_max = geometry.bounds
-	
-# 	x,y = Feature.geometry().centroid.xy
-
-# 	if 'X':
-# 		xs = np.empty(round((y_max-y_min/0.5))
 
 
 def line_func(line,precision=1):
@@ -187,30 +167,17 @@ def create_blueprint(Facility,attempts=100):
 
 	for group in dep_grps:
 		for feature in group:
-
-			print('-'*25)
-			print('placing',feature.name)
 			footprint = Facility.geometry()
 			overlaps = [feat for feat in placed_features if feat.level==feature.level]
 
-			print('CONSTRANING FEATURES')
-			for o in overlaps:
-				print('		',o.name,o.footprint().area)
-
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
-
 			overlaps = cascaded_union(overlaps)
-			
 			footprint = footprint.difference(overlaps)
-			
-			print('footprint area:',footprint.area)
 			
 			definition = feature.eval_rules(mask=footprint)
 			placed = place_feature(feature,footprint,build=True)
 
 			if placed:
-				print(feature.name,'placed')
-				print('-'*25)
 				placed_features.append(feature)
 				continue
 			else:
@@ -290,7 +257,6 @@ def evaluate_rules(Feature,mask=None):
 	else:
 		results['mask'] = mask
 
-	print(results['mask'].area)
 	return results
 
 
@@ -360,7 +326,6 @@ def place_feature(Feature,mask=None,build=False,rand=True,location=False,attempt
 
 	if 'rotate' in definition:
 		rotate = definition['rotate'][0]
-		print('rotate',rotate)
 	else:
 		rotate = random.randint(-180,180)
 	

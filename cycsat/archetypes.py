@@ -1,7 +1,10 @@
 """
 archetypes.py
 """
-import ast, random
+import ast, random, io
+
+import imageio
+import tempfile
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
@@ -43,7 +46,7 @@ operations = {
 	"less than": operator.lt,
 	"less than or equals": operator.le,
 	"greater than": operator.gt,
-	"greater than of equals": operator.ge
+	"greater than or equals": operator.ge
 }
 
 
@@ -214,6 +217,8 @@ class Facility(Base):
 				  'before creating the axis.')
 
 	def dep_graph(self):
+		"""Groups features based on dependencies."""
+
 		# create dictionary of features with dependencies
 		graph = dict((f.name, f.depends()) for f in self.features)
 		name_to_instance = dict( (f.name, f) for f in self.features )
@@ -241,28 +246,28 @@ class Facility(Base):
 		# Return the list of batches
 		return batches
 
-
 	def build(self,attempts=100):
 		"""Randomly places all the features of a facility"""
 		rules = build_facility(self,attempts=attempts)
 		return rules
 
-	def simulate(self,timestep,reader,world):
+	def simulate(self,simulation,timestep):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
-		generates events.
+		generates events. All conditions must be True in order for the event to be
+		created.
 
 		Keyword arguments:
+		simulation -- a cycsat simulation object
 		timestep -- the timestep for simulation
-		reader -- a reader connection for reading data from the database
 		"""
 		dynamic_features = [feature for feature in self.features if feature.visibility!=100]
-
+		
 		events = list()
 		for feature in dynamic_features:
 			evaluations = []
 			for condition in feature.conditions:
 				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (condition.table,self.AgentId,timestep)
-				df = pd.read_sql_query(qry,reader)
+				df = pd.read_sql_query(qry,simulation.reader)
 				value = df['Value'][0]
 
 				if operations[condition.oper](value,condition.value):
@@ -273,16 +278,17 @@ class Facility(Base):
 			if False in evaluations:
 				continue
 			else:
-				event = Event(timestep=timestep)
-				feature.events.append(event)
-				self.events.append(event)
+				if random.randint(1,100)>feature.visibility:
+					event = Event(timestep=timestep)
+					feature.events.append(event)
+					self.events.append(event)
+					simulation.save(feature)
+				else:
+					continue
+		simulation.save(self)
 
-				world.save(feature)
 
-		world.save(self)
-
-
-	def plot(self,axis=None,timestep=None,labels=True,title=True):
+	def plot(self,axis=None,timestep=0,labels=False,save=False,name='plot.png',virtual=None):
 		"""plots a facility and its static features or a timestep."""
 		if axis:
 			ax = axis
@@ -290,21 +296,57 @@ class Facility(Base):
 		else:
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		
+		# set up the plot
 		ax.set_xlim([0,self.width*10])
 		ax.set_ylim([0,self.length*10])
 		ax.set_axis_bgcolor('green')
-
+		ax.set_title(self.name+'\ntimestep:'+str(timestep))
 		ax.set_aspect('equal')
 
-		if title:
-			ax.set_title(self.name)
-
 		for feature in self.features:
+			# check if feature should be drawn at timestep
+			events = [e for e in self.events if (e.feature_id==feature.id) & (e.timestep==timestep)]
+			if feature.visibility != 100:
+				if len(events)==0:
+					continue
+
 			rgb = feature.get_rgb(plotting=True)
 			patch = PolygonPatch(feature.footprint(),facecolor=rgb)
 			ax.add_patch(patch)
 			if labels:
 				plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
+
+		if save:
+			plt.savefig(name)
+		if virtual:
+			plt.savefig(virtual,format='png')
+			return virtual
+
+
+	def gif(self,timesteps,name):
+		"""plots a facility and its static features or a timestep."""
+		plt.ioff()
+		plots = list()
+		for step in timesteps:
+			f = io.BytesIO()
+			f = self.plot(timestep=step,virtual=f)
+			plots.append(f)
+			plt.close()
+
+		images = list()
+		for plot in plots:
+			plot.seek(0)
+			images.append(imageio.imread(plot))
+		imageio.mimsave(name+'.gif', images)
+		plt.ion()
+
+
+# import imageio
+# images = []
+# for filename in filenames:
+#     images.append(imageio.imread(filename))
+# imageio.mimsave('/path/to/movie.gif', images)
+
 
 
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')

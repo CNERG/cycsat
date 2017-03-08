@@ -19,13 +19,11 @@ from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import geopandas
-
 
 Session = sessionmaker()
 
 
-class Cycsat(object):
+class Simulation(object):
 	"""
 	"""
 	def __init__(self,database):
@@ -41,6 +39,7 @@ class Cycsat(object):
 
 		# connect using pandas
 		self.reader = sqlite3.connect(self.database)
+		self.duration = pd.read_sql_query('SELECT Duration FROM Info',self.reader)['Duration'][0]
 
 	@property
 	def satellites(self):
@@ -132,7 +131,7 @@ class Cycsat(object):
 		for facility in facilities:
 			for timestep in range(self.duration):
 				try:
-					facility.simulate(timestep,self.reader,self)
+					facility.simulate(self,timestep)
 				except:
 					continue
 
