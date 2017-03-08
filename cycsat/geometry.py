@@ -142,7 +142,36 @@ def site_axis(Facility):
 # FACILITY CONSTRUCTION
 #------------------------------------------------------------------------------
 
-def create_blueprint(Facility,attempts=100):
+def dep_graph(features):
+		"""Groups features based on dependencies."""
+		# create dictionary of features with dependencies
+		graph = dict((f.name, f.depends()) for f in features)
+		name_to_instance = dict( (f.name, f) for f in features )
+
+		# where to store the batches
+		batches = list()
+
+		while graph:
+			# Get all features with no dependencies
+			ready = {name for name, deps in graph.items() if not deps}
+
+			if not ready:
+				msg  = "Circular dependencies found!\n"
+				raise ValueError(msg)
+
+			# Remove them from the dependency graph
+			for name in ready:
+				graph.pop(name)
+			for deps in graph.values():
+				deps.difference_update(ready)
+
+			# Add the batch to the list
+			batches.append( [name_to_instance[name] for name in ready] )
+
+		# Return the list of batches
+		return batches
+
+def create_blueprint(Facility,timestep=0,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry.
 

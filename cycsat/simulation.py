@@ -24,9 +24,10 @@ Session = sessionmaker()
 
 
 class Simulation(object):
-	"""
+	"""This is the Cycsat simulation object. It can be used to manage simulations
 	"""
 	def __init__(self,database):
+		"""Connects to a CYCLUS output database."""
 		global Session
 		global Base
 

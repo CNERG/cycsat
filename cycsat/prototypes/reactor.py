@@ -28,6 +28,6 @@ class SampleReactor(Facility):
         Plume()
         ]
 
-        # for f in self.features[1:]:
-        #    f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
+        for f in self.features[1:]:
+           f.rules.append(Rule(oper='WITHIN',target='concrete pad',value=0))
 

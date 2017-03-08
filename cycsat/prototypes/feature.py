@@ -22,7 +22,7 @@ class ConcretePad(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='ROTATE',value=0)
+        Rule(oper='ROTATE',value=0)
         ]
 
 
@@ -61,8 +61,8 @@ class SampleCoolingTower2(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='NEAR',target='cooling tower 1',value=300),
-        #Rule(oper='AXIS',target='cooling tower 1',direction='X'),
+        Rule(oper='NEAR',target='cooling tower 1',value=200),
+        Rule(oper='AXIS',target='cooling tower 1',direction='X'),
         ]
 
 
@@ -98,8 +98,8 @@ class SampleContainment2(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='NEAR',target='containment1',value=100),
-        #Rule(oper='AXIS',target='containment1',direction='X')
+        Rule(oper='NEAR',target='containment1',value=200),
+        Rule(oper='AXIS',direction='Y',target='containment1')
         ]
 
 
@@ -119,9 +119,9 @@ class Turbine1(Feature):
         ]
         
         self.rules = [
-        #Rule(oper='ROTATE',value=0)
-        #Rule(oper='ALINE',direction='Y',target='containment1'),
-        #Rule(oper='NEAR',target='containment1',value=500)
+        Rule(oper='ROTATE',value=0),
+        Rule(oper='AXIS',direction='X',target='containment1'),
+        Rule(oper='NEAR',target='containment1',value=500)
         ]
 
 
@@ -141,9 +141,9 @@ class Turbine2(Feature):
         ]
         
         self.rules = [
-        #Rule(oper='AXIS',direction='X',target='turbine1'),
-        #Rule(oper='ROTATE',value=0),
-        #Rule(oper='NEAR',target='turbine1',value=10)
+        Rule(oper='ROTATE',value=0),
+        Rule(oper='AXIS',direction='X',target='containment2'),
+        Rule(oper='NEAR',target='containment1',value=500)
         ]
 
 
@@ -164,7 +164,7 @@ class SampleFuel(Feature):
         ]
 
         self.rules = [
-        #Rule(oper='ROTATE',value=0)
+        Rule(oper='ROTATE',value=0)
         ]
 
 
@@ -183,7 +183,7 @@ class Plume(Feature):
         ]
 
         self.rules = [
-        Rule(oper='WITHIN',target='cooling tower 1',value=500)
+        Rule(oper='WITHIN',target='cooling tower 1',value=600)
         ]
 
         self.conditions = [

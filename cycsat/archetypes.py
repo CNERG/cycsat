@@ -195,6 +195,11 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
+	def timestep_events(self,timestep=0):
+		"""Returns a list of events at the facility filtered by the given timestep."""
+		events = [event for event in self.events if event.timestep==timestep]
+		return events
+
 	def geometry(self):
 		self.geo = build_geometry(self)
 		return self.geo
@@ -217,7 +222,7 @@ class Facility(Base):
 				  'before creating the axis.')
 
 	def dep_graph(self):
-		"""Groups features based on dependencies."""
+		"""Returns groups of features based on their dependencies."""
 
 		# create dictionary of features with dependencies
 		graph = dict((f.name, f.depends()) for f in self.features)
@@ -276,9 +281,12 @@ class Facility(Base):
 					evaluations.append(False)
 
 			if False in evaluations:
+				print(feature.name,'False')
 				continue
 			else:
-				if random.randint(1,100)>feature.visibility:
+				print(feature.name,'True')
+				if random.randint(1,100)<feature.visibility:
+					print('WRITE',timestep)
 					event = Event(timestep=timestep)
 					feature.events.append(event)
 					self.events.append(event)
@@ -414,6 +422,7 @@ class Shape(Base):
 	prototype = Column(String)
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)
+	
 	placed_wkt = Column(String)
 	stable_wkt = Column(String)
 
@@ -501,6 +510,7 @@ class Event(Base):
 
 	id = Column(Integer, primary_key=True)
 	timestep = Column(Integer)
+	wkt = Column(String)
 
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature,back_populates='events')

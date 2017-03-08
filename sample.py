@@ -2,10 +2,10 @@ import os
 from shutil import copyfile
 import random
 
-# # copying the test database (this is just for repeated testing)
-# src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.sqlite'
-# dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
-# copyfile(src, dst)
+# copying the test database (this is just for repeated testing)
+src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.sqlite'
+dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
+copyfile(src, dst)
 
 # =============================================================================
 # TESTING CYCSAT STARTS HERE
@@ -37,11 +37,6 @@ sim = Simulation('reactor_test_sample.sqlite')
 
 # ims = os.listdir('temp')
 
-# import imageio
-# images = []
-# for filename in filenames:
-#     images.append(imageio.imread(filename))
-# imageio.mimsave('/path/to/movie.gif', images)
 
 #fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 
