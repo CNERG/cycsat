@@ -292,12 +292,13 @@ class Facility(Base):
 					simulation.save(feature)
 				else:
 					continue
+		
 		build_facility(self,timestep=timestep)
 		simulation.save(self)
 		
 
 
-	def plot(self,axis=None,timestep=0,labels=False,save=False,name='plot.png',virtual=None):
+	def plot(self,axis=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
 		"""plots a facility and its static features or a timestep."""
 		if axis:
 			ax = axis
@@ -446,7 +447,7 @@ class Shape(Base):
 	feature = relationship(Feature, back_populates='shapes')
 
 	def add_location(self,timestep,wkt):
-		loc = Location(timestep=timestep,wkt=shape.placed_wkt)
+		loc = Location(timestep=timestep,wkt=self.placed_wkt)
 		self.locations.append(loc)
 
 	def geometry(self,placed=True):

@@ -145,8 +145,8 @@ def site_axis(Facility):
 def dep_graph(features):
 		"""Groups features based on dependencies."""
 		# create dictionary of features with dependencies
+		
 		graph = dict((f.name, f.depends()) for f in features)
-		print(graph)
 		name_to_instance = dict( (f.name, f) for f in features )
 
 		# where to store the batches
@@ -189,22 +189,34 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
 	# Facility.ax_angle = site_rotation
 
-	# if the timestep is greater than -1 use the features present at that timestep
-	if timestep>-1:
+	# determine which features to draw and create a list of ids
+	if timestep > -1:
 		feature_ids = set()
-		for event in Facility.events:
+		events = [event for event in Facility.events if event.timestep==timestep]
+		for event in events:
 			feature_ids.add(event.feature.id)
+		# no dynamic features to draw
+		if not feature_ids:
+			return True
+	else:
+		feature_ids = [feature.id for feature in Facility.features if feature.visibility==100]
+
+	dep_grps = Facility.dep_graph()
 
 	# track placed features
 	placed_features = list()
 
 	for group in dep_grps:
 		for feature in group:
+			if feature.id not in feature_ids:
+				placed_features.append(feature)
+				continue
 			
 			footprint = Facility.geometry()
 			overlaps = [feat for feat in placed_features if feat.level==feature.level]
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
 			overlaps = cascaded_union(overlaps)
+			
 			footprint = footprint.difference(overlaps)
 			
 			definition = feature.eval_rules(mask=footprint)
@@ -212,11 +224,9 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 
 			if placed:
 				placed_features.append(feature)
-
 				# record the new shape location
 				if timestep>-1:
 					for shape in feature.shapes:
-						print('add')
 						shape.add_location(timestep,shape.placed_wkt)
 				continue
 			else:
@@ -225,6 +235,28 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 
 	#Facility.rotate(site_rotation)
 	return True
+
+
+def place_dynamics(Facility, timestep=0):
+
+
+
+	placed_features = list()
+
+	for feature in features:
+		footprint = Facility.geometry()
+		
+		dyn_overlaps = [feat for feat in placed_features if feat.level==feature.level]
+		static_overlaps = [feat for feat in Facility.features if feat.level]
+
+		overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
+		overlaps = cascaded_union(overlaps)
+		footprint = footprint.difference(overlaps)
+			
+		definition = feature.eval_rules(mask=footprint)
+		placed = place_feature(feature,footprint,build=True)
+
+
 
 
 def rotate_facility(Facility,degrees=None):
