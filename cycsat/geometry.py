@@ -213,7 +213,7 @@ def create_blueprint(Facility,timestep=0,attempts=100):
 				print('blueprint failed')
 				return False
 
-	Facility.rotate(site_rotation)
+	#Facility.rotate(site_rotation)
 	return True
 
 
@@ -268,12 +268,30 @@ def evaluate_rules(Feature,mask=None):
 
 	for rule in Feature.rules:
 		# get all the features 'targeted' in the rule
-		targets = [feature.footprint(placed=True) for feature in Feature.facility.features 
+		targets = [feature for feature in Feature.facility.features 
 					if (feature.name==rule.target)]
 
-		target_geometry = cascaded_union(targets)
+		# search the rules of the targets
+		target_rules = list()
+		for target in targets:
+			target_rules+=target.rules
+
+		# get rule attributes
 		direction = rule.direction
-		result = rules[rule.oper](Feature,target_geometry,rule.value,direction)
+		value = rule.value
+
+		# if the rotate rule has targets use them to align 
+		if rule.oper=='ROTATE':
+			rotation = [r.value for r in target_rules if r.oper=='ROTATE']
+			if rotation:
+				value = rotation[0]
+			else:
+				value = rule.value
+
+		target_footprints = [target.footprint(placed=True) for target in targets]
+		target_geometry = cascaded_union(target_footprints)
+
+		result = rules[rule.oper](Feature,target_geometry,value,direction)
 
 		for kind, data in result.items():
 			results[kind].append(data)

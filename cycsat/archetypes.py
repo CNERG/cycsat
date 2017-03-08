@@ -415,10 +415,7 @@ class Shape(Base):
 	__tablename__ = 'CycSat_Shape'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	category = Column(String)
 	level = Column(Integer,default=0)
-	visibility = Column(Integer, default=100)
 	prototype = Column(String)
 	xoff = Column(Integer,default=0)
 	yoff = Column(Integer,default=0)

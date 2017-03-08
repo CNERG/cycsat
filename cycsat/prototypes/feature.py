@@ -164,7 +164,7 @@ class SampleFuel(Feature):
         ]
 
         self.rules = [
-        Rule(oper='ROTATE',value=0)
+        Rule(oper='ROTATE',target='concrete pad',value=0)
         ]
 
 

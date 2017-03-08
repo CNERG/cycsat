@@ -26,9 +26,9 @@ class Circle(Shape):
 
         self.stable_wkt = Point(xoff,yoff).buffer(self.radius).wkt
 
-    @declared_attr
-    def wkt(self):
-    	return Shape.__table__.c.get('wkt', Column(String))
+    # @declared_attr
+    # def wkt(self):
+    # 	return Shape.__table__.c.get('wkt', Column(String))
 
 
 class Rectangle(Shape):
@@ -46,9 +46,9 @@ class Rectangle(Shape):
 
         self.stable_wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
 
-    @declared_attr
-    def wkt(self):
-    	return Shape.__table__.c.get('wkt', Column(String))
+    # @declared_attr
+    # def wkt(self):
+    # 	return Shape.__table__.c.get('wkt', Column(String))
 
 
 class Plume(Shape):
@@ -69,6 +69,6 @@ class Plume(Shape):
         Condition(table='TimeSeriesPower',oper='greater than',value=0)
         ]
 
-    @declared_attr
-    def wkt(self):
-        return Shape.__table__.c.get('wkt', Column(String))
+    # @declared_attr
+    # def wkt(self):
+    #     return Shape.__table__.c.get('wkt', Column(String))
