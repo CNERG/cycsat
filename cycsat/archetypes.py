@@ -292,8 +292,8 @@ class Facility(Base):
 					simulation.save(feature)
 				else:
 					continue
-		simulation.save(self)
 		build_facility(self,timestep=timestep)
+		simulation.save(self)
 		
 
 
@@ -434,8 +434,6 @@ class Shape(Base):
 	level = Column(Integer,default=0)
 	prototype = Column(String)
 	
-	timestep = Column(Integer,default=-1)
-	
 	placed_wkt = Column(String)
 	stable_wkt = Column(String)
 
@@ -446,6 +444,10 @@ class Shape(Base):
 	
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='shapes')
+
+	def add_location(self,timestep,wkt):
+		loc = Location(timestep=timestep,wkt=shape.placed_wkt)
+		self.locations.append(loc)
 
 	def geometry(self,placed=True):
 		"""Returns a shapely geometry"""

@@ -146,6 +146,7 @@ def dep_graph(features):
 		"""Groups features based on dependencies."""
 		# create dictionary of features with dependencies
 		graph = dict((f.name, f.depends()) for f in features)
+		print(graph)
 		name_to_instance = dict( (f.name, f) for f in features )
 
 		# where to store the batches
@@ -181,8 +182,8 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 	footprint = Facility.geometry()
 	minx, miny, maxx, maxy = footprint.bounds
 	
-	# create a site axis
-	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
+	# # create a site axis
+	# site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
 	
 	# site_rotation = random.randint(-180,180)
 	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
@@ -193,16 +194,13 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 		feature_ids = set()
 		for event in Facility.events:
 			feature_ids.add(event.feature.id)
-		features = [feature for feature in Facility.features if feature.id in feature_ids]
-		dep_grps = dep_graph(features)
-	else:
-		dep_grps = Facility.dep_graph()
 
 	# track placed features
 	placed_features = list()
 
 	for group in dep_grps:
 		for feature in group:
+			
 			footprint = Facility.geometry()
 			overlaps = [feat for feat in placed_features if feat.level==feature.level]
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
@@ -214,6 +212,12 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 
 			if placed:
 				placed_features.append(feature)
+
+				# record the new shape location
+				if timestep>-1:
+					for shape in feature.shapes:
+						print('add')
+						shape.add_location(timestep,shape.placed_wkt)
 				continue
 			else:
 				print('blueprint failed')
