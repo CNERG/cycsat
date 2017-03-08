@@ -251,9 +251,9 @@ class Facility(Base):
 		# Return the list of batches
 		return batches
 
-	def build(self,attempts=100):
+	def build(self,timestep=-1,attempts=100):
 		"""Randomly places all the features of a facility"""
-		rules = build_facility(self,attempts=attempts)
+		rules = build_facility(self,timestep=timestep,attempts=attempts)
 		return rules
 
 	def simulate(self,simulation,timestep):
@@ -266,7 +266,7 @@ class Facility(Base):
 		timestep -- the timestep for simulation
 		"""
 		dynamic_features = [feature for feature in self.features if feature.visibility!=100]
-		
+
 		events = list()
 		for feature in dynamic_features:
 			evaluations = []
@@ -280,15 +280,12 @@ class Facility(Base):
 				else:
 					evaluations.append(False)
 
-			# re-place all static features!
-
 			if False in evaluations:
-				print(feature.name,'False')
+				print(feature.name,timestep,'False')
 				continue
 			else:
-				print(feature.name,'True')
 				if random.randint(1,100)<feature.visibility:
-					print('WRITE',timestep)
+					print(feature.name,timestep,'True')
 					event = Event(timestep=timestep)
 					feature.events.append(event)
 					self.events.append(event)
@@ -296,6 +293,8 @@ class Facility(Base):
 				else:
 					continue
 		simulation.save(self)
+		build_facility(self,timestep=timestep)
+		
 
 
 	def plot(self,axis=None,timestep=0,labels=False,save=False,name='plot.png',virtual=None):
@@ -387,8 +386,18 @@ class Feature(Base):
 
 	def footprint(self,placed=True):
 		"""Returns a shapely geometry of the static shapes"""
-		self.geo = build_footprint(self,placed=placed)
-		return self.geo
+		footprint = build_footprint(self,placed)
+		return footprint
+
+	def tfootprint(self,location):
+		"""Returns a shapely geometry of the static shapes"""
+
+		locations = list()
+		for shape in self.shapes:
+			locations+=[loc.geometry for loc in shape.locations]
+
+		footprint = cascaded_union(locations)
+		return footprint
 
 	def get_rgb(self,plotting=False):
 		"""Returns the RGB be value as a list [RGB] which is stored as text"""
@@ -425,10 +434,6 @@ class Shape(Base):
 	level = Column(Integer,default=0)
 	prototype = Column(String)
 	
-	# xoff = Column(Integer,default=0)
-	# yoff = Column(Integer,default=0)
-	#visibility = Column(Integer,default=100)
-	
 	timestep = Column(Integer,default=-1)
 	
 	placed_wkt = Column(String)
@@ -458,7 +463,26 @@ class Shape(Base):
 	def materialize(self):
 		materialize(self)
 
+
 Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
+
+
+class Location(Base):
+	"""The geometric/temporal record a Shape at a timestep."""
+	__tablename__ = 'CycSat_Location'
+
+	id = Column(Integer, primary_key=True)
+	timestep = Column(Integer,default=0)
+	wkt = Column(String)
+	
+	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
+	shape = relationship(Shape, back_populates='locations')
+
+	@property
+	def geometry(self):
+		return load_wkt(self.wkt)
+
+Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape')
 
 
 class Condition(Base):

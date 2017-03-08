@@ -171,7 +171,7 @@ def dep_graph(features):
 		# Return the list of batches
 		return batches
 
-def create_blueprint(Facility,timestep=0,attempts=100):
+def create_blueprint(Facility,timestep=-1,attempts=100):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry.
 
@@ -184,21 +184,27 @@ def create_blueprint(Facility,timestep=0,attempts=100):
 	# create a site axis
 	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
 	
-	site_rotation = random.randint(-180,180)
-	site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-	Facility.ax_angle = site_rotation
+	# site_rotation = random.randint(-180,180)
+	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+	# Facility.ax_angle = site_rotation
+
+	# if the timestep is greater than -1 use the features present at that timestep
+	if timestep>-1:
+		feature_ids = set()
+		for event in Facility.events:
+			feature_ids.add(event.feature.id)
+		features = [feature for feature in Facility.features if feature.id in feature_ids]
+		dep_grps = dep_graph(features)
+	else:
+		dep_grps = Facility.dep_graph()
 
 	# track placed features
 	placed_features = list()
-
-	# dependency groups
-	dep_grps = Facility.dep_graph()
 
 	for group in dep_grps:
 		for feature in group:
 			footprint = Facility.geometry()
 			overlaps = [feat for feat in placed_features if feat.level==feature.level]
-
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
 			overlaps = cascaded_union(overlaps)
 			footprint = footprint.difference(overlaps)
@@ -226,10 +232,10 @@ def rotate_facility(Facility,degrees=None):
 		rotate_feature(feature,degrees,Facility.geometry().centroid)
 
 
-def build_facility(Facility,attempts=100):
+def build_facility(Facility,timestep=-1,attempts=100):
 	"""Randomly places all the features of a facility"""	
 	for x in range(attempts):
-		result = create_blueprint(Facility)
+		result = create_blueprint(Facility,timestep)
 		if result:
 			Facility.defined = True
 			break
