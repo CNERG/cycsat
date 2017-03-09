@@ -102,11 +102,12 @@ class Simulation(object):
 		df = pd.read_sql_query(sql,self.reader)
 		return df
 
-	def build(self,AgentId=None):
+	def build(self,templates,AgentId=None):
 		"""Builds all the facilities in an output database from cyclus"""
 
-		if len(self.read('select * from Cycsat_Facility'))==0:
-			pass
+		if len(self.read('select * from Cycsat_Facility'))>0:
+			print('facility already build')
+			return None
 		
 		facilities = list()
 
@@ -117,10 +118,14 @@ class Simulation(object):
 		
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
-
 			if agent[1]['Kind']=='Facility':
-				facility = samples[prototype](AgentId=agent[1]['AgentId'])
-				facility.build()
+
+				if prototype in templates:
+					facility = templates[prototype](AgentId=agent[1]['AgentId'])
+					facility.build()
+				else:
+					continue
+				
 				facilities.append(facility)
 		self.save(facilities)
 

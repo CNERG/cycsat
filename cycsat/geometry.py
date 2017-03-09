@@ -212,6 +212,8 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 			if feature.id not in feature_ids:
 				placed_features.append(feature)
 				continue
+
+			print('placing')
 			
 			footprint = Facility.geometry()
 			overlaps = [feat for feat in placed_features if feat.level==feature.level]

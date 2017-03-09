@@ -19,34 +19,57 @@ from cycsat.prototypes.reactor import SampleReactor
 from cycsat.prototypes.instrument import Blue, Red, Green
 from cycsat.image import Sensor
 
-from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
-from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rules
 
+from cycsat.geometry import Polygon, Point, box
+from cycsat.archetypes import Facility, Feature, Rule, Condition, Shape
+
+#------------------------------------------------------------------------------------
+# Defining the facilities
+#------------------------------------------------------------------------------------
+
+class CoolingTower(Feature):
+	def __init__(self,name):
+		self.name = name
+		self.level = 1
+		self.visibility = 100
+		
+		self.shapes = [
+		Shape(stable_wkt=Point(0,0).buffer(1000).wkt,rgb='[70,70,70]')
+		]
+
+Pad = Feature(name='concrete pad',level=1,visibility=100)
+Pad.shapes = [Shape(stable_wkt=box(0,0,6000,6000).wkt,rgb='[204,204,204]')]
+
+CoolingTower1 = CoolingTower(name='cooling tower 1')
+CoolingTower2 = CoolingTower(name='cooling tower 2')
+CoolingTower2.rules = [Rule(oper='NEAR',target='cooling tower 1',value=100)]
+
+Plume = Feature(name='plume',visibility=99, level=2)
+Plume.shapes = [Shape(stable_wkt=Point(500,500).buffer(500).wkt,rgb='[255,255,255]')]
+Plume.rules = [Rule(oper='WITHIN',target='cooling tower 1',value=300)]
+
+
+class Reactor(Facility):
+	def __init__(self,AgentId):
+		self.AgentId = AgentId
+		self.name = 'demo reactor'
+		self.width = 862
+		self.length = 862
+		
+		self.features = [
+		CoolingTower1,
+		CoolingTower2,
+		Plume,
+		Pad
+		]
+
+template = {'Reactor':Reactor}
+
+#------------------------------------------------------------------------------------
+# Running the simulations
+#------------------------------------------------------------------------------------
+
+# create the simulation by reading the database and supplying a template list
 sim = Simulation('reactor_test_sample.sqlite')
-
-# f = SampleReactor()
-# f.build()
-
-# fig, axes = plt.subplots(nrows=2,ncols=5,sharex=True,sharey=True,figsize=(15,5))
-# for i, ax in enumerate(axes.flat,start=1):
-# 	#ax.set_xticks([2000,4000,6000,8000,10000])
-# 	#ax.set_yticks([2000,4000,6000,8000,10000])
-# 	f.build()
-# 	f.plot(ax,title=False,labels=False)
-
-
-# ims = os.listdir('temp')
-
-
-#fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-
-def plot_features(features):
-	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-	ax.set_xlim([0,10000])
-	ax.set_ylim([0,10000])
-	ax.set_aspect('equal')
-
-	patches = [PolygonPatch(feat) for feat in features]
-	for patch in patches:
-		ax.add_patch(patch)
+sim.build(template)
 

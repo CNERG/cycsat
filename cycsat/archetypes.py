@@ -381,7 +381,7 @@ class Feature(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	visibility = Column(Integer)
+	visibility = Column(Integer,default=100)
 	prototype = Column(String)
 	#wkt = Column(String)
 	rgb = Column(String)
