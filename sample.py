@@ -34,15 +34,17 @@ class CoolingTower(Feature):
 		self.visibility = 100
 		
 		self.shapes = [
-		Shape(stable_wkt=Point(0,0).buffer(1000).wkt,rgb='[70,70,70]')
+		Shape(stable_wkt=Point(0,0).buffer(800).wkt,rgb='[70,70,70]')
 		]
 
-Pad = Feature(name='concrete pad',level=1,visibility=100)
+		self.rules = [Rule(oper='WITHIN',target='concrete pad',value=0)]
+
+Pad = Feature(name='concrete pad',level=0,visibility=100)
 Pad.shapes = [Shape(stable_wkt=box(0,0,6000,6000).wkt,rgb='[204,204,204]')]
 
 CoolingTower1 = CoolingTower(name='cooling tower 1')
 CoolingTower2 = CoolingTower(name='cooling tower 2')
-CoolingTower2.rules = [Rule(oper='NEAR',target='cooling tower 1',value=100)]
+CoolingTower2.rules.append(Rule(oper='NEAR',target='cooling tower 1',value=100))
 
 Plume = Feature(name='plume',visibility=99, level=2)
 Plume.shapes = [Shape(stable_wkt=Point(500,500).buffer(500).wkt,rgb='[255,255,255]')]
