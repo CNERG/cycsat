@@ -8,6 +8,7 @@ from .archetypes import Base, Satellite, Mission
 from random import randint
 import os
 import shutil
+from copy import copy
 
 from skimage.io import imread
 
@@ -18,10 +19,14 @@ import matplotlib.pyplot as plt
 from sqlalchemy import text
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import make_transient
 
 
 Session = sessionmaker()
 
+#--------------------------------------------------------------------------------
+# SIMULATION CLASS
+#--------------------------------------------------------------------------------
 
 class Simulation(object):
 	"""This is the Cycsat simulation object. It can be used to manage simulations
@@ -120,8 +125,8 @@ class Simulation(object):
 			prototype = agent[1]['Spec'][10:]
 			if agent[1]['Kind']=='Facility':
 
-				if prototype in templates:
-					facility = templates[prototype](AgentId=agent[1]['AgentId'])
+				if prototype in samples:
+					facility = samples[prototype](AgentId=agent[1]['AgentId'])
 					facility.build()
 				else:
 					continue
@@ -140,6 +145,21 @@ class Simulation(object):
 					facility.simulate(self,timestep)
 				except:
 					continue
+	
+	def clone_facility(self,facility):
+		clone = copy(facility)
+		clone.features = [copy(feat) for feat in clone.features]
+		for feature in clone.features:
+			feature.shapes = [copy(shape) for shape in feature.shapes]
+			feature.rules = [copy(rule) for rule in feature.rules]
+			feature.conditions = [copy(condition) for condition in feature.conditions]
+		return clone
+
+
+
+
+
+
 
 
 
