@@ -53,7 +53,7 @@ class SampleCoolingTower1(Feature):
 
         # define shapes
         self.shapes = [
-        Circle(radius=900,materiagl_code=23,rgb=[70,70,70]),
+        Circle(radius=900,material_code=23,rgb=[70,70,70]),
         Circle(level=1,radius=620,material_code=24,rgb=[70,70,70])
         ]
 

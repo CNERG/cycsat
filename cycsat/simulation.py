@@ -1,6 +1,16 @@
 """
 simulation.py
+
+
+# Evaluate rule should be a function that takes a function (any kind of function)
+# and returns a geometry the geometry {rule,points,etc.}
+
+
 """
+
+import pandas as pd
+import geopandas as gpd
+
 from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event
 from .archetypes import Base, Satellite, Mission
@@ -15,12 +25,12 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sqlalchemy import text
+from sqlalchemy import text, exists
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-Session = sessionmaker()
+Session = sessionmaker() 
 
 
 class Simulation(object):
@@ -38,43 +48,61 @@ class Simulation(object):
 		self.session = Session()
 		Base.metadata.create_all(self.engine)
 
-		# connect using pandas
+		# connect using pandas for querying rules in the database
 		self.reader = sqlite3.connect(self.database)
 		self.duration = pd.read_sql_query('SELECT Duration FROM Info',self.reader)['Duration'][0]
+
+	def gen_df(self,Table,geo=None):
+		cols = Table.__table__.columns.keys()
+		records = self.session.query(Table).all()
+		df = pd.DataFrame([[getattr(i,j) for j in cols] for i in records],columns=cols)
+		if geo:
+			df = gpd.GeoDataFrame(df,geometry=geo)
+		return df
 
 	@property
 	def satellites(self):
 		"""Returns a list of facilities."""
-		return self.session.query(Satellite).all()
+		return self.gen_df(Satellite)
 
-	@property
-	def facilities(self):
-		"""Returns a list of facilities."""
-		return self.session.query(Facility).all()
+	def add_sat(self,sat):
+		if self.session.query(Satellite).filter(sat.name==sat.name).count()==0:
+			self.session.add(sat)
+			self.session.commit()
+			print('NEW SATELLITE {',sat.name,'} ADDED')
+		else:
+			print('{',sat.name,'} ALREADY EXISTS')
 
-	@property
-	def events(self):
-		"""Selects entities from database"""
-		result = self.session.query(Event).all()
-		return result	
+	# def select_sat()
 
-	@property
-	def features(self):
-		"""Selects entities from database"""
-		result = self.session.query(Feature).all()
-		return result
+	# @property
+	# def facilities(self):
+	# 	"""Returns a list of facilities."""
+	# 	return self.session.query(Facility).all()
 
-	@property
-	def instruments(self):
-		"""Selects entities from database"""
-		result = self.session.query(Instrument).all()
-		return result	
+	# @property
+	# def events(self):
+	# 	"""Selects entities from database"""
+	# 	result = self.session.query(Event).all()
+	# 	return result	
 
-	@property
-	def missions(self):
-		"""Selects entities from database"""
-		result = self.session.query(Mission).all()
-		return result	
+	# @property
+	# def features(self):
+	# 	"""Selects entities from database"""
+	# 	result = self.session.query(Feature).all()
+	# 	return result
+
+	# @property
+	# def instruments(self):
+	# 	"""Selects entities from database"""
+	# 	result = self.session.query(Instrument).all()
+	# 	return result	
+
+	# @property
+	# def missions(self):
+	# 	"""Selects entities from database"""
+	# 	result = self.session.query(Mission).all()
+	# 	return result	
 
 	def save_all(self):
 		"""Writes archetype instances to database"""

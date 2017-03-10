@@ -57,12 +57,9 @@ class Satellite(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	prototype = Column(String)
 	mmu = Column(Integer)
 	width = Column(Integer)
 	length = Column(Integer)
-
-	__mapper_args__ = {'polymorphic_on': prototype}
 
 
 class Instrument(Base):

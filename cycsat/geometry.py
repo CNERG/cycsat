@@ -468,6 +468,8 @@ def place_facility(Facility,geometry,attempts=100):
 # PLACMENT RULES (returns either a mask, position, or alignment)
 #------------------------------------------------------------------------------
 
+# rules should take features, targets (or shapes) (other features), and a value
+
 def within_rule(feature,target_geometry,value,*unused):
 	mask = target_geometry.buffer(value)
 	return {'mask':mask}
