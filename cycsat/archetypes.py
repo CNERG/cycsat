@@ -50,6 +50,15 @@ operations = {
 }
 
 
+class Simulation(Base):
+	"""A collection of instruments."""
+
+	__tablename__ = 'CycSat_Simulation'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+
+
 class Satellite(Base):
 	"""A collection of instruments."""
 
@@ -178,6 +187,7 @@ class Facility(Base):
 
 	id = Column(Integer, primary_key=True)
 	AgentId = Column(Integer)
+	build_id = Column(String)
 	name = Column(String)
 	width = Column(Integer)
 	length = Column(Integer)
@@ -248,7 +258,7 @@ class Facility(Base):
 		rules = build_facility(self,timestep=timestep,attempts=attempts)
 		return rules
 
-	def simulate(self,simulation,timestep):
+	def simulate(self,simulation,sim,timestep):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
 		generates events. All conditions must be True in order for the event to be
 		created.
@@ -281,6 +291,7 @@ class Facility(Base):
 					event = Event(timestep=timestep)
 					feature.events.append(event)
 					self.events.append(event)
+					sim.events.append(event)
 					simulation.save(feature)
 				else:
 					continue
@@ -432,7 +443,8 @@ class Feature(Base):
 		return evaluate_rules(self,mask)
 
 
-Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
+Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility',
+								 cascade='all, delete, delete-orphan')
 
 
 class Shape(Base):
@@ -493,7 +505,8 @@ class Shape(Base):
 		materialize(self)
 
 
-Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
+Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature',
+								cascade='all, delete, delete-orphan')
 
 
 class Location(Base):
@@ -507,12 +520,18 @@ class Location(Base):
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='locations')
 
+	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+	simulation = relationship(Simulation, back_populates='locations')
+
 	@property
 	def geometry(self):
 		return load_wkt(self.wkt)
 
-Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape')
 
+Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape',
+								cascade='all, delete, delete-orphan')
+Simulation.locations = relationship('Location', order_by=Location.id,back_populates='simulation',
+								cascade='all, delete, delete-orphan')
 
 class Condition(Base):
 	"""Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
@@ -524,15 +543,11 @@ class Condition(Base):
 	oper = Column(String)
 	value = Column(Integer)
 
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape, back_populates='conditions')
-
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='conditions')
 
-
-Shape.conditions = relationship('Condition', order_by=Condition.id,back_populates='shape')
-Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature')
+Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature',
+								   cascade='all, delete, delete-orphan')
 
 
 class Rule(Base):
@@ -546,9 +561,6 @@ class Rule(Base):
 	value = Column(Integer,default=0)
 	direction = Column(String)
 
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape, back_populates='rules')
-
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='rules')
 
@@ -560,8 +572,9 @@ class Rule(Base):
 	def describe(self):
 		print(self.oper,self.value,self.target,self.direction)
 
-Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
-Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')
+
+Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature',
+							 cascade='all, delete, delete-orphan')
 
 
 class Event(Base):
@@ -580,12 +593,13 @@ class Event(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility,back_populates='events')
 
-	def geometry():
-		return build_geometry(Event)
-
+	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+	simulation = relationship(Simulation, back_populates='events')
 
 Feature.events = relationship('Event',order_by=Event.id,back_populates='feature')
 Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
+Simulation.events = relationship('Event',order_by=Event.id,back_populates='simulation',
+								  cascade='all, delete, delete-orphan')
 
 
 class Scene(Base):

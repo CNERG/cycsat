@@ -15,7 +15,7 @@ import matplotlib as plt
 
 from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event
-from .archetypes import Base, Satellite, Mission
+from .archetypes import Base, Satellite, Mission, Simulation
 
 from random import randint
 import os
@@ -35,7 +35,7 @@ from sqlalchemy.orm import sessionmaker
 Session = sessionmaker() 
 
 
-class Simulation(object):
+class Cycsat(object):
 	"""This is the Cycsat simulation object. It can be used to manage simulations
 	"""
 	def __init__(self,database):
@@ -90,62 +90,9 @@ class Simulation(object):
 	def events(self):
 		return self.gen_df(Event)
 
-
-	# def add_sat(self,sat):
-	# 	if self.session.query(Satellite).filter(Satellite.name==sat.name).count()==0:
-	# 		self.session.add(sat)
-	# 		self.session.commit()
-	# 		print('NEW SATELLITE {',sat.name,'} ADDED')
-	# 	else:
-	# 		print('{',sat.name,'} ALREADY EXISTS')
-
-	# def set_sat(self.)
-
-
-
-	# def select_sat()
-
-	# @property
-	# def facilities(self):
-	# 	"""Returns a list of facilities."""
-	# 	return self.session.query(Facility).all()
-
-	# @property
-	# def events(self):
-	# 	"""Selects entities from database"""
-	# 	result = self.session.query(Event).all()
-	# 	return result	
-
-	# @property
-	# def features(self):
-	# 	"""Selects entities from database"""
-	# 	result = self.session.query(Feature).all()
-	# 	return result
-
-	# @property
-	# def instruments(self):
-	# 	"""Selects entities from database"""
-	# 	result = self.session.query(Instrument).all()
-	# 	return result	
-
-	# @property
-	# def missions(self):
-	# 	"""Selects entities from database"""
-	# 	result = self.session.query(Mission).all()
-	# 	return result	
-
-	def save_all(self):
-		"""Writes archetype instances to database"""
-		classes = [self.satellites,
-				   self.missions,
-				   self.facilities,
-				   self.events,
-				   self.features,
-				   self.instruments]
-
-		for class_list in classes:
-			self.session.add_all(class_list)
-		self.session.commit()
+	@property
+	def rules(self):
+		return self.gen_df(Rule)
 
 	def save(self,Entities):
 		"""Writes archetype instances to database"""
@@ -156,43 +103,63 @@ class Simulation(object):
 		self.session.commit()
 
 	def read(self,sql):
-		"""Read sql query as pandas dataframe"""
+		"""Read SQL query as pandas dataframe"""
 		df = pd.read_sql_query(sql,self.reader)
 		return df
 
-	def build(self,AgentId=None):
-		"""Builds all the facilities in an output database from cyclus"""
-
-		if len(self.read('select * from Cycsat_Facility'))==0:
-			pass
+	def build(self,build_id,facilities='all',attempts=100,log=False):
+		"""Builds facilities.
 		
+		Keyword arguments:
+		simid -- a unique simulation id (number or text)
+		attempts -- the maximum number attempts to be made to place each feature
+		"""
+
+		if str(build_id) in self.facilities.build_id.unique():
+			print('WARNING:')
+			print('This will erase all facilities, feature, shapes, etc.')
+			print('with the build_id: {',build_id,'}')
+			print('Are you sure you wish to continue? (y/n)')
+			p = input(':')
+			if p=='y':
+				self.session.query(Facility).filter(Facility.build_id==build_id).delete()
+			else:
+				return None
+
+		# get Agents to build
+		AgentEntry = self.read('select * from AgentEntry')
+
 		facilities = list()
-
-		sql = 'select * from AgentEntry'
-		if AgentId:
-			sql = 'select * from AgentEntry where AgentId='+str(AgentId)
-		AgentEntry = self.read(sql)
-		
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
+				facility.build_id = build_id
 				facility.build()
 				facilities.append(facility)
 		self.save(facilities)
 
-	def simulate(self):
+	def simulate(self,name,build_id):
 		"""Generates events for all facilties"""
 
+		self.session.query(Simulation).filter(Simulation.name==name).delete()
+		sim = Simulation(name=name)
+
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
-		facilities = self.facilities
+		
+		facilities = self.facilities[self.facilities.build_id==build_id]
 		for facility in facilities.iterrows():
-			for timestep in range(self.duration):
-				try:
-					facility[1]['instance'].simulate(self,timestep)
-				except:
-					continue
+			if facility[1]['defined']:
+				for timestep in range(self.duration):
+					try:
+						facility[1]['instance'].simulate(self,sim,timestep)
+					except:
+						continue
+
+		self.session.add(sim)
+		self.session.commit()
+
 
 
 

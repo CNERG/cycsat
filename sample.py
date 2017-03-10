@@ -12,7 +12,7 @@ copyfile(src, dst)
 # =============================================================================
 from descartes import PolygonPatch
 
-from cycsat.simulation import Simulation
+from cycsat.simulation import Cycsat
 from cycsat.archetypes import Mission, Facility, Site, Satellite, Shape, Rule, Event
 from cycsat.prototypes.satellite import LANDSAT8, RGB
 from cycsat.prototypes.reactor import SampleReactor
@@ -22,31 +22,7 @@ from cycsat.image import Sensor
 from cycsat.geometry import build_facility, placement_bounds, Point, posit_point, place_feature
 from cycsat.geometry import line_func, rotate_facility, near_rule, evaluate_rules
 
-sim = Simulation('reactor_test_sample.sqlite')
+sim = Cycsat('reactor_test_sample.sqlite')
 
 # f = SampleReactor()
 # f.build()
-
-# fig, axes = plt.subplots(nrows=2,ncols=5,sharex=True,sharey=True,figsize=(15,5))
-# for i, ax in enumerate(axes.flat,start=1):
-# 	#ax.set_xticks([2000,4000,6000,8000,10000])
-# 	#ax.set_yticks([2000,4000,6000,8000,10000])
-# 	f.build()
-# 	f.plot(ax,title=False,labels=False)
-
-
-# ims = os.listdir('temp')
-
-
-#fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-
-def plot_features(features):
-	fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-	ax.set_xlim([0,10000])
-	ax.set_ylim([0,10000])
-	ax.set_aspect('equal')
-
-	patches = [PolygonPatch(feat) for feat in features]
-	for patch in patches:
-		ax.add_patch(patch)
-
