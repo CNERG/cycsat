@@ -3,13 +3,15 @@ simulation.py
 
 
 # Evaluate rule should be a function that takes a function (any kind of function)
-# and returns a geometry the geometry {rule,points,etc.}
+# and returns a geometry the geometry 
 
 
 """
 
 import pandas as pd
 import geopandas as gpd
+
+import matplotlib as plt
 
 from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event
@@ -55,23 +57,51 @@ class Simulation(object):
 	def gen_df(self,Table,geo=None):
 		cols = Table.__table__.columns.keys()
 		records = self.session.query(Table).all()
-		df = pd.DataFrame([[getattr(i,j) for j in cols] for i in records],columns=cols)
+		df = pd.DataFrame([[getattr(i,j) for j in cols]+[i] for i in records],columns=cols+['instance'])
 		if geo:
 			df = gpd.GeoDataFrame(df,geometry=geo)
 		return df
 
 	@property
 	def satellites(self):
-		"""Returns a list of facilities."""
 		return self.gen_df(Satellite)
 
-	def add_sat(self,sat):
-		if self.session.query(Satellite).filter(sat.name==sat.name).count()==0:
-			self.session.add(sat)
-			self.session.commit()
-			print('NEW SATELLITE {',sat.name,'} ADDED')
-		else:
-			print('{',sat.name,'} ALREADY EXISTS')
+	@property
+	def missions(self):
+		return self.gen_df(Mission)
+
+	@property
+	def instruments(self):
+		return self.gen_df(Instrument)
+
+	@property
+	def facilities(self):
+		return self.gen_df(Facility)
+
+	@property
+	def features(self):
+		return self.gen_df(Feature)
+
+	@property
+	def shapes(self):
+		return self.gen_df(Shape)
+
+	@property
+	def events(self):
+		return self.gen_df(Event)
+
+
+	# def add_sat(self,sat):
+	# 	if self.session.query(Satellite).filter(Satellite.name==sat.name).count()==0:
+	# 		self.session.add(sat)
+	# 		self.session.commit()
+	# 		print('NEW SATELLITE {',sat.name,'} ADDED')
+	# 	else:
+	# 		print('{',sat.name,'} ALREADY EXISTS')
+
+	# def set_sat(self.)
+
+
 
 	# def select_sat()
 
@@ -157,10 +187,10 @@ class Simulation(object):
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
 		facilities = self.facilities
-		for facility in facilities:
+		for facility in facilities.iterrows():
 			for timestep in range(self.duration):
 				try:
-					facility.simulate(self,timestep)
+					facility[1]['instance'].simulate(self,timestep)
 				except:
 					continue
 
