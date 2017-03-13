@@ -14,7 +14,7 @@ import geopandas as gpd
 import matplotlib as plt
 
 from .prototypes import samples
-from .archetypes import Facility, Instrument, Feature, Shape, Event
+from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
 from .archetypes import Base, Satellite, Mission, Simulation
 
 from random import randint
@@ -39,7 +39,7 @@ class Cycsat(object):
 	"""This is the Cycsat simulation object. It can be used to manage simulations
 	"""
 	def __init__(self,database):
-		"""Connects to a CYCLUS output database."""
+		"""Connects to a CYCLUS database."""
 		global Session
 		global Base
 
