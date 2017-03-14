@@ -15,7 +15,7 @@ import matplotlib as plt
 
 from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
-from .archetypes import Base, Satellite, Mission, Simulation, Job, Process
+from .archetypes import Base, Satellite, Mission, Simulation, Build, Process
 
 from random import randint
 import os
@@ -96,7 +96,7 @@ class CycSat(object):
 
 	@property
 	def jobs(self):
-		return self.gen_df(Job)
+		return self.gen_df(Build)
 
 	@property
 	def processes(self):
@@ -121,10 +121,10 @@ class CycSat(object):
 		Keyword arguments:
 		attempts -- (optional) max number of of attempts
 		facilities -- (optional) a list of facilities to build, default all
-		name -- (optional) name for the build 'Job'
+		name -- (optional) name for the build 'Build'
 		"""
 		# create the job
-		job = Job(name=name)
+		job = Build(name=name)
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')

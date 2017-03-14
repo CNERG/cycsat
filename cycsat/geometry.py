@@ -334,7 +334,6 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	Keyword arguments:
 	build -- draws from the shapes stable_wkt
 	"""
-	
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 

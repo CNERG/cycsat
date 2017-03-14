@@ -50,17 +50,17 @@ operations = {
 }
 
 
-class Job(Base):
+class Build(Base):
 	"""A an action taken by a user on a facility. Contains a 'Procces' log of
 	cycsat actions to carry out the job."""
 
-	__tablename__ = 'CycSat_Job'
+	__tablename__ = 'CycSat_Build'
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
 
 
 class Process(Base):
-	"""A proccess run by cycsat under a particluar user-initiated 'Job'.
+	"""A proccess run by cycsat under a particluar user-initiated 'Build'.
 	"""
 	__tablename__ = 'CycSat_Procces'
 
@@ -69,10 +69,10 @@ class Process(Base):
 	result = Column(Integer,default=0)
 	message = Column(String)
 
-	job_id = Column(Integer, ForeignKey('CycSat_Job.id'))
-	job = relationship(Job, back_populates='processes')
+	job_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	job = relationship(Build, back_populates='processes')
 
-Job.processes = relationship('Process', order_by=Process.id,back_populates='job',
+Build.processes = relationship('Process', order_by=Process.id,back_populates='job',
 								 cascade='all, delete, delete-orphan')
 
 
@@ -227,8 +227,8 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
-	job_id = Column(Integer, ForeignKey('CycSat_Job.id'))
-	job = relationship(Job, back_populates='facilities')
+	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	build = relationship(Build, back_populates='facilities')
 
 	def geometry(self):
 		self.geo = build_geometry(self)
@@ -412,7 +412,7 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-Job.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
+Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
 
 
@@ -425,7 +425,6 @@ class Feature(Base):
 	name = Column(String)
 	visibility = Column(Integer)
 	prototype = Column(String)
-	#wkt = Column(String)
 	rgb = Column(String)
 	level = Column(Integer)
 
