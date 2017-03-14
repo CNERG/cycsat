@@ -198,8 +198,7 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 		for event in events:
 			feature_ids.add(event.feature.id)
 		if not feature_ids:
-			process.result = 1
-			return process
+			return True
 	else:
 		feature_ids = [feature.id for feature in Facility.features if feature.visibility==100]
 
@@ -231,12 +230,8 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 					shape.add_location(timestep,shape.placed_wkt)
 				continue
 			else:
-				process.result = -1
-				process.message = '{ '+feature.name+' } failed to be placed.'
-				return process
-	
-	process.result = 1
-	return process
+				return False
+	return True
 
 
 def rotate_facility(Facility,degrees=None):

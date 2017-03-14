@@ -35,7 +35,7 @@ from sqlalchemy.orm import sessionmaker
 Session = sessionmaker() 
 
 
-class Cycsat(object):
+class CycSat(object):
 	"""This is the Cycsat simulation object. It can be used to manage simulations
 	"""
 	def __init__(self,database):
@@ -115,7 +115,7 @@ class Cycsat(object):
 		df = pd.read_sql_query(sql,self.reader)
 		return df
 
-	def build(self,attempts=100,name=None):
+	def build(self,name,attempts=100,):
 		"""Builds facilities.
 		
 		Keyword arguments:
@@ -136,30 +136,28 @@ class Cycsat(object):
 			if agent[1]['Kind']=='Facility':
 				
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
-				facility.place_features(job=job,timestep=-1,attempts=attempts)
+				facility.place_features(timestep=-1,attempts=attempts)
 				job.facilities.append(facility)
 				facilities.append(facility)
 		
 		self.save(job)
 
-	def simulate(self,name,build_id):
+	def simulate(self,job_id,name=None):
 		"""Generates events for all facilties"""
-
-		self.session.query(Simulation).filter(Simulation.name==name).delete()
-		sim = Simulation(name=name)
+		simulation = Simulation(name=name)
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
 		
-		facilities = self.facilities[self.facilities.build_id==build_id]
+		facilities = self.facilities[self.facilities.job_id==job_id]
 		for facility in facilities.iterrows():
 			if facility[1]['defined']:
 				for timestep in range(self.duration):
 					try:
-						facility[1]['instance'].simulate(self,sim,timestep)
+						facility[1]['instance'].simulate(self,simulation,timestep)
 					except:
 						continue
 
-		self.session.add(sim)
+		self.session.add(simulation)
 		self.session.commit()
 
 

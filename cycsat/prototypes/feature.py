@@ -21,7 +21,7 @@ class ConcretePad(Feature):
         ]
 
         self.rules = [
-        Rule(oper='ROTATE',value=0)
+        Rule(oper='ROTATE',value=120)
         ]
 
 
@@ -30,7 +30,7 @@ class Truck(Feature):
 
     def __init__(self,name='truck'): 
         self.name = name
-        self.visibility = 100
+        self.visibility = 80
         self.level = 1
 
         # define shapes

@@ -10,7 +10,6 @@ copyfile(src, dst)
 # =============================================================================
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
+from cycsat.simulation import CycSat
 
-from cycsat.simulation import Cycsat
-
-sim = Cycsat('reactor_test_sample.sqlite')
+sim = CycSat('reactor_test_sample.sqlite')

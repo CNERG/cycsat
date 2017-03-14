@@ -213,7 +213,6 @@ class Facility(Base):
 
 	id = Column(Integer, primary_key=True)
 	AgentId = Column(Integer)
-	build_id = Column(String)
 	name = Column(String)
 	width = Column(Integer)
 	length = Column(Integer)
@@ -282,23 +281,17 @@ class Facility(Base):
 		# Return the list of batches
 		return batches
 
-	def place_features(self,job,timestep=-1,attempts=100):
+	def place_features(self,timestep=-1,attempts=100):
 		"""Places all the features of a facility according to their rules
 		and events at the provided timestep."""
-
 		for x in range(attempts):
-			process = Process(name='place_features')
-			job.processes.append(process)
-
-			process = place_features(self,process,timestep,attempts)
-			if process.result == 1:
-				Facility.defined = True
-				break
+			result = place_features(self,timestep,attempts)
+			if result:
+				self.defined = True
+				return True
 			else:
-				Facility.defined = False
+				self.defined = False
 				continue
-
-		return job
 
 	def simulate(self,simulation,sim,timestep):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
@@ -338,7 +331,7 @@ class Facility(Base):
 				else:
 					continue
 		
-		build_facility(self,timestep=timestep)
+		place_features(self,timestep=timestep)
 		simulation.save(self)
 
 
