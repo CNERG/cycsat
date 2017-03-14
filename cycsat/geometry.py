@@ -181,6 +181,59 @@ def dep_graph(features):
 		return batches
 
 
+def place_features(Facility,timestep=-1,attempts=100,verbose=False):
+	"""Creates a random layout for all the features of a facility and 
+	gives each feature a placed geometry.
+
+	Keyword arguments:
+	attempts -- the maximum number attempts to be made to place each feature
+	"""
+	footprint = Facility.geometry()
+	minx, miny, maxx, maxy = footprint.bounds
+
+	# determine which features to draw (by timestep) and create a list of ids
+	if timestep > -1:
+		feature_ids = set()
+		events = [event for event in Facility.events if event.timestep==timestep]
+		for event in events:
+			feature_ids.add(event.feature.id)
+		if not feature_ids:
+			return True
+	else:
+		feature_ids = [feature.id for feature in Facility.features if feature.visibility==100]
+
+	dep_grps = Facility.dep_graph()
+
+	# track placed features
+	placed_features = list()
+
+	for group in dep_grps:
+		for feature in group:
+			if feature.id not in feature_ids:
+				placed_features.append(feature)
+				continue
+			
+			footprint = Facility.geometry()
+			overlaps = [feat for feat in placed_features if feat.level==feature.level]
+			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
+			overlaps = cascaded_union(overlaps)
+			
+			footprint = footprint.difference(overlaps)
+			
+			definition = feature.eval_rules(mask=footprint)
+			placed = place_feature(feature,footprint,build=True)
+
+			if placed:
+				placed_features.append(feature)
+				# record the new shape location
+				for shape in feature.shapes:
+					shape.add_location(timestep,shape.placed_wkt)
+				continue
+			else:
+				return False
+	return True
+
+
 def rotate_facility(Facility,degrees=None):
 	"""Rotates all the features of a facility."""
 	if not degrees:
