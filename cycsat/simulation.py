@@ -15,7 +15,7 @@ import matplotlib as plt
 
 from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
-from .archetypes import Base, Satellite, Mission, Simulation
+from .archetypes import Base, Satellite, Mission, Simulation, Job, Process
 
 from random import randint
 import os
@@ -94,6 +94,14 @@ class Cycsat(object):
 	def rules(self):
 		return self.gen_df(Rule)
 
+	@property
+	def jobs(self):
+		return self.gen_df(Job)
+
+	@property
+	def processes(self):
+		return self.gen_df(Process)
+
 	def save(self,Entities):
 		"""Writes archetype instances to database"""
 		if isinstance(Entities, list):
@@ -107,24 +115,16 @@ class Cycsat(object):
 		df = pd.read_sql_query(sql,self.reader)
 		return df
 
-	def build(self,build_id,facilities='all',attempts=100,log=False):
+	def build(self,attempts=100,name=None):
 		"""Builds facilities.
 		
 		Keyword arguments:
-		simid -- a unique simulation id (number or text)
-		attempts -- the maximum number attempts to be made to place each feature
+		attempts -- (optional) max number of of attempts
+		facilities -- (optional) a list of facilities to build, default all
+		name -- (optional) name for the build 'Job'
 		"""
-
-		if str(build_id) in self.facilities.build_id.unique():
-			print('WARNING:')
-			print('This will erase all facilities, feature, shapes, etc.')
-			print('with the build_id: {',build_id,'}')
-			print('Are you sure you wish to continue? (y/n)')
-			p = input(':')
-			if p=='y':
-				self.session.query(Facility).filter(Facility.build_id==build_id).delete()
-			else:
-				return None
+		# create the job
+		job = Job(name=name)
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')
@@ -134,11 +134,13 @@ class Cycsat(object):
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
+				
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
-				facility.build_id = build_id
-				facility.build()
+				facility.place_features(job=job,timestep=-1,attempts=attempts)
+				job.facilities.append(facility)
 				facilities.append(facility)
-		self.save(facilities)
+		
+		self.save(job)
 
 	def simulate(self,name,build_id):
 		"""Generates events for all facilties"""

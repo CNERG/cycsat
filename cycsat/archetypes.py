@@ -10,7 +10,7 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import create_blueprint, place, build_facility
+from .geometry import place_features, place
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import rotate_facility, evaluate_rules
 
@@ -48,6 +48,32 @@ operations = {
 	"greater than": operator.gt,
 	"greater than or equals": operator.ge
 }
+
+
+class Job(Base):
+	"""A an action taken by a user on a facility. Contains a 'Procces' log of
+	cycsat actions to carry out the job."""
+
+	__tablename__ = 'CycSat_Job'
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+
+
+class Process(Base):
+	"""A proccess run by cycsat under a particluar user-initiated 'Job'.
+	"""
+	__tablename__ = 'CycSat_Procces'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String) # description of the the event/error
+	result = Column(Integer,default=0)
+	message = Column(String)
+
+	job_id = Column(Integer, ForeignKey('CycSat_Job.id'))
+	job = relationship(Job, back_populates='processes')
+
+Job.processes = relationship('Process', order_by=Process.id,back_populates='job',
+								 cascade='all, delete, delete-orphan')
 
 
 class Simulation(Base):
@@ -202,6 +228,9 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
+	job_id = Column(Integer, ForeignKey('CycSat_Job.id'))
+	job = relationship(Job, back_populates='facilities')
+
 	def geometry(self):
 		self.geo = build_geometry(self)
 		return self.geo
@@ -253,10 +282,23 @@ class Facility(Base):
 		# Return the list of batches
 		return batches
 
-	def build(self,timestep=-1,attempts=100):
-		"""Randomly places all the features of a facility"""
-		rules = build_facility(self,timestep=timestep,attempts=attempts)
-		return rules
+	def place_features(self,job,timestep=-1,attempts=100):
+		"""Places all the features of a facility according to their rules
+		and events at the provided timestep."""
+
+		for x in range(attempts):
+			process = Process(name='place_features')
+			job.processes.append(process)
+
+			process = place_features(self,process,timestep,attempts)
+			if process.result == 1:
+				Facility.defined = True
+				break
+			else:
+				Facility.defined = False
+				continue
+
+		return job
 
 	def simulate(self,simulation,sim,timestep):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
@@ -377,8 +419,7 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-
-
+Job.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
 
 
