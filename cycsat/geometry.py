@@ -1,7 +1,6 @@
 #------------------------------------------------------------------------------
 # GEOMETRY FUNCTIONS
 #------------------------------------------------------------------------------
-
 from collections import defaultdict
 from sqlalchemy import Column, Integer, String
 
@@ -131,10 +130,19 @@ def create_plan(Site,attempts=100):
 			print('site plan failed')
 
 
+# this is for creating terrain
 def site_axis(Facility):
 	"""Generates a site axis."""
 	site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
 	rotate(site_axis,random.randint(-180,180))
+
+
+	# # create a site axis
+	# site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
+	
+	# site_rotation = random.randint(-180,180)
+	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+	# Facility.ax_angle = site_rotation
 
 	return site_axis
 
@@ -173,7 +181,7 @@ def dep_graph(features):
 		return batches
 
 
-def create_blueprint(Facility,timestep=-1,attempts=100):
+def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 	"""Creates a random layout for all the features of a facility and 
 	gives each feature a placed geometry.
 
@@ -182,13 +190,6 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 	"""
 	footprint = Facility.geometry()
 	minx, miny, maxx, maxy = footprint.bounds
-	
-	# # create a site axis
-	# site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
-	
-	# site_rotation = random.randint(-180,180)
-	# site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-	# Facility.ax_angle = site_rotation
 
 	# determine which features to draw (by timestep) and create a list of ids
 	if timestep > -1:
@@ -196,7 +197,6 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 		events = [event for event in Facility.events if event.timestep==timestep]
 		for event in events:
 			feature_ids.add(event.feature.id)
-		# no dynamic features to draw
 		if not feature_ids:
 			return True
 	else:
@@ -232,10 +232,7 @@ def create_blueprint(Facility,timestep=-1,attempts=100):
 					shape.add_location(timestep,shape.placed_wkt)
 				continue
 			else:
-				print('blueprint failed')
 				return False
-
-	#Facility.rotate(site_rotation)
 	return True
 
 
@@ -247,18 +244,6 @@ def rotate_facility(Facility,degrees=None):
 	for feature in Facility.features:
 		rotate_feature(feature,degrees,Facility.geometry().centroid)
 
-
-def build_facility(Facility,timestep=-1,attempts=100):
-	"""Randomly places all the features of a facility"""	
-	for x in range(attempts):
-		result = create_blueprint(Facility,timestep)
-		if result:
-			Facility.defined = True
-			break
-		else:
-			Facility.defined = False
-			continue
-	return result
 
 #------------------------------------------------------------------------------
 # FEATURE PLACEMENT
@@ -351,7 +336,6 @@ def place(Entity,placement,build=False,center=None,rotation=0):
 	Keyword arguments:
 	build -- draws from the shapes stable_wkt
 	"""
-	
 	placed_x = placement.coords.xy[0][0]
 	placed_y = placement.coords.xy[1][0]
 
@@ -469,6 +453,8 @@ def place_facility(Facility,geometry,attempts=100):
 #------------------------------------------------------------------------------
 # PLACMENT RULES (returns either a mask, position, or alignment)
 #------------------------------------------------------------------------------
+
+# rules should take features, targets (or shapes) (other features), and a value
 
 def within_rule(feature,target_geometry,value,*unused):
 	mask = target_geometry.buffer(value)

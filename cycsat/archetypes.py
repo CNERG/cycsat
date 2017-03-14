@@ -10,7 +10,7 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import create_blueprint, place, build_facility
+from .geometry import place_features, place
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import rotate_facility, evaluate_rules
 
@@ -50,6 +50,41 @@ operations = {
 }
 
 
+class Build(Base):
+	"""A an action taken by a user on a facility. Contains a 'Procces' log of
+	cycsat actions to carry out the job."""
+
+	__tablename__ = 'CycSat_Build'
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+
+
+class Process(Base):
+	"""A proccess run by cycsat under a particluar user-initiated 'Build'.
+	"""
+	__tablename__ = 'CycSat_Procces'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String) # description of the the event/error
+	result = Column(Integer,default=0)
+	message = Column(String)
+
+	job_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	job = relationship(Build, back_populates='processes')
+
+Build.processes = relationship('Process', order_by=Process.id,back_populates='job',
+								 cascade='all, delete, delete-orphan')
+
+
+class Simulation(Base):
+	"""A collection of instruments."""
+
+	__tablename__ = 'CycSat_Simulation'
+
+	id = Column(Integer, primary_key=True)
+	name = Column(String)
+
+
 class Satellite(Base):
 	"""A collection of instruments."""
 
@@ -57,12 +92,9 @@ class Satellite(Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String)
-	prototype = Column(String)
 	mmu = Column(Integer)
 	width = Column(Integer)
 	length = Column(Integer)
-
-	__mapper_args__ = {'polymorphic_on': prototype}
 
 
 class Instrument(Base):
@@ -195,6 +227,9 @@ class Facility(Base):
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
 
+	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	build = relationship(Build, back_populates='facilities')
+
 	def geometry(self):
 		self.geo = build_geometry(self)
 		return self.geo
@@ -246,12 +281,19 @@ class Facility(Base):
 		# Return the list of batches
 		return batches
 
-	def build(self,timestep=-1,attempts=100):
-		"""Randomly places all the features of a facility"""
-		rules = build_facility(self,timestep=timestep,attempts=attempts)
-		return rules
+	def place_features(self,timestep=-1,attempts=100):
+		"""Places all the features of a facility according to their rules
+		and events at the provided timestep."""
+		for x in range(attempts):
+			result = place_features(self,timestep,attempts)
+			if result:
+				self.defined = True
+				return True
+			else:
+				self.defined = False
+				continue
 
-	def simulate(self,simulation,timestep):
+	def simulate(self,simulation,sim,timestep):
 		"""Evaluates the conditions for dynamic shapes at a given timestep and
 		generates events. All conditions must be True in order for the event to be
 		created.
@@ -284,11 +326,12 @@ class Facility(Base):
 					event = Event(timestep=timestep)
 					feature.events.append(event)
 					self.events.append(event)
+					sim.events.append(event)
 					simulation.save(feature)
 				else:
 					continue
 		
-		build_facility(self,timestep=timestep)
+		place_features(self,timestep=timestep)
 		simulation.save(self)
 
 
@@ -369,8 +412,7 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-
-
+Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
 
 
@@ -383,7 +425,6 @@ class Feature(Base):
 	name = Column(String)
 	visibility = Column(Integer,default=100)
 	prototype = Column(String)
-	#wkt = Column(String)
 	rgb = Column(String)
 	level = Column(Integer)
 
@@ -435,7 +476,8 @@ class Feature(Base):
 		return evaluate_rules(self,mask)
 
 
-Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility')
+Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility',
+								 cascade='all, delete, delete-orphan')
 
 
 class Shape(Base):
@@ -496,7 +538,8 @@ class Shape(Base):
 		materialize(self)
 
 
-Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature')
+Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature',
+								cascade='all, delete, delete-orphan')
 
 
 class Location(Base):
@@ -510,12 +553,18 @@ class Location(Base):
 	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
 	shape = relationship(Shape, back_populates='locations')
 
+	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+	simulation = relationship(Simulation, back_populates='locations')
+
 	@property
 	def geometry(self):
 		return load_wkt(self.wkt)
 
-Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape')
 
+Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape',
+								cascade='all, delete, delete-orphan')
+Simulation.locations = relationship('Location', order_by=Location.id,back_populates='simulation',
+								cascade='all, delete, delete-orphan')
 
 class Condition(Base):
 	"""Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
@@ -527,15 +576,11 @@ class Condition(Base):
 	oper = Column(String)
 	value = Column(Integer)
 
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape, back_populates='conditions')
-
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='conditions')
 
-
-Shape.conditions = relationship('Condition', order_by=Condition.id,back_populates='shape')
-Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature')
+Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature',
+								   cascade='all, delete, delete-orphan')
 
 
 class Rule(Base):
@@ -549,9 +594,6 @@ class Rule(Base):
 	value = Column(Integer,default=0)
 	direction = Column(String)
 
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape, back_populates='rules')
-
 	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
 	feature = relationship(Feature, back_populates='rules')
 
@@ -563,8 +605,9 @@ class Rule(Base):
 	def describe(self):
 		print(self.oper,self.value,self.target,self.direction)
 
-Shape.rules = relationship('Rule', order_by=Rule.id,back_populates='shape')
-Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature')
+
+Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature',
+							 cascade='all, delete, delete-orphan')
 
 
 class Event(Base):
@@ -583,12 +626,13 @@ class Event(Base):
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility,back_populates='events')
 
-	def geometry():
-		return build_geometry(Event)
-
+	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+	simulation = relationship(Simulation, back_populates='events')
 
 Feature.events = relationship('Event',order_by=Event.id,back_populates='feature')
 Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
+Simulation.events = relationship('Event',order_by=Event.id,back_populates='simulation',
+								  cascade='all, delete, delete-orphan')
 
 
 class Scene(Base):

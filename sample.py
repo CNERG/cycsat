@@ -10,6 +10,7 @@ copyfile(src, dst)
 # =============================================================================
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
+<<<<<<< HEAD
 from descartes import PolygonPatch
 
 from cycsat.simulation import Simulation
@@ -60,4 +61,8 @@ template = {'Reactor':Reactor}
 # # create the simulation by reading the database and supplying a template list
 sim = Simulation('reactor_test_sample.sqlite')
 # sim.build(template)
+=======
+from cycsat.simulation import CycSat
+>>>>>>> exploratory
 
+sim = CycSat('reactor_test_sample.sqlite')
