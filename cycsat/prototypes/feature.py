@@ -21,7 +21,7 @@ class ConcretePad(Feature):
         ]
 
         self.rules = [
-        Rule(oper='ROTATE',value=120)
+        Rule(oper='ROTATE',value=0)
         ]
 
 

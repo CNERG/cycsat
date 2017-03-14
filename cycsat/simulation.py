@@ -135,13 +135,13 @@ class CycSat(object):
 		
 		self.save(job)
 
-	def simulate(self,job_id,name=None):
+	def simulate(self,build_id,name=None):
 		"""Generates events for all facilties"""
 		simulation = Simulation(name=name)
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
 		
-		facilities = self.facilities[self.facilities.job_id==job_id]
+		facilities = self.facilities[self.facilities.build_id==build_id]
 		for facility in facilities.iterrows():
 			if facility[1]['defined']:
 				for timestep in range(self.duration):

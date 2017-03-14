@@ -69,10 +69,10 @@ class Process(Base):
 	result = Column(Integer,default=0)
 	message = Column(String)
 
-	job_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-	job = relationship(Build, back_populates='processes')
+	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	build = relationship(Build, back_populates='processes')
 
-Build.processes = relationship('Process', order_by=Process.id,back_populates='job',
+Build.processes = relationship('Process', order_by=Process.id,back_populates='build',
 								 cascade='all, delete, delete-orphan')
 
 
@@ -412,7 +412,7 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
+Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='build')
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
 
 

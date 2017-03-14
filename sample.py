@@ -12,4 +12,9 @@ copyfile(src, dst)
 # =============================================================================
 from cycsat.simulation import CycSat
 
+
+
+
+
+
 sim = CycSat('reactor_test_sample.sqlite')
