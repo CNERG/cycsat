@@ -21,7 +21,7 @@ class ConcretePad(Feature):
         ]
 
         self.rules = [
-        Rule(oper='ROTATE',value=120)
+        Rule(oper='ROTATE',value=0)
         ]
 
 
@@ -129,7 +129,6 @@ class Turbine1(Feature):
         ]
         
         self.rules = [
-        Rule(oper='ROTATE',value=0),
         Rule(oper='AXIS',direction='X',target='containment1'),
         Rule(oper='NEAR',target='containment1',value=500)
         ]
@@ -150,7 +149,6 @@ class Turbine2(Feature):
         ]
         
         self.rules = [
-        Rule(oper='ROTATE',value=0),
         Rule(oper='AXIS',direction='X',target='containment2'),
         Rule(oper='NEAR',target='containment1',value=500)
         ]
@@ -172,7 +170,6 @@ class SampleFuel(Feature):
         ]
 
         self.rules = [
-        Rule(oper='ROTATE',target='concrete pad',value=0)
         ]
 
 

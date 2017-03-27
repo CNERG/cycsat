@@ -130,6 +130,7 @@ class CycSat(object):
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')
+		print(len(AgentEntry))
 
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
@@ -138,16 +139,19 @@ class CycSat(object):
 
 				template = [i for i in build.facilities if (i.template==True) & (i.prototype==prototype)]
 				if template:
+					
 					facility = self.copy_facility(template[0])
 					facility.prototype = prototype
 					facility.AgentId = agent[1]['AgentId']
-					
 					self.save(facility)
 					facility.place_features(timestep=-1,attempts=attempts)
 					# facility = samples[prototype](AgentId=agent[1]['AgentId'])
+
+					#build = self.
 					build.facilities.append(facility)
 		
-		self.save(build)
+		#self.save(build)
+		self.session.commit()
 
 	def simulate(self,build_id,name='None'):
 		"""Generates events for all facilties"""
@@ -173,36 +177,18 @@ class CycSat(object):
 		features = list()
 		for feature in facility.features:
 			c = feature.copy(self.session)
-			print(c)
 			features.append(c)
 
-		self.session.expunge(facility)
-		make_transient(facility)
-		facility.id = None
-		facility.template = False
+		copy = facility
+		self.session.expunge_all()
+		make_transient(copy)
+		copy.id = None
+		copy.template = False
 
-		facility.features = features
+		copy.features = features
 		self.refresh()
 
-		return facility
-
-	def copy_facility2(self,facility):
-		"""Copies a facility template and related rows."""
-		
-		features = list()
-		for feature in facility.features:
-			c = feature.copy(self.session)
-			print(c)
-			features.append(c)
-
-		self.session.expunge(facility)
-		make_transient(facility)
-		facility.id = None
-
-		facility.features = features
-		self.refresh()
-
-		return facility
+		return copy
 
 
 
