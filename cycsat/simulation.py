@@ -120,8 +120,13 @@ class CycSat(object):
 		facilities -- (optional) a list of facilities to build, default all
 		name -- (optional) name for the build 'Build'
 		"""
-		# create the build
+		# create the build and add the templates as 'models'
 		build = Build(name=name)
+		for prototype in templates:
+			template = templates[prototype]
+			template.prototype = prototype
+			build.facilities.append(template)
+		self.save(build)
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')
@@ -131,9 +136,10 @@ class CycSat(object):
 
 			if agent[1]['Kind']=='Facility':
 				
-				facility = samples[prototype](AgentId=agent[1]['AgentId'])
-				# facility = templates[prototype]
-				# facility.AgentId = agent[1]['AgentId']
+				# facility = samples[prototype](AgentId=agent[1]['AgentId'])
+				
+				facility = templates[prototype]
+				facility.AgentId = agent[1]['AgentId']
 				facility.place_features(timestep=-1,attempts=attempts)
 				
 				build.facilities.append(facility)

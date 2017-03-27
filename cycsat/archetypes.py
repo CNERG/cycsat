@@ -53,8 +53,7 @@ operations = {
 
 
 class Build(Base):
-	"""A an action taken by a user on a facility. Contains a 'Procces' log of
-	cycsat actions to carry out the build."""
+	"""A possible realization of all Facilities and Features in a simulation."""
 
 	__tablename__ = 'CycSat_Build'
 	id = Column(Integer, primary_key=True)
@@ -216,6 +215,7 @@ class Facility(Base):
 	length = Column(Integer)
 	terrain = Column(BLOB)
 	prototype = Column(String)
+	template = Column(Boolean,default=False)
 	defined = Column(Boolean,default=False)
 	ax_angle = Column(Integer)
 	wkt = Column(String)
