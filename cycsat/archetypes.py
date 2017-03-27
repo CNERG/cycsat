@@ -215,7 +215,7 @@ class Facility(Base):
 	length = Column(Integer)
 	terrain = Column(BLOB)
 	prototype = Column(String)
-	template = Column(Boolean,default=False)
+	template = Column(Boolean,default=True)
 	defined = Column(Boolean,default=False)
 	ax_angle = Column(Integer)
 	wkt = Column(String)

@@ -135,14 +135,17 @@ class CycSat(object):
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
-				
-				# facility = samples[prototype](AgentId=agent[1]['AgentId'])
-				
-				facility = templates[prototype]
-				facility.AgentId = agent[1]['AgentId']
-				facility.place_features(timestep=-1,attempts=attempts)
-				
-				build.facilities.append(facility)
+
+				template = [i for i in build.facilities if (i.template==True) & (i.prototype==prototype)]
+				if template:
+					facility = self.copy_facility(template[0])
+					facility.prototype = prototype
+					facility.AgentId = agent[1]['AgentId']
+					
+					self.save(facility)
+					facility.place_features(timestep=-1,attempts=attempts)
+					# facility = samples[prototype](AgentId=agent[1]['AgentId'])
+					build.facilities.append(facility)
 		
 		self.save(build)
 
@@ -176,6 +179,7 @@ class CycSat(object):
 		self.session.expunge(facility)
 		make_transient(facility)
 		facility.id = None
+		facility.template = False
 
 		facility.features = features
 		self.refresh()
