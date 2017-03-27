@@ -14,10 +14,10 @@ from cycsat.simulation import CycSat
 from cycsat.archetypes import Facility, Feature, Shape, Rule
 
 
-SampleReactor = Facility(name='new')
+# SampleReactor = Facility(name='new')
 
-templates = {
-	'Reactor' : SampleReactor,
-}
+# templates = {
+# 	'Reactor' : SampleReactor,
+# }
 
 sim = CycSat('reactor_test_sample.sqlite')
