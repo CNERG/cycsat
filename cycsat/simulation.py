@@ -23,9 +23,10 @@ import matplotlib.pyplot as plt
 from sqlalchemy import text, exists
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import make_transient
 
 
-Session = sessionmaker() 
+Session = sessionmaker()
 
 
 class CycSat(object):
@@ -47,10 +48,13 @@ class CycSat(object):
 		self.reader = sqlite3.connect(self.database)
 		self.duration = pd.read_sql_query('SELECT Duration FROM Info',self.reader)['Duration'][0]
 
+	def refresh(self):
+		self.__init__(self.database)
+
 	def gen_df(self,Table,geo=None):
 		cols = Table.__table__.columns.keys()
 		records = self.session.query(Table).all()
-		df = pd.DataFrame([[getattr(i,j) for j in cols]+[i] for i in records],columns=cols+['instance'])
+		df = pd.DataFrame([[getattr(i,j) for j in cols]+[i] for i in records],columns=cols+['obj'])
 		if geo:
 			df = gpd.GeoDataFrame(df,geometry=geo)
 		return df
@@ -88,7 +92,7 @@ class CycSat(object):
 		return self.gen_df(Rule)
 
 	@property
-	def jobs(self):
+	def builds(self):
 		return self.gen_df(Build)
 
 	@property
@@ -108,7 +112,7 @@ class CycSat(object):
 		df = pd.read_sql_query(sql,self.reader)
 		return df
 
-	def build(self,name,attempts=100,):
+	def build(self,name,templates=None,attempts=100):
 		"""Builds facilities.
 		
 		Keyword arguments:
@@ -116,42 +120,79 @@ class CycSat(object):
 		facilities -- (optional) a list of facilities to build, default all
 		name -- (optional) name for the build 'Build'
 		"""
-		# create the job
-		job = Build(name=name)
+		# create the build
+		build = Build(name=name)
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')
 
-		facilities = list()
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
 				
 				facility = samples[prototype](AgentId=agent[1]['AgentId'])
+				# facility = templates[prototype]
+				# facility.AgentId = agent[1]['AgentId']
 				facility.place_features(timestep=-1,attempts=attempts)
-				job.facilities.append(facility)
-				facilities.append(facility)
+				
+				build.facilities.append(facility)
 		
-		self.save(job)
+		self.save(build)
 
-	def simulate(self,job_id,name=None):
+	def simulate(self,build_id,name='None'):
 		"""Generates events for all facilties"""
 		simulation = Simulation(name=name)
 
 		self.duration = self.read('SELECT Duration FROM Info')['Duration'][0]
 		
-		facilities = self.facilities[self.facilities.job_id==job_id]
+		facilities = self.facilities[self.facilities.build_id==build_id]
 		for facility in facilities.iterrows():
 			if facility[1]['defined']:
 				for timestep in range(self.duration):
 					try:
-						facility[1]['instance'].simulate(self,simulation,timestep)
+						facility[1]['obj'].simulate(self,simulation,timestep)
 					except:
 						continue
 
 		self.session.add(simulation)
 		self.session.commit()
+
+	def copy_facility(self,facility):
+		"""Copies a facility template and related rows."""
+		
+		features = list()
+		for feature in facility.features:
+			c = feature.copy(self.session)
+			print(c)
+			features.append(c)
+
+		self.session.expunge(facility)
+		make_transient(facility)
+		facility.id = None
+
+		facility.features = features
+		self.refresh()
+
+		return facility
+
+	def copy_facility2(self,facility):
+		"""Copies a facility template and related rows."""
+		
+		features = list()
+		for feature in facility.features:
+			c = feature.copy(self.session)
+			print(c)
+			features.append(c)
+
+		self.session.expunge(facility)
+		make_transient(facility)
+		facility.id = None
+
+		facility.features = features
+		self.refresh()
+
+		return facility
 
 
 

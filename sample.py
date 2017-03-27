@@ -11,5 +11,11 @@ copyfile(src, dst)
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
 from cycsat.simulation import CycSat
+from cycsat.archetypes import Feature, Shape, Rule
+
+
+# templates = {
+# 	'Reactor' : SampleReactor,
+# }
 
 sim = CycSat('reactor_test_sample.sqlite')

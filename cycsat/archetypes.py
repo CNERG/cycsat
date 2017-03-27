@@ -35,9 +35,11 @@ from sqlalchemy import Column, Integer, String, Table, Boolean
 from sqlalchemy.dialects.sqlite import BLOB
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm.session import make_transient
 
 
 Base = declarative_base()
+
 
 operations = {
 	"equals": operator.eq,
@@ -52,7 +54,7 @@ operations = {
 
 class Build(Base):
 	"""A an action taken by a user on a facility. Contains a 'Procces' log of
-	cycsat actions to carry out the job."""
+	cycsat actions to carry out the build."""
 
 	__tablename__ = 'CycSat_Build'
 	id = Column(Integer, primary_key=True)
@@ -69,10 +71,10 @@ class Process(Base):
 	result = Column(Integer,default=0)
 	message = Column(String)
 
-	job_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-	job = relationship(Build, back_populates='processes')
+	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+	build = relationship(Build, back_populates='processes')
 
-Build.processes = relationship('Process', order_by=Process.id,back_populates='job',
+Build.processes = relationship('Process', order_by=Process.id,back_populates='build',
 								 cascade='all, delete, delete-orphan')
 
 
@@ -162,10 +164,6 @@ class Instrument(Base):
 		scene = Scene(timestep=timestep)
 		self.scenes.append(scene)
 		self.Facility.scenes.append(scene)
-		
-		# if Mission:
-		# 	Mission.scenes.append(scene)
-		# World.save([Mission,self,self.Facility])
 		
 		path = path+str(scene.id)
 		self.Sensor.write(path)
@@ -264,11 +262,9 @@ class Facility(Base):
 		while graph:
 			# Get all features with no dependencies
 			ready = {name for name, deps in graph.items() if not deps}
-
 			if not ready:
 				msg  = "Circular dependencies found!\n"
 				raise ValueError(msg)
-
 			# Remove them from the dependency graph
 			for name in ready:
 				graph.pop(name)
@@ -388,7 +384,7 @@ class Facility(Base):
 			return virtual
 
 
-	def gif(self,timesteps,name):
+	def gif(self,timesteps,name,fps=1):
 		"""plots a facility and its static features or a timestep."""
 		plt.ioff()
 		plots = list()
@@ -402,7 +398,7 @@ class Facility(Base):
 		for plot in plots:
 			plot.seek(0)
 			images.append(imageio.imread(plot))
-		imageio.mimsave(name+'.gif', images)
+		imageio.mimsave(name+'.gif', images, fps=fps)
 		plt.ion()
 
 
@@ -412,7 +408,7 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='job')
+Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='build')
 Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
 
 
@@ -474,6 +470,34 @@ class Feature(Base):
 
 	def eval_rules(self,mask=None):
 		return evaluate_rules(self,mask)
+
+	def copy(self,session):
+		"""Copies the Feature and all it's related records."""
+
+		copies = {
+			'shapes':list(),
+			'rules':list(),
+			'conditions':list(),
+		}
+
+		for records in copies.keys():
+			for record in getattr(self,records):
+				copy = record
+				session.expunge(copy)
+				make_transient(copy)
+				copy.id = None
+				copies[records].append(copy)
+
+		session.expunge(self)
+		make_transient(self)
+		self.id = None
+		self.facility_id = None
+
+		self.shapes = copies['shapes']
+		self.rules = copies['rules']
+		self.condition = copies['conditions']
+
+		return self
 
 
 Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility',
