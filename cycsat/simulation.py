@@ -130,10 +130,8 @@ class CycSat(object):
 
 		# get Agents to build
 		AgentEntry = self.read('select * from AgentEntry')
-		print(len(AgentEntry))
 
 		built_facilities = list()
-
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
 
@@ -141,19 +139,13 @@ class CycSat(object):
 
 				template = [i for i in build.facilities if i.prototype==prototype]
 				template2 = [(i.id,i.template,i.prototype) for i in build.facilities]
-				print(template2,len(build.facilities))
 
 				template = self.session.query(Facility).filter(Facility.prototype==prototype). \
 				filter(Facility.template==True).all()
 				
 				if template:
-					print('		build temp.')
-					
 					facility = self.copy_facility(template[0])
 					facility.AgentId = agent[1]['AgentId']
-					#self.save(facility)
-					
-					#facility.place_features(timestep=-1,attempts=attempts)
 					built_facilities.append(facility)
 		
 
@@ -161,6 +153,10 @@ class CycSat(object):
 		self.session.expunge(build)
 		self.session.add(build)
 		self.session.commit()
+
+		facilities = self.session.query(Facility).filter(Facility.template==False).filter(Facility.build_id==build.id).all()
+		for facility in facilities:
+			facility.place_features(timestep=-1,attempts=attempts)
 
 	def simulate(self,build_id,name='None'):
 		"""Generates events for all facilties"""

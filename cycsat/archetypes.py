@@ -351,7 +351,7 @@ class Facility(Base):
 		"""plots a facility and its static features or a timestep."""
 		if axis:
 			ax = axis
-			plt.axis('equal')
+			ax.set_aspect('equal')
 		else:
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		
