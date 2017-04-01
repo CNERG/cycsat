@@ -120,7 +120,7 @@ class CycSat(object):
 		facilities -- (optional) a list of facilities to build, default all
 		name -- (optional) name for the build 'Build'
 		"""
-		# create the build and add the templates as 'models'
+		# create the build and add the templates
 		build = Build(name=name)
 		for prototype in templates:
 			template = templates[prototype]
@@ -132,25 +132,34 @@ class CycSat(object):
 		AgentEntry = self.read('select * from AgentEntry')
 		print(len(AgentEntry))
 
+		built_facilities = list()
+
 		for agent in AgentEntry.iterrows():
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
 
-				template = [i for i in build.facilities if (i.template==True) & (i.prototype==prototype)]
+				template = [i for i in build.facilities if i.prototype==prototype]
+				template2 = [(i.id,i.template,i.prototype) for i in build.facilities]
+				print(template2,len(build.facilities))
+
+				template = self.session.query(Facility).filter(Facility.prototype==prototype). \
+				filter(Facility.template==True).all()
+				
 				if template:
+					print('		build temp.')
 					
 					facility = self.copy_facility(template[0])
-					facility.prototype = prototype
 					facility.AgentId = agent[1]['AgentId']
-					self.save(facility)
-					facility.place_features(timestep=-1,attempts=attempts)
-					# facility = samples[prototype](AgentId=agent[1]['AgentId'])
-
-					#build = self.
-					build.facilities.append(facility)
+					#self.save(facility)
+					
+					#facility.place_features(timestep=-1,attempts=attempts)
+					built_facilities.append(facility)
 		
-		#self.save(build)
+
+		build.facilities+=built_facilities
+		self.session.expunge(build)
+		self.session.add(build)
 		self.session.commit()
 
 	def simulate(self,build_id,name='None'):
@@ -180,13 +189,13 @@ class CycSat(object):
 			features.append(c)
 
 		copy = facility
-		self.session.expunge_all()
+		self.session.expunge(copy)
 		make_transient(copy)
 		copy.id = None
 		copy.template = False
 
 		copy.features = features
-		self.refresh()
+		#self.refresh()
 
 		return copy
 
