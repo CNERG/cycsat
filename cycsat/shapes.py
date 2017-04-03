@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, String
 
 from shapely.geometry import Polygon, Point
+from shapely.affinity import translate as shift_shape
 
 from cycsat.archetypes import Shape, Rule, Condition
 from cycsat.laboratory import Material
@@ -37,5 +38,7 @@ class Rectangle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.stable_wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
+        poly = Polygon([(0,0),(self.length,self.width),(self.length,self.width),(self.length,self.width)])
+
+        self.stable_wkt = shift_shape(poly,xoff,yoff).wkt
 

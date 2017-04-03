@@ -208,6 +208,8 @@ class CycSat(object):
 
 		for ax,facility in zip(axes,facilities.iterrows()):
 			facility[1].obj.plot(ax=ax,timestep=timestep)
+
+		plt.tight_layout()
 		
 		if virtual:
 			plt.savefig(virtual,format='png')
