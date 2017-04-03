@@ -38,7 +38,5 @@ class Rectangle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        poly = Polygon([(0,0),(self.length,self.width),(self.length,self.width),(self.length,self.width)])
-
-        self.stable_wkt = shift_shape(poly,xoff,yoff).wkt
+        self.stable_wkt = Polygon([(xoff,yoff),(xoff,self.width),(self.length,self.width),(self.length,yoff)]).wkt
 

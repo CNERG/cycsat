@@ -301,6 +301,8 @@ def evaluate_rules(Feature,mask=None):
 		target_footprints = [target.footprint(placed=True) for target in targets]
 		target_geometry = cascaded_union(target_footprints)
 
+		print(target_geometry)
+
 		result = rules[rule.oper](Feature,target_geometry,value,direction,event)
 
 		for kind, data in result.items():
