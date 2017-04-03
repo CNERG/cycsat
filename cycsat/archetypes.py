@@ -347,10 +347,9 @@ class Facility(Base):
 		return sorted(shapes,key=lambda x: x[0])
 		
 
-	def plot(self,axis=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
+	def plot(self,ax=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
 		"""plots a facility and its static features or a timestep."""
-		if axis:
-			ax = axis
+		if ax:
 			ax.set_aspect('equal')
 		else:
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)

@@ -16,6 +16,8 @@ import shutil
 
 from skimage.io import imread
 
+import imageio
+
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -148,7 +150,6 @@ class CycSat(object):
 					facility.AgentId = agent[1]['AgentId']
 					built_facilities.append(facility)
 		
-
 		build.facilities+=built_facilities
 		self.session.expunge(build)
 		self.session.add(build)
@@ -157,6 +158,7 @@ class CycSat(object):
 		facilities = self.session.query(Facility).filter(Facility.template==False).filter(Facility.build_id==build.id).all()
 		for facility in facilities:
 			facility.place_features(timestep=-1,attempts=attempts)
+			self.save(facility)
 
 	def simulate(self,build_id,name='None'):
 		"""Generates events for all facilties"""
@@ -194,6 +196,50 @@ class CycSat(object):
 		#self.refresh()
 
 		return copy
+
+	def plot(self,sql,timestep):
+		"""Plots facilites that meet a sql query at a given timestep"""
+
+		facilities = self.facilities.query(sql)
+		facilities = facilities[facilities.template==False]
+
+		if len(facilities)==1:
+			fig, ax = facilities.iloc[0].obj.plot(timestep=timestep)
+			return fig, ax
+		
+		fig, axes = plt.subplots(len(facilities))
+
+		for ax,facility in zip(axes,facilities.iterrows()):
+			facility[1].obj.plot(ax=ax,timestep=timestep)
+		return fig, axes
+
+	def gif(self,sql,timesteps,name,fps=1):
+		"""plots facilities into a gif"""
+
+		facilities = self.facilities.query(sql)
+		facilities = facilities[facilities.template==False]
+
+		plt.ioff()
+		plots = list()
+		for step in timesteps:
+			f = io.BytesIO()
+			f = self.plot(timestep=step,virtual=f)
+			plots.append(f)
+			plt.close()
+
+		images = list()
+		for plot in plots:
+			plot.seek(0)
+			images.append(imageio.imread(plot))
+		imageio.mimsave(name+'.gif', images, fps=fps)
+		plt.ion()
+
+	
+
+
+
+
+
 
 
 
