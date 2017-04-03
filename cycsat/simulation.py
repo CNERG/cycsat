@@ -6,9 +6,8 @@ import geopandas as gpd
 
 import matplotlib as plt
 
-from .prototypes import samples
 from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
-from .archetypes import Base, Satellite, Mission, Simulation, Build, Process
+from .archetypes import Base, Satellite, Simulation, Build, Process
 
 from random import randint
 import os
@@ -139,8 +138,6 @@ class CycSat(object):
 			prototype = agent[1]['Spec'][10:]
 
 			if agent[1]['Kind']=='Facility':
-
-				print(template)
 
 				template = self.session.query(Facility).filter(Facility.prototype==prototype). \
 				filter(Facility.template==True).all() #filter(Facility.name==template.name).all()

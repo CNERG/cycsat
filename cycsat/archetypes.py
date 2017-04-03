@@ -167,22 +167,7 @@ class Instrument(Base):
 		path = path+str(scene.id)
 		self.Sensor.write(path)
 
-
-class Mission(Base):
-	"""Collection of images from a satellite"""
-
-	__tablename__ = 'CycSat_Mission'
-
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	timesteps = Column(String)
-	
-	satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
-	satellite = relationship(Satellite, back_populates='missions')
-
-
-Satellite.missions = relationship('Mission', order_by=Mission.id,back_populates='satellite')
-Satellite.instruments = relationship('Instrument', order_by=Instrument.id, back_populates='satellite')
+Satellite.instruments = relationship('Instrument', order_by=Instrument.id,back_populates='satellite')
 
 
 class Site(Base):
@@ -195,12 +180,6 @@ class Site(Base):
 	
 	width = Column(Integer)
 	length = Column(Integer)
-
-	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
-	mission = relationship(Mission, back_populates='sites')
-
-
-Mission.sites = relationship('Site', order_by=Site.id,back_populates='mission')
 
 
 class Facility(Base):
@@ -220,7 +199,7 @@ class Facility(Base):
 	ax_angle = Column(Integer)
 	wkt = Column(String)
 
-	__mapper_args__ = {'polymorphic_on': prototype}
+	# __mapper_args__ = {'polymorphic_on': prototype}
 	
 	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
 	site = relationship(Site, back_populates='facilities')
@@ -357,8 +336,9 @@ class Facility(Base):
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		
 		# set up the plot
-		ax.set_xlim([0,self.width*10])
-		ax.set_ylim([0,self.length*10])
+		#plt.axes().set_aspect('equal')
+		ax.set_xlim([0,self.length])
+		ax.set_ylim([0,self.width])
 		ax.set_axis_bgcolor('green')
 		ax.set_title(self.name+'\ntimestep:'+str(timestep))
 		ax.set_aspect('equal')
@@ -670,9 +650,6 @@ class Scene(Base):
 	id = Column(Integer, primary_key=True)
 	timestep = Column(Integer)
 
-	mission_id = Column(Integer, ForeignKey('CycSat_Mission.id'))
-	mission = relationship(Mission,back_populates='scenes')
-
 	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
 	facility = relationship(Facility,back_populates='scenes')
 
@@ -682,5 +659,4 @@ class Scene(Base):
 # Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
 Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
 Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
-Mission.scenes = relationship('Scene', order_by=Scene.id,back_populates='mission')
 

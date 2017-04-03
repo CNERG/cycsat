@@ -12,17 +12,43 @@ copyfile(src, dst)
 # =============================================================================
 from cycsat.simulation import CycSat
 from cycsat.archetypes import Facility, Feature, Shape, Rule
-from cycsat.prototypes.reactor import SampleReactor
+from cycsat.shapes import Circle, Rectangle
 
-sr = SampleReactor()
+#------------------------------------------------------------------------
+# Define a Reactor
+#------------------------------------------------------------------------
 
-#sr = Facility(name='test',width=800,length=800)
+SampleReactor = Facility(name='test reactor',width=1100,length=800)
+
+ConcretePad = Feature(name='concrete pad')
+ConcretePad.level = 0
+ConcretePad.visibility = 100
+ConcretePad.shapes = [Rectangle(width=700,length=685,rgb=[155,155,155])]
+ConcretePad.rules = [Rule(oper='ROTATE',value=0)]
+SampleReactor.features.append(ConcretePad)
+
+CoolingTower1 = Feature(name='cooling tower 1')
+CoolingTower1.level = 1
+CoolingTower1.visibility = 100
+CoolingTower1.shapes = [Circle(radius=110,rgb=[70,70,70])]
+CoolingTower1.rules = [Rule(oper='WITHIN',target='concrete pad')]
+SampleReactor.features.append(CoolingTower1)
 
 
-# this defines what the 
+CoolingTower2 = Feature(name='cooling tower 2')
+CoolingTower2.level = 1
+CoolingTower2.visibility = 100
+CoolingTower2.shapes = [Circle(radius=110,rgb=[70,70,70])]
+CoolingTower2.rules = [Rule(oper='WITHIN',target='concrete pad'),
+					   Rule(oper='NEAR',target='cooling tower 1',value=100),
+					   Rule(oper='AXIS',target='cooling tower 1',direction = 'X')]
+SampleReactor.features.append(CoolingTower2)
+
+# this defines what the a reactor is
 templates = {
-	'Reactor' : sr,
+	'Reactor' : SampleReactor,
 }
 
+# load and build the dataset
 sim = CycSat('reactor_test_sample.sqlite')
 sim.build('new',templates=templates)

@@ -28,8 +28,8 @@ def build_geometry(Entity):
 	if Entity.wkt:
 		geometry = load_wkt(Entity.wkt)
 	else:
-		width = Entity.width*10
-		length = Entity.length*10
+		width = Entity.width
+		length = Entity.length
 		geometry = Polygon([(0,0),(0,width),(length,width),(length,0)])
 		
 	return geometry
