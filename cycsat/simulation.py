@@ -13,6 +13,7 @@ from .archetypes import Base, Satellite, Mission, Simulation, Build, Process
 from random import randint
 import os
 import shutil
+import io
 
 from skimage.io import imread
 
@@ -197,7 +198,7 @@ class CycSat(object):
 
 		return copy
 
-	def plot(self,sql,timestep):
+	def plot(self,sql,timestep=-1,virtual=None):
 		"""Plots facilites that meet a sql query at a given timestep"""
 
 		facilities = self.facilities.query(sql)
@@ -211,19 +212,21 @@ class CycSat(object):
 
 		for ax,facility in zip(axes,facilities.iterrows()):
 			facility[1].obj.plot(ax=ax,timestep=timestep)
+		
+		if virtual:
+			plt.savefig(virtual,format='png')
+			return virtual
+
 		return fig, axes
 
 	def gif(self,sql,timesteps,name,fps=1):
 		"""plots facilities into a gif"""
 
-		facilities = self.facilities.query(sql)
-		facilities = facilities[facilities.template==False]
-
 		plt.ioff()
 		plots = list()
 		for step in timesteps:
 			f = io.BytesIO()
-			f = self.plot(timestep=step,virtual=f)
+			f = self.plot(sql=sql,timestep=step,virtual=f)
 			plots.append(f)
 			plt.close()
 
@@ -234,7 +237,7 @@ class CycSat(object):
 		imageio.mimsave(name+'.gif', images, fps=fps)
 		plt.ion()
 
-	
+
 
 
 
