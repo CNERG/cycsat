@@ -51,4 +51,4 @@ templates = {
 
 # load and build the dataset
 sim = CycSat('reactor_test_sample.sqlite')
-sim.build('new',templates=templates)
+#sim.build('new',templates=templates)
