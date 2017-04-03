@@ -16,6 +16,8 @@ from cycsat.prototypes.reactor import SampleReactor
 
 sr = SampleReactor()
 
+sr = Facility(name='test',width=800,length=800)
+
 
 # this defines what the 
 templates = {

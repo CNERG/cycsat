@@ -140,11 +140,8 @@ class CycSat(object):
 
 			if agent[1]['Kind']=='Facility':
 
-				template = [i for i in build.facilities if i.prototype==prototype]
-				template2 = [(i.id,i.template,i.prototype) for i in build.facilities]
-
 				template = self.session.query(Facility).filter(Facility.prototype==prototype). \
-				filter(Facility.template==True).all()
+				filter(Facility.template==True).filter(Facility.name==template.name).all()
 				
 				if template:
 					facility = self.copy_facility(template[0])
@@ -208,6 +205,7 @@ class CycSat(object):
 			fig, ax = facilities.iloc[0].obj.plot(timestep=timestep)
 			return fig, ax
 		
+		print(len(facilities))
 		fig, axes = plt.subplots(len(facilities))
 
 		for ax,facility in zip(axes,facilities.iterrows()):
@@ -220,7 +218,7 @@ class CycSat(object):
 		return fig, axes
 
 	def gif(self,sql,timesteps,name,fps=1):
-		"""plots facilities into a gif"""
+		"""Creates a GIF of these """
 
 		plt.ioff()
 		plots = list()
