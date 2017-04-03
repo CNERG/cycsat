@@ -188,8 +188,8 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 	Keyword arguments:
 	attempts -- the maximum number attempts to be made to place each feature
 	"""
-	footprint = Facility.geometry()
-	minx, miny, maxx, maxy = footprint.bounds
+	# footprint = Facility.geometry()
+	# minx, miny, maxx, maxy = footprint.bounds
 
 	# determine which features to draw (by timestep) and create a list of ids
 	if timestep > -1:
@@ -219,8 +219,6 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 			overlaps = cascaded_union(overlaps)
 			
 			footprint = footprint.difference(overlaps)
-			
-			definition = feature.eval_rules(mask=footprint)
 			placed = place_feature(feature,footprint,build=True)
 
 			if placed:

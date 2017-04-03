@@ -350,8 +350,10 @@ class Facility(Base):
 	def plot(self,ax=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
 		"""plots a facility and its static features or a timestep."""
 		if ax:
+			new_fig = False
 			ax.set_aspect('equal')
 		else:
+			new_fig = True
 			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
 		
 		# set up the plot
@@ -378,9 +380,13 @@ class Facility(Base):
 
 		if save:
 			plt.savefig(name)
+		
 		if virtual:
 			plt.savefig(virtual,format='png')
 			return virtual
+
+		if new_fig:
+			return fig, ax
 
 
 	def gif(self,timesteps,name,fps=1):
