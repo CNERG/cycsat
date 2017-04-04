@@ -453,7 +453,11 @@ def place_facility(Facility,geometry,attempts=100):
 # rules should take features, targets (or shapes) (other features), and a value
 
 def within_rule(feature,target_geometry,value,*unused):
-	mask = target_geometry.buffer(value)
+	if value:
+		buf = value
+	else:
+		buf = 0
+	mask = target_geometry.buffer(buf)
 	return {'mask':mask}
 
 
