@@ -181,62 +181,6 @@ def dep_graph(features):
 		return batches
 
 
-def assemble(Facility,timestep=-1,attempts=100):
-	"""Assembles all the Features of a Facility according to their Rules.
-
-	Keyword arguments:
-	timestep -- the timestep of the Facility to draw
-	attempts -- the max # of attempts to place a feature
-	"""
-	# determine which features to draw (by timestep) and creates a set of ids
-	if timestep > -1:
-		feature_ids = set()
-		events = [event for event in Facility.events if event.timestep==timestep]
-		for event in events:
-			feature_ids.add(event.feature.id)
-		if not feature_ids:
-			return True
-	else:
-		feature_ids = [feature.id for feature in Facility.features if feature.visibility==100]
-
-	# create dependency groups
-	dep_grps = Facility.dep_graph()
-
-	# store placed features
-	placed_features = list()
-
-	for group in dep_grps:
-		for feature in group:
-			if feature.id not in feature_ids:
-				placed_features.append(feature)
-				continue
-			
-			footprint = Facility.geometry()
-
-			# find geometry of features that could overlap (share the same z-level)
-			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
-			overlaps = cascaded_union(overlaps)
-			
-			# mask out placed features that could overlap
-			footprint = footprint.difference(overlaps)
-
-			# place the feature
-			placed = place_feature(feature,footprint,attempts=attempts,build=True)
-
-			# if placed was successful append to list and add new location
-			if placed:
-				placed_features.append(feature)
-				for shape in feature.shapes:
-					shape.add_location(timestep,shape.placed_wkt)
-				continue
-			# if placement fails entire Facility assembly fails
-			else:
-				return False
-	
-	# if no Features fail then assembly succeeds
-	return True
-
-
 def rotate_facility(Facility,degrees=None):
 	"""Rotates all the features of a facility."""
 	if not degrees:
