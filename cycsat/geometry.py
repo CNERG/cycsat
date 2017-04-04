@@ -301,6 +301,8 @@ def evaluate_rules(Feature,mask=None):
 		target_footprints = [target.footprint(placed=True) for target in targets]
 		target_geometry = cascaded_union(target_footprints)
 
+		if value is None:
+			value = 0
 		result = rules[rule.oper](Feature,target_geometry,value,direction,event)
 
 		for kind, data in result.items():
@@ -453,11 +455,7 @@ def place_facility(Facility,geometry,attempts=100):
 # rules should take features, targets (or shapes) (other features), and a value
 
 def within_rule(feature,target_geometry,value,*unused):
-	if value:
-		buf = value
-	else:
-		buf = 0
-	mask = target_geometry.buffer(buf)
+	mask = target_geometry.buffer(value)
 	return {'mask':mask}
 
 
