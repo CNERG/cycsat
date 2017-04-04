@@ -181,17 +181,14 @@ def dep_graph(features):
 		return batches
 
 
-def place_features(Facility,timestep=-1,attempts=100,verbose=False):
-	"""Creates a random layout for all the features of a facility and 
-	gives each feature a placed geometry.
+def assemble(Facility,timestep=-1,attempts=100):
+	"""Assembles all the Features of a Facility according to their Rules.
 
 	Keyword arguments:
-	attempts -- the maximum number attempts to be made to place each feature
+	timestep -- the timestep of the Facility to draw
+	attempts -- the max # of attempts before failing
 	"""
-	# footprint = Facility.geometry()
-	# minx, miny, maxx, maxy = footprint.bounds
-
-	# determine which features to draw (by timestep) and create a list of ids
+	# determine which features to draw (by timestep) and creates a set of ids
 	if timestep > -1:
 		feature_ids = set()
 		events = [event for event in Facility.events if event.timestep==timestep]
@@ -202,9 +199,10 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 	else:
 		feature_ids = [feature.id for feature in Facility.features if feature.visibility==100]
 
+	# create dependency groups
 	dep_grps = Facility.dep_graph()
 
-	# track placed features
+	# store placed features
 	placed_features = list()
 
 	for group in dep_grps:
@@ -214,21 +212,27 @@ def place_features(Facility,timestep=-1,attempts=100,verbose=False):
 				continue
 			
 			footprint = Facility.geometry()
-			overlaps = [feat for feat in placed_features if feat.level==feature.level]
+
+			# find geometry of features that could overlap (share the same z-level)
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
 			overlaps = cascaded_union(overlaps)
 			
+			# mask out placed features that could overlap
 			footprint = footprint.difference(overlaps)
+
+			# place the feature
 			placed = place_feature(feature,footprint,build=True)
 
+			# if placed was successful append to list and add new location
 			if placed:
 				placed_features.append(feature)
-				# record the new shape location
 				for shape in feature.shapes:
 					shape.add_location(timestep,shape.placed_wkt)
 				continue
+			# if placement fails entire Facility assembly fails
 			else:
 				return False
+	# if no Features fail then assembly succeeds
 	return True
 
 

@@ -10,7 +10,7 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import place_features, place
+from .geometry import assemble, place
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import rotate_facility, evaluate_rules
 
@@ -260,7 +260,7 @@ class Facility(Base):
 		"""Places all the features of a facility according to their rules
 		and events at the provided timestep."""
 		for x in range(attempts):
-			result = place_features(self,timestep,attempts)
+			result = assemble(self,timestep,attempts)
 			if result:
 				self.defined = True
 				return True

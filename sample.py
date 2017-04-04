@@ -36,12 +36,12 @@ BuildingSet.rules = [Rule(oper='WITHIN',target='concrete pad'),
 SampleReactor.features.append(BuildingSet)
 
 
-# CoolingTower1 = Feature(name='cooling tower 1')
-# CoolingTower1.level = 1
-# CoolingTower1.visibility = 100
-# CoolingTower1.shapes = [Circle(radius=110,rgb=[70,70,70])]
-# CoolingTower1.rules = [Rule(oper='WITHIN',target='concrete pad')]
-# SampleReactor.features.append(CoolingTower1)
+CoolingTower1 = Feature(name='cooling tower 1')
+CoolingTower1.level = 1
+CoolingTower1.visibility = 100
+CoolingTower1.shapes = [Circle(radius=110,rgb=[70,70,70])]
+CoolingTower1.rules = [Rule(oper='WITHIN',target='concrete pad')]
+SampleReactor.features.append(CoolingTower1)
 
 
 # CoolingTower2 = Feature(name='cooling tower 2')
