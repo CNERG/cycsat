@@ -186,7 +186,7 @@ def assemble(Facility,timestep=-1,attempts=100):
 
 	Keyword arguments:
 	timestep -- the timestep of the Facility to draw
-	attempts -- the max # of attempts before failing
+	attempts -- the max # of attempts to place a feature
 	"""
 	# determine which features to draw (by timestep) and creates a set of ids
 	if timestep > -1:
@@ -213,8 +213,6 @@ def assemble(Facility,timestep=-1,attempts=100):
 			
 			footprint = Facility.geometry()
 
-			print(feature.name)
-
 			# find geometry of features that could overlap (share the same z-level)
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
 			overlaps = cascaded_union(overlaps)
@@ -223,7 +221,7 @@ def assemble(Facility,timestep=-1,attempts=100):
 			footprint = footprint.difference(overlaps)
 
 			# place the feature
-			placed = place_feature(feature,footprint,build=True)
+			placed = place_feature(feature,footprint,attempts=attempts,build=True)
 
 			# if placed was successful append to list and add new location
 			if placed:

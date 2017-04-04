@@ -493,7 +493,6 @@ Facility.features = relationship('Feature', order_by=Feature.id,back_populates='
 
 class Shape(Base):
 	"""A geometry with condtions and rules"""
-
 	__tablename__ = 'CycSat_Shape'
 
 	id = Column(Integer, primary_key=True)
