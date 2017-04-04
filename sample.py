@@ -27,7 +27,7 @@ ConcretePad.shapes = [Rectangle(width=700,length=685,rgb=[155,155,155])]
 ConcretePad.rules = [Rule(oper='ROTATE',value=20)]
 SampleReactor.features.append(ConcretePad)
 
-BuildingSet = Feature(name='cooling tower 1')
+BuildingSet = Feature(name='building set')
 BuildingSet.level = 1
 BuildingSet.visibility = 100
 BuildingSet.shapes = [Rectangle(width=73,length=13,rgb=[70,70,70])]

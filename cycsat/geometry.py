@@ -213,6 +213,8 @@ def assemble(Facility,timestep=-1,attempts=100):
 			
 			footprint = Facility.geometry()
 
+			print(feature.name)
+
 			# find geometry of features that could overlap (share the same z-level)
 			overlaps = [feat.footprint() for feat in placed_features if feat.level==feature.level]
 			overlaps = cascaded_union(overlaps)
@@ -232,6 +234,7 @@ def assemble(Facility,timestep=-1,attempts=100):
 			# if placement fails entire Facility assembly fails
 			else:
 				return False
+	
 	# if no Features fail then assembly succeeds
 	return True
 
