@@ -358,6 +358,8 @@ class Facility(Base):
 			if labels:
 				plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
 
+		plt.tight_layout()
+		
 		if save:
 			plt.savefig(name)
 		

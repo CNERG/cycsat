@@ -140,7 +140,7 @@ class CycSat(object):
 			if agent[1]['Kind']=='Facility':
 
 				template = self.session.query(Facility).filter(Facility.prototype==prototype). \
-				filter(Facility.template==True).all() #filter(Facility.name==template.name).all()
+				filter(Facility.template==True).all()
 				
 				if template:
 					facility = self.copy_facility(template[0])
@@ -156,6 +156,12 @@ class CycSat(object):
 		for facility in facilities:
 			facility.place_features(timestep=-1,attempts=attempts)
 			self.save(facility)
+
+		# delete templates
+		templates = self.session.query(Facility).filter(Facility.template==True).all()
+		for template in templates:
+			self.session.delete(template)
+			self.session.commit()
 
 	def simulate(self,build_id,name='None'):
 		"""Generates events for all facilties"""
