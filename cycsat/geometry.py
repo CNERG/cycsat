@@ -19,6 +19,7 @@ from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
+
 #------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
@@ -96,6 +97,7 @@ def line_func(line, precision=1):
 
     return points
 
+
 #------------------------------------------------------------------------------
 # SITE PREP
 #------------------------------------------------------------------------------
@@ -148,6 +150,7 @@ def site_axis(Facility):
 
     return site_axis
 
+
 #------------------------------------------------------------------------------
 # FACILITY CONSTRUCTION
 #------------------------------------------------------------------------------
@@ -155,8 +158,8 @@ def site_axis(Facility):
 
 def dep_graph(features):
     """Groups features based on dependencies."""
-    # create dictionary of features with dependencies
 
+    # create dictionary of features with dependencies
     graph = dict((f.name, f.depends()) for f in features)
     name_to_instance = dict((f.name, f) for f in features)
 
@@ -168,7 +171,7 @@ def dep_graph(features):
         ready = {name for name, deps in graph.items() if not deps}
 
         if not ready:
-            msg = "Circular dependencies found!\n"
+            msg = "Circular dependencies ofeatures found.\n"
             raise ValueError(msg)
 
         # Remove them from the dependency graph
@@ -180,7 +183,6 @@ def dep_graph(features):
         # Add the batch to the list
         batches.append([name_to_instance[name] for name in ready])
 
-    # Return the list of batches
     return batches
 
 
@@ -271,11 +273,14 @@ def list_bearings(Feature):
 
 
 def evaluate_rules(Feature, mask=None):
-    """Evaluates a a feature's rules and returns instructions."""
+    """Evaluates a a feature's rules and returns instructions.
+
+    Keyword arguments:
+    mask -- the mask of possible areas
+    """
     results = defaultdict(list)
 
     for rule in Feature.rules:
-        # get rule attributes
         direction = rule.direction
         value = rule.value
         event = None
