@@ -345,26 +345,26 @@ def rotate_feature(Feature, rotation, center='center'):
         shape.placed_wkt = rotated.wkt
 
 
-def place(Entity, placement, build=False, center=None, rotation=0):
-    """Places a shape to a coordinate position
+def place(Shape, placement, build=False, center=None, rotation=0):
+    """Places a Shape to a coordinate position.
 
     Keyword arguments:
-    build -- draws from the shapes stable_wkt
+    build -- draws from the shapes the stable_wkt rather than placed 
     """
     placed_x = placement.coords.xy[0][0]
     placed_y = placement.coords.xy[1][0]
 
     if build:
-        geometry = Entity.geometry(placed=False)
+        geometry = Shape.geometry(placed=False)
     else:
-        geometry = Entity.geometry(placed=True)
+        geometry = Shape.geometry(placed=True)
 
     shape_x = geometry.centroid.coords.xy[0][0]
     shape_y = geometry.centroid.coords.xy[1][0]
 
     try:
-        xoff = Entity.xoff
-        yoff = Entity.yoff
+        xoff = Shape.xoff
+        yoff = Shape.yoff
     except:
         xoff = 0
         yoff = 0
@@ -376,9 +376,9 @@ def place(Entity, placement, build=False, center=None, rotation=0):
     if rotation != 0:
         shifted = rotate(shifted, rotation, origin='center', use_radians=False)
 
-    Entity.placed_wkt = shifted.wkt
+    Shape.placed_wkt = shifted.wkt
 
-    return Entity
+    return Shape
 
 
 def place_feature(Feature, mask=None, build=False, rand=True, location=False, attempts=100):
