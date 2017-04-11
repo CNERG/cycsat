@@ -32,14 +32,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import make_transient
 
 
-Session = sessionmaker()
+# Session = sessionmaker()
+
+# @property
 
 
-class Database(object):
-    """"""
+class Interface:
+    """Interface for connecting to sqlite database."""
 
     def __init__(self, path, base):
-        global Session
+        Session = sessionmaker()
 
         self.path = path
         self.Base = getattr(base, 'Base')
@@ -57,22 +59,33 @@ class Database(object):
         for name, obj in inspect.getmembers(archetypes):
             if inspect.isclass(obj):
                 try:
-
                     self.archetypes[obj.__tablename__] = obj
                 except:
                     continue
 
-    def get_table(self, table_name, geo=False):
+    def bind_table(self, table_name):
+        """Binds a database table to a function for retriving a pandas dataframe view of the database"""
+        def get_table(interface=self, table=table_name, geo=False):
+            archetype = interface.archetypes[table_name]
+            cols = archetype.__table__.columns.keys()
+            data = interface.session.query(archetype).all()
 
-        archetype = self.archetypes[table_name]
-        cols = archetype.__table__.columns.keys()
-        data = self.session.query(archetype).all()
+            df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
+                               for i in data], columns=cols + ['obj'])
+            if geo:
+                df = gpd.GeoDataFrame(df, geometry=geo)
+            return df
+        get_table.__name__ = table_name
+        return get_table
 
-        df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
-                           for i in data], columns=cols + ['obj'])
-        if geo:
-            df = gpd.GeoDataFrame(df, geometry=geo)
-        return df
+
+class Database(Interface):
+
+    def __init__(self, path, base):
+        Interface.__init__(self, path, base)
+        for table in self.archetypes:
+            func = self.bind_table(table)
+            setattr(self, table, func)
 
 
 class Simulator(object):

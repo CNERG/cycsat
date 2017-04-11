@@ -19,7 +19,6 @@ from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
 from shapely.ops import cascaded_union
 
-
 #------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
