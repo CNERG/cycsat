@@ -12,7 +12,6 @@ modules = [
     'gdal'
 ]
 
-
 for module in modules:
     try:
         __import__(module)

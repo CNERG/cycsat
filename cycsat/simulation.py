@@ -2,6 +2,7 @@
 simulation.py
 """
 import math
+import inspect
 import pandas as pd
 import geopandas as gpd
 
@@ -9,6 +10,8 @@ import matplotlib as plt
 
 from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
 from .archetypes import Base, Satellite, Simulation, Build, Process
+
+import cycsat.archetypes as archetypes
 
 from random import randint
 import os
@@ -32,7 +35,47 @@ from sqlalchemy.orm.session import make_transient
 Session = sessionmaker()
 
 
-class CycSat(object):
+class Database(object):
+    """"""
+
+    def __init__(self, path, base):
+        global Session
+
+        self.path = path
+        self.Base = getattr(base, 'Base')
+
+        self.engine = create_engine(
+            'sqlite+pysqlite:///' + self.path, module=sqlite3.dbapi2, echo=False)
+
+        Session.configure(bind=self.engine)
+        self.session = Session()
+        self.Base.metadata.create_all(self.engine)
+
+        self.connection = sqlite3.connect(self.path)
+
+        self.archetypes = dict()
+        for name, obj in inspect.getmembers(archetypes):
+            if inspect.isclass(obj):
+                try:
+
+                    self.archetypes[obj.__tablename__] = obj
+                except:
+                    continue
+
+    def get_table(self, table_name, geo=False):
+
+        archetype = self.archetypes[table_name]
+        cols = archetype.__table__.columns.keys()
+        data = self.session.query(archetype).all()
+
+        df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
+                           for i in data], columns=cols + ['obj'])
+        if geo:
+            df = gpd.GeoDataFrame(df, geometry=geo)
+        return df
+
+
+class Simulator(object):
     """This is the Cycsat simulation object used to manage simulations.
     """
 

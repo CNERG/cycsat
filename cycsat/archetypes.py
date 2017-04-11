@@ -376,12 +376,6 @@ class Facility(Base):
         plt.ion()
 
 
-# import imageio
-# images = []
-# for filename in filenames:
-#     images.append(imageio.imread(filename))
-# imageio.mimsave('/path/to/movie.gif', images)
-
 Build.facilities = relationship(
     'Facility', order_by=Facility.id, back_populates='build')
 
