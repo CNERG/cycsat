@@ -1,7 +1,9 @@
 """
 archetypes.py
 """
-import ast, random, io
+import ast
+import random
+import io
 
 import imageio
 import tempfile
@@ -42,351 +44,336 @@ Base = declarative_base()
 
 
 operations = {
-	"equals": operator.eq,
-	"not equal": operator.ne,
-	"not equal": operator.ne,
-	"less than": operator.lt,
-	"less than or equals": operator.le,
-	"greater than": operator.gt,
-	"greater than or equals": operator.ge
+    "equals": operator.eq,
+    "not equal": operator.ne,
+    "not equal": operator.ne,
+    "less than": operator.lt,
+    "less than or equals": operator.le,
+    "greater than": operator.gt,
+    "greater than or equals": operator.ge
 }
 
 
 class Build(Base):
-	"""A possible realization of all Facilities and Features in a simulation."""
+    """A possible realization of all Facilities and Features in a simulation."""
 
-	__tablename__ = 'CycSat_Build'
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
+    __tablename__ = 'CycSat_Build'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
 
 
 class Process(Base):
-	"""A proccess run by cycsat under a particluar user-initiated 'Build'.
-	"""
-	__tablename__ = 'CycSat_Procces'
+    """A proccess run by cycsat under a particluar user-initiated 'Build'.
+    """
+    __tablename__ = 'CycSat_Procces'
 
-	id = Column(Integer, primary_key=True)
-	name = Column(String) # description of the the event/error
-	result = Column(Integer,default=0)
-	message = Column(String)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)  # description of the the event/error
+    result = Column(Integer, default=0)
+    message = Column(String)
 
-	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-	build = relationship(Build, back_populates='processes')
+    build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+    build = relationship(Build, back_populates='processes')
 
-Build.processes = relationship('Process', order_by=Process.id,back_populates='build',
-								 cascade='all, delete, delete-orphan')
+Build.processes = relationship('Process', order_by=Process.id, back_populates='build',
+                               cascade='all, delete, delete-orphan')
 
 
 class Simulation(Base):
-	"""A collection of instruments."""
+    """A collection of instruments."""
 
-	__tablename__ = 'CycSat_Simulation'
+    __tablename__ = 'CycSat_Simulation'
 
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
 
 
 class Satellite(Base):
-	"""A collection of instruments."""
+    """A collection of instruments."""
 
-	__tablename__ = 'CycSat_Satellite'
+    __tablename__ = 'CycSat_Satellite'
 
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	mmu = Column(Integer)
-	width = Column(Integer)
-	length = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    mmu = Column(Integer)
+    width = Column(Integer)
+    length = Column(Integer)
 
 
 class Instrument(Base):
-	"""Parameters for generating a scene"""
+    """Parameters for generating a scene"""
 
-	__tablename__ = 'CycSat_Instrument'
+    __tablename__ = 'CycSat_Instrument'
 
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	mmu = Column(Integer, default=1) # in 10ths of centimeters
-	width = Column(Integer)
-	length = Column(Integer)
-	min_spectrum = Column(String)
-	max_spectrum = Column(String)
-	prototype = Column(String)
-	wkt = Column(String)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    mmu = Column(Integer, default=1)  # in 10ths of centimeters
+    width = Column(Integer)
+    length = Column(Integer)
+    min_spectrum = Column(String)
+    max_spectrum = Column(String)
+    prototype = Column(String)
+    wkt = Column(String)
 
-	__mapper_args__ = {'polymorphic_on': prototype}
+    __mapper_args__ = {'polymorphic_on': prototype}
 
-	satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
-	satellite = relationship(Satellite, back_populates='instruments')
-		
+    satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
+    satellite = relationship(Satellite, back_populates='instruments')
 
-	def geometry(self):
-		self.geo = build_geometry(self)
-		return self.geo
+    def geometry(self):
+        self.geo = build_geometry(self)
+        return self.geo
 
+    def target(self, Facility):
+        """Creates a sensor object and focuses it on a facility"""
+        self.Sensor = Sensor(self)
+        self.Facility = Facility
 
-	def target(self,Facility):
-		"""Creates a sensor object and focuses it on a facility"""
-		self.Sensor = Sensor(self)
-		self.Facility = Facility
+        self.shapes = []
+        for feature in Facility.features:
+            for shape in feature.shapes:
+                self.shapes.append(materialize(shape))
 
-		self.shapes = []
-		for feature in Facility.features:
-			for shape in feature.shapes:
-				self.shapes.append(materialize(shape))
-		
-		self.Sensor.focus(Facility)
-		self.Sensor.calibrate(Facility)
+        self.Sensor.focus(Facility)
+        self.Sensor.calibrate(Facility)
 
+    def capture(self, timestep, path, Mission=None, World=None):
+        """Adds shapes at timestep to a image"""
 
-	def capture(self,timestep,path,Mission=None,World=None):
-		"""Adds shapes at timestep to a image"""
+        self.Sensor.reset()
 
-		self.Sensor.reset()
+        # gets all events from a timestep
+        events = [
+            Event.shape_id for Event in self.Facility.events if Event.timestep == timestep]
+        # get all shapes from a timestep (if there is an event)
+        shapes = [Shape for Shape in self.shapes if Shape.id in events]
 
-		# gets all events from a timestep
-		events = [Event.shape_id for Event in self.Facility.events if Event.timestep==timestep]
-		# get all shapes from a timestep (if there is an event)
-		shapes = [Shape for Shape in self.shapes if Shape.id in events]
-		
-		shape_stack = dict()
-		for shape in shapes:
-			if shape.level in shape_stack:
-				shape_stack[shape.level].append(shape)
-			else:
-				shape_stack[shape.level] = [shape]
+        shape_stack = dict()
+        for shape in shapes:
+            if shape.level in shape_stack:
+                shape_stack[shape.level].append(shape)
+            else:
+                shape_stack[shape.level] = [shape]
 
-		for level in sorted(shape_stack):
-			for shape in shape_stack[level]:
-				self.Sensor.capture_shape(shape)
-		
-		# create and save the scene object
-		scene = Scene(timestep=timestep)
-		self.scenes.append(scene)
-		self.Facility.scenes.append(scene)
-		
-		path = path+str(scene.id)
-		self.Sensor.write(path)
+        for level in sorted(shape_stack):
+            for shape in shape_stack[level]:
+                self.Sensor.capture_shape(shape)
 
-Satellite.instruments = relationship('Instrument', order_by=Instrument.id,back_populates='satellite')
+        # create and save the scene object
+        scene = Scene(timestep=timestep)
+        self.scenes.append(scene)
+        self.Facility.scenes.append(scene)
 
+        path = path + str(scene.id)
+        self.Sensor.write(path)
 
-class Site(Base):
-	"""Collection of facilities"""
-
-	__tablename__ = 'CycSat_Site'
-
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	
-	width = Column(Integer)
-	length = Column(Integer)
+Satellite.instruments = relationship(
+    'Instrument', order_by=Instrument.id, back_populates='satellite')
 
 
 class Facility(Base):
-	"""A collection of features."""
+    """A collection of features."""
 
-	__tablename__ = 'CycSat_Facility'
+    __tablename__ = 'CycSat_Facility'
 
-	id = Column(Integer, primary_key=True)
-	AgentId = Column(Integer)
-	name = Column(String)
-	width = Column(Integer)
-	length = Column(Integer)
-	terrain = Column(BLOB)
-	prototype = Column(String)
-	template = Column(Boolean,default=True)
-	defined = Column(Boolean,default=False)
-	ax_angle = Column(Integer)
-	wkt = Column(String)
+    id = Column(Integer, primary_key=True)
+    AgentId = Column(Integer)
+    name = Column(String)
+    width = Column(Integer)
+    length = Column(Integer)
+    terrain = Column(BLOB)
+    prototype = Column(String)
+    template = Column(Boolean, default=True)
+    defined = Column(Boolean, default=False)
+    ax_angle = Column(Integer)
+    wkt = Column(String)
 
-	# __mapper_args__ = {'polymorphic_on': prototype}
-	
-	site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
-	site = relationship(Site, back_populates='facilities')
+    # __mapper_args__ = {'polymorphic_on': prototype}
+    build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+    build = relationship(Build, back_populates='facilities')
 
-	build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-	build = relationship(Build, back_populates='facilities')
+    def geometry(self):
+        self.geo = build_geometry(self)
+        return self.geo
 
-	def geometry(self):
-		self.geo = build_geometry(self)
-		return self.geo
+    def footprint(self):
+        return build_footprint(self)
 
-	def footprint(self):
-		return build_footprint(self)
+    def rotate(self, degrees):
+        rotate_facility(self, degrees)
 
-	def rotate(self,degrees):
-		rotate_facility(self,degrees)
+    def axis(self):
+        if self.ax_angle:
+            footprint = self.geometry()
+            minx, miny, maxx, maxy = footprint.bounds
+            site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
+            site_axis = rotate(site_axis, self.ax_angle)
+            return site_axis
+        else:
+            print('This facility has not been built. Use the build() method \n'
+                  'before creating the axis.')
 
-	def axis(self):
-		if self.ax_angle:
-			footprint = self.geometry()
-			minx, miny, maxx, maxy = footprint.bounds
-			site_axis = LineString([[-maxx,0],[maxx*2,0]])
-			site_axis = rotate(site_axis,self.ax_angle)
-			return site_axis
-		else:
-			print('This facility has not been built. Use the build() method \n'
-				  'before creating the axis.')
+    def dep_graph(self):
+        """Returns groups of features based on their dependencies."""
 
-	def dep_graph(self):
-		"""Returns groups of features based on their dependencies."""
+        # create dictionary of features with dependencies
+        graph = dict((f.name, f.depends()) for f in self.features)
+        name_to_instance = dict((f.name, f) for f in self.features)
 
-		# create dictionary of features with dependencies
-		graph = dict((f.name, f.depends()) for f in self.features)
-		name_to_instance = dict( (f.name, f) for f in self.features )
+        # where to store the batches
+        batches = list()
 
-		# where to store the batches
-		batches = list()
+        while graph:
+            # Get all features with no dependencies
+            ready = {name for name, deps in graph.items() if not deps}
+            if not ready:
+                msg = "Circular dependencies found!\n"
+                raise ValueError(msg)
+            # Remove them from the dependency graph
+            for name in ready:
+                graph.pop(name)
+            for deps in graph.values():
+                deps.difference_update(ready)
 
-		while graph:
-			# Get all features with no dependencies
-			ready = {name for name, deps in graph.items() if not deps}
-			if not ready:
-				msg  = "Circular dependencies found!\n"
-				raise ValueError(msg)
-			# Remove them from the dependency graph
-			for name in ready:
-				graph.pop(name)
-			for deps in graph.values():
-				deps.difference_update(ready)
+            # Add the batch to the list
+            batches.append([name_to_instance[name] for name in ready])
 
-			# Add the batch to the list
-			batches.append( [name_to_instance[name] for name in ready] )
+        # Return the list of batches
+        return batches
 
-		# Return the list of batches
-		return batches
+    def place_features(self, timestep=-1, attempts=100):
+        """Places all the features of a facility according to their rules
+        and events at the provided timestep."""
+        for x in range(attempts):
+            result = assemble(self, timestep, attempts)
+            if result:
+                self.defined = True
+                return True
+            else:
+                self.defined = False
+                continue
 
-	def place_features(self,timestep=-1,attempts=100):
-		"""Places all the features of a facility according to their rules
-		and events at the provided timestep."""
-		for x in range(attempts):
-			result = assemble(self,timestep,attempts)
-			if result:
-				self.defined = True
-				return True
-			else:
-				self.defined = False
-				continue
+    def simulate(self, simulation, sim, timestep):
+        """Evaluates the conditions for dynamic shapes at a given timestep and
+        generates events. All conditions must be True in order for the event to be
+        created.
 
-	def simulate(self,simulation,sim,timestep):
-		"""Evaluates the conditions for dynamic shapes at a given timestep and
-		generates events. All conditions must be True in order for the event to be
-		created.
+        Keyword arguments:
+        simulation -- a cycsat simulation object
+        timestep -- the timestep for simulation
+        """
+        dynamic_features = [
+            feature for feature in self.features if feature.visibility != 100]
 
-		Keyword arguments:
-		simulation -- a cycsat simulation object
-		timestep -- the timestep for simulation
-		"""
-		dynamic_features = [feature for feature in self.features if feature.visibility!=100]
+        events = list()
+        for feature in dynamic_features:
+            evaluations = []
+            for condition in feature.conditions:
+                qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (
+                    condition.table, self.AgentId, timestep)
+                df = pd.read_sql_query(qry, simulation.reader)
+                value = df['Value'][0]
 
-		events = list()
-		for feature in dynamic_features:
-			evaluations = []
-			for condition in feature.conditions:
-				qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (condition.table,self.AgentId,timestep)
-				df = pd.read_sql_query(qry,simulation.reader)
-				value = df['Value'][0]
+                if operations[condition.oper](value, condition.value):
+                    evaluations.append(True)
+                else:
+                    evaluations.append(False)
 
-				if operations[condition.oper](value,condition.value):
-					evaluations.append(True)
-				else:
-					evaluations.append(False)
+            if False in evaluations:
+                print(feature.name, timestep, 'False')
+                continue
+            else:
+                if random.randint(1, 100) < feature.visibility:
+                    print(feature.name, timestep, 'True')
+                    event = Event(timestep=timestep)
+                    feature.events.append(event)
+                    self.events.append(event)
+                    sim.events.append(event)
+                    simulation.save(feature)
+                else:
+                    continue
 
-			if False in evaluations:
-				print(feature.name,timestep,'False')
-				continue
-			else:
-				if random.randint(1,100)<feature.visibility:
-					print(feature.name,timestep,'True')
-					event = Event(timestep=timestep)
-					feature.events.append(event)
-					self.events.append(event)
-					sim.events.append(event)
-					simulation.save(feature)
-				else:
-					continue
-		
-		place_features(self,timestep=timestep)
-		simulation.save(self)
+        place_features(self, timestep=timestep)
+        simulation.save(self)
 
+    def timestep_shapes(self, timestep=0):
+        """Returns the ordered shapes to draw at a facility for a given timestep."""
+        shapes = list()
 
-	def timestep_shapes(self,timestep=0):
-		"""Returns the ordered shapes to draw at a facility for a given timestep."""
-		shapes = list()
-		
-		for feature in self.features:
-			# add all if a static feature
-			if feature.visibility==100:
-				shapes+=[(shape.level,shape) for shape in feature.shapes]
-			else:
-				events = [e for e in feature.events if e.timestep==timestep]
-				if len(events)>0:
-					shapes+=[(shape.level,shape) for shape in feature.shapes]
-		
-		return sorted(shapes,key=lambda x: x[0])
-		
+        for feature in self.features:
+            # add all if a static feature
+            if feature.visibility == 100:
+                shapes += [(shape.level, shape) for shape in feature.shapes]
+            else:
+                events = [e for e in feature.events if e.timestep == timestep]
+                if len(events) > 0:
+                    shapes += [(shape.level, shape)
+                               for shape in feature.shapes]
 
-	def plot(self,ax=None,timestep=-1,labels=False,save=False,name='plot.png',virtual=None):
-		"""plots a facility and its static features or a timestep."""
-		if ax:
-			new_fig = False
-			ax.set_aspect('equal')
-		else:
-			new_fig = True
-			fig, ax = plt.subplots(1,1,sharex=True,sharey=True)
-		
-		# set up the plot
-		#plt.axes().set_aspect('equal')
-		ax.set_xlim([0,self.length])
-		ax.set_ylim([0,self.width])
-		ax.set_axis_bgcolor('green')
-		ax.set_title(self.name+'\ntimestep:'+str(timestep))
-		ax.set_aspect('equal')
+        return sorted(shapes, key=lambda x: x[0])
 
-		shapes = self.timestep_shapes(timestep)
-		for shape in shapes:
-			shape = shape[1]
-			if shape.feature.visibility==100:
-				geometry = shape.geometry()
-			else:
-				geometry = shape.geometry(timestep=timestep)
+    def plot(self, ax=None, timestep=-1, labels=False, save=False, name='plot.png', virtual=None):
+        """plots a facility and its static features or a timestep."""
+        if ax:
+            new_fig = False
+            ax.set_aspect('equal')
+        else:
+            new_fig = True
+            fig, ax = plt.subplots(1, 1, sharex=True, sharey=True)
 
-			rgb = shape.get_rgb(plotting=True)
-			patch = PolygonPatch(geometry,facecolor=rgb)
-			ax.add_patch(patch)
-			
-			if labels:
-				plt.text(feature.geo.centroid.x,feature.geo.centroid.y,feature.name)
+        # set up the plot
+        # plt.axes().set_aspect('equal')
+        ax.set_xlim([0, self.length])
+        ax.set_ylim([0, self.width])
+        ax.set_axis_bgcolor('green')
+        ax.set_title('Agent: ' + str(self.AgentId) +
+                     '\ntimestep:' + str(timestep))
+        ax.set_aspect('equal')
 
-		plt.tight_layout()
-		
-		if save:
-			plt.savefig(name)
-		
-		if virtual:
-			plt.savefig(virtual,format='png')
-			return virtual
+        shapes = self.timestep_shapes(timestep)
+        for shape in shapes:
+            shape = shape[1]
+            if shape.feature.visibility == 100:
+                geometry = shape.geometry()
+            else:
+                geometry = shape.geometry(timestep=timestep)
 
-		if new_fig:
-			return fig, ax
+            rgb = shape.get_rgb(plotting=True)
+            patch = PolygonPatch(geometry, facecolor=rgb)
+            ax.add_patch(patch)
 
+            if labels:
+                plt.text(feature.geo.centroid.x,
+                         feature.geo.centroid.y, feature.name)
 
-	def gif(self,timesteps,name,fps=1):
-		"""plots a facility and its static features or a timestep."""
-		plt.ioff()
-		plots = list()
-		for step in timesteps:
-			f = io.BytesIO()
-			f = self.plot(timestep=step,virtual=f)
-			plots.append(f)
-			plt.close()
+        plt.tight_layout()
 
-		images = list()
-		for plot in plots:
-			plot.seek(0)
-			images.append(imageio.imread(plot))
-		imageio.mimsave(name+'.gif', images, fps=fps)
-		plt.ion()
+        if save:
+            plt.savefig(name)
+
+        if virtual:
+            plt.savefig(virtual, format='png')
+            return virtual
+
+        if new_fig:
+            return fig, ax
+
+    def gif(self, timesteps, name, fps=1):
+        """plots a facility and its static features or a timestep."""
+        plt.ioff()
+        plots = list()
+        for step in timesteps:
+            f = io.BytesIO()
+            f = self.plot(timestep=step, virtual=f)
+            plots.append(f)
+            plt.close()
+
+        images = list()
+        for plot in plots:
+            plot.seek(0)
+            images.append(imageio.imread(plot))
+        imageio.mimsave(name + '.gif', images, fps=fps)
+        plt.ion()
 
 
 # import imageio
@@ -395,269 +382,273 @@ class Facility(Base):
 #     images.append(imageio.imread(filename))
 # imageio.mimsave('/path/to/movie.gif', images)
 
-Build.facilities = relationship('Facility', order_by=Facility.id,back_populates='build')
-Site.facilities = relationship('Facility', order_by=Facility.id,back_populates='site')
+Build.facilities = relationship(
+    'Facility', order_by=Facility.id, back_populates='build')
 
 
 class Feature(Base):
-	"""Collection of shapes"""
+    """Collection of shapes"""
 
-	__tablename__ = 'CycSat_Feature'
+    __tablename__ = 'CycSat_Feature'
 
-	id = Column(Integer, primary_key=True)
-	name = Column(String)
-	visibility = Column(Integer)
-	prototype = Column(String)
-	rgb = Column(String)
-	level = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    visibility = Column(Integer)
+    prototype = Column(String)
+    rgb = Column(String)
+    level = Column(Integer)
 
-	__mapper_args__ = {'polymorphic_on': prototype}
+    __mapper_args__ = {'polymorphic_on': prototype}
 
-	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Facility, back_populates='features')
+    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+    facility = relationship(Facility, back_populates='features')
 
-	def sorted_events(self):
-		"""Returns a sorted list (by timestep) of events."""
-		events = dict((event.timestep,event) for event in self.events)
-		return events
+    def sorted_events(self):
+        """Returns a sorted list (by timestep) of events."""
+        events = dict((event.timestep, event) for event in self.events)
+        return events
 
-	def footprint(self,placed=True):
-		"""Returns a shapely geometry of the static shapes"""
-		footprint = build_footprint(self,placed)
-		return footprint
+    def footprint(self, placed=True):
+        """Returns a shapely geometry of the static shapes"""
+        footprint = build_footprint(self, placed)
+        return footprint
 
-	def tfootprint(self,location):
-		"""Returns a shapely geometry of the static shapes"""
+    def tfootprint(self, location):
+        """Returns a shapely geometry of the static shapes"""
 
-		locations = list()
-		for shape in self.shapes:
-			locations+=[loc.geometry for loc in shape.locations]
+        locations = list()
+        for shape in self.shapes:
+            locations += [loc.geometry for loc in shape.locations]
 
-		footprint = cascaded_union(locations)
-		return footprint
+        footprint = cascaded_union(locations)
+        return footprint
 
-	def get_rgb(self,plotting=False):
-		"""Returns the RGB be value as a list [RGB] which is stored as text"""
-		try:
-			rgb = ast.literal_eval(self.rgb)
-		except:
-			rgb = self.rgb
+    def get_rgb(self, plotting=False):
+        """Returns the RGB be value as a list [RGB] which is stored as text"""
+        try:
+            rgb = ast.literal_eval(self.rgb)
+        except:
+            rgb = self.rgb
 
-		if plotting:
-			return [x/255 for x in rgb]
-		else:
-			return rgb
+        if plotting:
+            return [x / 255 for x in rgb]
+        else:
+            return rgb
 
-	def depends(self,mask=None):
-		deps = set()
-		for rule in self.rules:
-			if rule.target:
-				deps.add(rule.target)
-		return deps
+    def depends(self, mask=None):
+        deps = set()
+        for rule in self.rules:
+            if rule.target:
+                deps.add(rule.target)
+        return deps
 
-	def eval_rules(self,mask=None):
-		return evaluate_rules(self,mask)
+    def eval_rules(self, mask=None):
+        return evaluate_rules(self, mask)
 
-	def copy(self,session):
-		"""Copies the Feature and all it's related records."""
+    def copy(self, session):
+        """Copies the Feature and all it's related records."""
 
-		copies = {
-			'shapes':list(),
-			'rules':list(),
-			'conditions':list(),
-		}
+        copies = {
+            'shapes': list(),
+            'rules': list(),
+            'conditions': list(),
+        }
 
-		for records in copies.keys():
-			for record in getattr(self,records):
-				copy = record
-				session.expunge(copy)
-				make_transient(copy)
-				copy.id = None
-				copies[records].append(copy)
+        for records in copies.keys():
+            for record in getattr(self, records):
+                copy = record
+                session.expunge(copy)
+                make_transient(copy)
+                copy.id = None
+                copies[records].append(copy)
 
-		session.expunge(self)
-		make_transient(self)
-		self.id = None
-		self.facility_id = None
+        session.expunge(self)
+        make_transient(self)
+        self.id = None
+        self.facility_id = None
 
-		self.shapes = copies['shapes']
-		self.rules = copies['rules']
-		self.condition = copies['conditions']
+        self.shapes = copies['shapes']
+        self.rules = copies['rules']
+        self.condition = copies['conditions']
 
-		return self
+        return self
 
 
-Facility.features = relationship('Feature', order_by=Feature.id,back_populates='facility',
-								 cascade='all, delete, delete-orphan')
+Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
+                                 cascade='all, delete, delete-orphan')
 
 
 class Shape(Base):
-	"""A geometry with condtions and rules"""
-	__tablename__ = 'CycSat_Shape'
+    """A geometry with condtions and rules"""
+    __tablename__ = 'CycSat_Shape'
 
-	id = Column(Integer, primary_key=True)
-	level = Column(Integer,default=0)
-	prototype = Column(String)
-	
-	placed_wkt = Column(String)
-	stable_wkt = Column(String)
+    id = Column(Integer, primary_key=True)
+    level = Column(Integer, default=0)
+    prototype = Column(String)
 
-	material_code = Column(Integer)
-	rgb = Column(String)
+    placed_wkt = Column(String)
+    stable_wkt = Column(String)
 
-	__mapper_args__ = {'polymorphic_on': prototype}
-	
-	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-	feature = relationship(Feature, back_populates='shapes')
+    material_code = Column(Integer)
+    rgb = Column(String)
 
-	def add_location(self,timestep,wkt):
-		loc = Location(timestep=timestep,wkt=self.placed_wkt)
-		self.locations.append(loc)
+    __mapper_args__ = {'polymorphic_on': prototype}
 
-	def get_rgb(self,plotting=False):
-		"""Returns the RGB be value as a list [RGB] which is stored as text"""
-		try:
-			rgb = ast.literal_eval(self.rgb)
-		except:
-			rgb = self.rgb
+    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+    feature = relationship(Feature, back_populates='shapes')
 
-		if plotting:
-			return [x/255 for x in rgb]
-		else:
-			return rgb
+    def add_location(self, timestep, wkt):
+        loc = Location(timestep=timestep, wkt=self.placed_wkt)
+        self.locations.append(loc)
 
-	def geometry(self,placed=True,timestep=None):
-		"""Returns a shapely geometry"""
-		if timestep:
-			locations = [loc for loc in self.locations if loc.timestep==timestep]
-			if locations:
-				return load_wkt(locations[0].wkt)
+    def get_rgb(self, plotting=False):
+        """Returns the RGB be value as a list [RGB] which is stored as text"""
+        try:
+            rgb = ast.literal_eval(self.rgb)
+        except:
+            rgb = self.rgb
 
-		if not self.placed_wkt:
-			geom = self.stable_wkt
-		else:
-			if placed:
-				geom = self.placed_wkt
-			else:
-				geom = self.stable_wkt
+        if plotting:
+            return [x / 255 for x in rgb]
+        else:
+            return rgb
 
-		self.geo = load_wkt(geom)
-		return self.geo
+    def geometry(self, placed=True, timestep=None):
+        """Returns a shapely geometry"""
 
-	def materialize(self):
-		materialize(self)
+        if timestep:
+            locations = [
+                loc for loc in self.locations if loc.timestep == timestep]
+            if locations:
+                return load_wkt(locations[0].wkt)
+
+        if not self.placed_wkt:
+            geom = self.stable_wkt
+        else:
+            if placed:
+                geom = self.placed_wkt
+            else:
+                geom = self.stable_wkt
+
+        self.geo = load_wkt(geom)
+        return self.geo
+
+    def materialize(self):
+        materialize(self)
 
 
-Feature.shapes = relationship('Shape', order_by=Shape.id,back_populates='feature',
-								cascade='all, delete, delete-orphan')
+Feature.shapes = relationship('Shape', order_by=Shape.id, back_populates='feature',
+                              cascade='all, delete, delete-orphan')
 
 
 class Location(Base):
-	"""The geometric/temporal record a Shape at a timestep."""
-	__tablename__ = 'CycSat_Location'
+    """The geometric/temporal record a Shape at a timestep."""
+    __tablename__ = 'CycSat_Location'
 
-	id = Column(Integer, primary_key=True)
-	timestep = Column(Integer,default=0)
-	wkt = Column(String)
-	
-	shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
-	shape = relationship(Shape, back_populates='locations')
+    id = Column(Integer, primary_key=True)
+    timestep = Column(Integer, default=0)
+    wkt = Column(String)
 
-	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
-	simulation = relationship(Simulation, back_populates='locations')
+    shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
+    shape = relationship(Shape, back_populates='locations')
 
-	@property
-	def geometry(self):
-		return load_wkt(self.wkt)
+    simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+    simulation = relationship(Simulation, back_populates='locations')
+
+    @property
+    def geometry(self):
+        return load_wkt(self.wkt)
 
 
-Shape.locations = relationship('Location', order_by=Location.id,back_populates='shape',
-								cascade='all, delete, delete-orphan')
-Simulation.locations = relationship('Location', order_by=Location.id,back_populates='simulation',
-								cascade='all, delete, delete-orphan')
+Shape.locations = relationship('Location', order_by=Location.id, back_populates='shape',
+                               cascade='all, delete, delete-orphan')
+Simulation.locations = relationship('Location', order_by=Location.id, back_populates='simulation',
+                                    cascade='all, delete, delete-orphan')
+
 
 class Condition(Base):
-	"""Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
-	
-	__tablename__ = 'CycSat_Condition'
+    """Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
 
-	id = Column(Integer, primary_key=True)
-	table = Column(String)
-	oper = Column(String)
-	value = Column(Integer)
+    __tablename__ = 'CycSat_Condition'
 
-	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-	feature = relationship(Feature, back_populates='conditions')
+    id = Column(Integer, primary_key=True)
+    table = Column(String)
+    oper = Column(String)
+    value = Column(Integer)
 
-Feature.conditions = relationship('Condition', order_by=Condition.id,back_populates='feature',
-								   cascade='all, delete, delete-orphan')
+    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+    feature = relationship(Feature, back_populates='conditions')
+
+Feature.conditions = relationship('Condition', order_by=Condition.id, back_populates='feature',
+                                  cascade='all, delete, delete-orphan')
 
 
 class Rule(Base):
-	"""Spatial rule for where a feature or shape can appear."""
-	
-	__tablename__ = 'CycSat_Rule'
+    """Spatial rule for where a feature or shape can appear."""
 
-	id = Column(Integer, primary_key=True)
-	oper = Column(String) # e.g. within, disjoint, near etc.
-	target = Column(Integer)
-	value = Column(Integer,default=0)
-	direction = Column(String)
+    __tablename__ = 'CycSat_Rule'
 
-	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-	feature = relationship(Feature, back_populates='rules')
+    id = Column(Integer, primary_key=True)
+    oper = Column(String)  # e.g. within, disjoint, near etc.
+    target = Column(Integer)
+    value = Column(Integer, default=0)
+    direction = Column(String)
+
+    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+    feature = relationship(Feature, back_populates='rules')
+
+    def evaluate(self, placed_features, footprint):
+        evaluation = evaluate_rule(self, placed_features, footprint)
+        return evaluation
+
+    def describe(self):
+        print(self.oper, self.value, self.target, self.direction)
 
 
-	def evaluate(self,placed_features,footprint):
-		evaluation = evaluate_rule(self,placed_features,footprint)
-		return evaluation
-
-	def describe(self):
-		print(self.oper,self.value,self.target,self.direction)
-
-
-Feature.rules = relationship('Rule', order_by=Rule.id,back_populates='feature',
-							 cascade='all, delete, delete-orphan')
+Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
+                             cascade='all, delete, delete-orphan')
 
 
 class Event(Base):
-	"""An instance of a non-static Shape at a facility for a given timestep. Modified
-	by rules."""
+    """An instance of a non-static Shape at a facility for a given timestep. Modified
+    by rules."""
 
-	__tablename__ = 'CycSat_Event'
+    __tablename__ = 'CycSat_Event'
 
-	id = Column(Integer, primary_key=True)
-	timestep = Column(Integer)
-	wkt = Column(String)
+    id = Column(Integer, primary_key=True)
+    timestep = Column(Integer)
+    wkt = Column(String)
 
-	feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-	feature = relationship(Feature,back_populates='events')
+    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+    feature = relationship(Feature, back_populates='events')
 
-	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Facility,back_populates='events')
+    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+    facility = relationship(Facility, back_populates='events')
 
-	simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
-	simulation = relationship(Simulation, back_populates='events')
+    simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
+    simulation = relationship(Simulation, back_populates='events')
 
-Feature.events = relationship('Event',order_by=Event.id,back_populates='feature')
-Facility.events = relationship('Event',order_by=Event.id,back_populates='facility')
-Simulation.events = relationship('Event',order_by=Event.id,back_populates='simulation',
-								  cascade='all, delete, delete-orphan')
+Feature.events = relationship(
+    'Event', order_by=Event.id, back_populates='feature')
+Facility.events = relationship(
+    'Event', order_by=Event.id, back_populates='facility')
+Simulation.events = relationship('Event', order_by=Event.id, back_populates='simulation',
+                                 cascade='all, delete, delete-orphan')
 
 
 class Scene(Base):
-	__tablename__ = 'CycSat_Scene'
+    __tablename__ = 'CycSat_Scene'
 
-	id = Column(Integer, primary_key=True)
-	timestep = Column(Integer)
+    id = Column(Integer, primary_key=True)
+    timestep = Column(Integer)
 
-	facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-	facility = relationship(Facility,back_populates='scenes')
+    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+    facility = relationship(Facility, back_populates='scenes')
 
-	instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
-	instrument = relationship(Instrument, back_populates='scenes')
+    instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
+    instrument = relationship(Instrument, back_populates='scenes')
 
-# Site.scenes = relationship('Scene', order_by=Scene.id,back_populates='site')
-Facility.scenes = relationship('Scene',order_by=Scene.id,back_populates='facility')
-Instrument.scenes = relationship('Scene', order_by=Scene.id,back_populates='instrument')
-
+Facility.scenes = relationship(
+    'Scene', order_by=Scene.id, back_populates='facility')
+Instrument.scenes = relationship(
+    'Scene', order_by=Scene.id, back_populates='instrument')
