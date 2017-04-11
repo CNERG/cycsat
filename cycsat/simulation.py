@@ -33,7 +33,7 @@ Session = sessionmaker()
 
 
 class CycSat(object):
-    """This is the Cycsat simulation object used to manage simulations
+    """This is the Cycsat simulation object used to manage simulations.
     """
 
     def __init__(self, database):
@@ -65,6 +65,23 @@ class CycSat(object):
         if geo:
             df = gpd.GeoDataFrame(df, geometry=geo)
         return df
+
+    def save(self, Entities):
+        """Writes archetype instances to database"""
+        if isinstance(Entities, list):
+            self.session.add_all(Entities)
+        else:
+            self.session.add(Entities)
+        self.session.commit()
+
+    def read(self, sql):
+        """Read SQL query as pandas dataframe"""
+        df = pd.read_sql_query(sql, self.reader)
+        return df
+
+#----------------------------------------------------------------------------------#
+# Properties
+#----------------------------------------------------------------------------------#
 
     @property
     def satellites(self):
@@ -105,19 +122,6 @@ class CycSat(object):
     @property
     def processes(self):
         return self.gen_df(Process)
-
-    def save(self, Entities):
-        """Writes archetype instances to database"""
-        if isinstance(Entities, list):
-            self.session.add_all(Entities)
-        else:
-            self.session.add(Entities)
-        self.session.commit()
-
-    def read(self, sql):
-        """Read SQL query as pandas dataframe"""
-        df = pd.read_sql_query(sql, self.reader)
-        return df
 
     def build(self, name, templates=None, attempts=100):
         """Builds facilities.
@@ -248,7 +252,7 @@ class CycSat(object):
         return fig, axes
 
     def gif(self, sql, timesteps, name, fps=1):
-        """Creates a GIF of these """
+        """Creates a GIF"""
 
         plt.ioff()
         plots = list()

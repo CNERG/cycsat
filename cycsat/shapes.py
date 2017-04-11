@@ -1,8 +1,6 @@
 """
 shapes.py
 """
-
-
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import Column, String
 
