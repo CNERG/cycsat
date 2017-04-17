@@ -40,6 +40,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import make_transient
 
 
+# multiple inheritance for a template library
 Base = declarative_base()
 
 
@@ -181,12 +182,12 @@ class Facility(Base):
     name = Column(String)
     width = Column(Integer)
     length = Column(Integer)
-    terrain = Column(BLOB)
-    prototype = Column(String)
-    template = Column(Boolean, default=True)
     defined = Column(Boolean, default=False)
-    ax_angle = Column(Integer)
+    prototype = Column(String)
+    template = Column(String)
     wkt = Column(String)
+
+    __mapper_args__ = {'polymorphic_on': template}
 
     # __mapper_args__ = {'polymorphic_on': prototype}
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
@@ -387,7 +388,7 @@ class Feature(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    visibility = Column(Integer)
+    visibility = Column(Integer, default=100)
     prototype = Column(String)
     rgb = Column(String)
     level = Column(Integer)
@@ -405,16 +406,6 @@ class Feature(Base):
     def footprint(self, placed=True):
         """Returns a shapely geometry of the static shapes"""
         footprint = build_footprint(self, placed)
-        return footprint
-
-    def tfootprint(self, location):
-        """Returns a shapely geometry of the static shapes"""
-
-        locations = list()
-        for shape in self.shapes:
-            locations += [loc.geometry for loc in shape.locations]
-
-        footprint = cascaded_union(locations)
         return footprint
 
     def get_rgb(self, plotting=False):
@@ -451,12 +442,18 @@ class Feature(Base):
         for records in copies.keys():
             for record in getattr(self, records):
                 copy = record
-                session.expunge(copy)
+                try:
+                    session.expunge(copy)
+                except:
+                    pass
                 make_transient(copy)
                 copy.id = None
                 copies[records].append(copy)
 
-        session.expunge(self)
+        try:
+            session.expunge(self)
+        except:
+            pass
         make_transient(self)
         self.id = None
         self.facility_id = None

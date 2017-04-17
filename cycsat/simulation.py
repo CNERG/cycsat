@@ -32,12 +32,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import make_transient
 
 
-# Session = sessionmaker()
-
-# @property
-
-
-class Interface:
+class Database:
     """Interface for connecting to sqlite database."""
 
     def __init__(self, path, base):
@@ -63,123 +58,53 @@ class Interface:
                 except:
                     continue
 
+    def query(self, sql):
+        """Query the database and return a pandas dataframe."""
+        df = pd.read_sql_query(sql, self.connection)
+        return df
+
+    def save(self, Objects):
+        """Saves objects to the database. Takes a list of a single object."""
+
+        if isinstance(Objects, list):
+            self.session.add_all(Objects)
+        else:
+            self.session.add(Objects)
+        self.session.commit()
+
     def bind_table(self, table_name):
         """Binds a database table to a function for retriving a pandas dataframe view of the database"""
-        def get_table(interface=self, table=table_name, geo=False):
+        def get_table(interface=self, table=table_name, sql=None):
             archetype = interface.archetypes[table_name]
             cols = archetype.__table__.columns.keys()
             data = interface.session.query(archetype).all()
 
             df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
                                for i in data], columns=cols + ['obj'])
-            if geo:
-                df = gpd.GeoDataFrame(df, geometry=geo)
+
+            if 'geometry' in df.columns.tolist():
+                df = df.assign(geometry=df.geometry.apply(load_wkt))
+                df = gpd.GeoDataFrame(df, geometry='geometry')
             return df
+
         get_table.__name__ = table_name
         return get_table
 
 
-class Database(Interface):
+class Simulator(Database):
 
-    def __init__(self, path, base):
-        Interface.__init__(self, path, base)
+    def __init__(self, path, base=archetypes):
+        Database.__init__(self, path, base)
         for table in self.archetypes:
             func = self.bind_table(table)
-            setattr(self, table, func)
+            table_name = table.replace('CycSat_', '')
+            setattr(self, table_name, func)
 
+        # get information about the simulation
+        self.duration = self.query(
+            'SELECT Duration FROM Info')['Duration'][0]
 
-class Simulator(object):
-    """This is the Cycsat simulation object used to manage simulations.
-    """
-
-    def __init__(self, database):
-        """Connects to a CYCLUS database."""
-        global Session
-        global Base
-
-        # connect using SQLAlchemy
-        self.database = database
-        self.engine = create_engine(
-            'sqlite+pysqlite:///' + self.database, module=sqlite3.dbapi2, echo=False)
-        Session.configure(bind=self.engine)
-        self.session = Session()
-        Base.metadata.create_all(self.engine)
-
-        # connect using pandas for querying rules in the database
-        self.reader = sqlite3.connect(self.database)
-        self.duration = pd.read_sql_query(
-            'SELECT Duration FROM Info', self.reader)['Duration'][0]
-
-    def refresh(self):
-        self.__init__(self.database)
-
-    def gen_df(self, Table, geo=None):
-        cols = Table.__table__.columns.keys()
-        records = self.session.query(Table).all()
-        df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
-                           for i in records], columns=cols + ['obj'])
-        if geo:
-            df = gpd.GeoDataFrame(df, geometry=geo)
-        return df
-
-    def save(self, Entities):
-        """Writes archetype instances to database"""
-        if isinstance(Entities, list):
-            self.session.add_all(Entities)
-        else:
-            self.session.add(Entities)
-        self.session.commit()
-
-    def read(self, sql):
-        """Read SQL query as pandas dataframe"""
-        df = pd.read_sql_query(sql, self.reader)
-        return df
-
-#----------------------------------------------------------------------------------#
-# Properties
-#----------------------------------------------------------------------------------#
-
-    @property
-    def satellites(self):
-        return self.gen_df(Satellite)
-
-    @property
-    def missions(self):
-        return self.gen_df(Mission)
-
-    @property
-    def instruments(self):
-        return self.gen_df(Instrument)
-
-    @property
-    def facilities(self):
-        return self.gen_df(Facility)
-
-    @property
-    def features(self):
-        return self.gen_df(Feature)
-
-    @property
-    def shapes(self):
-        return self.gen_df(Shape)
-
-    @property
-    def events(self):
-        return self.gen_df(Event)
-
-    @property
-    def rules(self):
-        return self.gen_df(Rule)
-
-    @property
-    def builds(self):
-        return self.gen_df(Build)
-
-    @property
-    def processes(self):
-        return self.gen_df(Process)
-
-    def build(self, name, templates=None, attempts=100):
+    def build(self, name, templates, attempts=100):
         """Builds facilities.
 
         Keyword arguments:
@@ -187,29 +112,24 @@ class Simulator(object):
         facilities -- (optional) a list of facilities to build, default all
         name -- (optional) name for the build 'Build'
         """
-        # create the build and add the templates
         build = Build(name=name)
-        for prototype in templates:
-            template = templates[prototype]
-            template.prototype = prototype
-            build.facilities.append(template)
         self.save(build)
 
         # get Agents to build
-        AgentEntry = self.read('select * from AgentEntry')
+        AgentEntry = self.query('select * from AgentEntry')
 
         built_facilities = list()
         for agent in AgentEntry.iterrows():
-            prototype = agent[1]['Spec'][10:]
+            prototype = agent[1]['Prototype']
 
             if agent[1]['Kind'] == 'Facility':
+                # template = self.session.query(Facility).filter(Facility.prototype == prototype). \
+                #     filter(Facility.template == True).all()
 
-                template = self.session.query(Facility).filter(Facility.prototype == prototype). \
-                    filter(Facility.template == True).all()
-
-                if template:
-                    facility = self.copy_facility(template[0])
+                if prototype in templates:
+                    facility = templates[prototype]()
                     facility.AgentId = agent[1]['AgentId']
+                    facility.prototype = prototype
                     built_facilities.append(facility)
 
         build.facilities += built_facilities
@@ -218,17 +138,10 @@ class Simulator(object):
         self.session.commit()
 
         facilities = self.session.query(Facility).filter(
-            Facility.template == False).filter(Facility.build_id == build.id).all()
+            Facility.build_id == build.id).all()
         for facility in facilities:
             facility.place_features(timestep=-1, attempts=attempts)
             self.save(facility)
-
-        # delete templates
-        templates = self.session.query(Facility).filter(
-            Facility.template == True).all()
-        for template in templates:
-            self.session.delete(template)
-            self.session.commit()
 
     def simulate(self, build_id, name='None'):
         """Generates events for all facilties"""
@@ -248,25 +161,6 @@ class Simulator(object):
         self.session.add(simulation)
         self.session.commit()
 
-    def copy_facility(self, facility):
-        """Copies a facility template and related rows."""
-
-        features = list()
-        for feature in facility.features:
-            c = feature.copy(self.session)
-            features.append(c)
-
-        copy = facility
-        self.session.expunge(copy)
-        make_transient(copy)
-        copy.id = None
-        copy.template = False
-
-        copy.features = features
-        # self.refresh()
-
-        return copy
-
     def plot(self, sql=None, timestep=-1, virtual=None):
         """Plots facilites that meet a sql query at a given timestep
 
@@ -278,8 +172,7 @@ class Simulator(object):
         if not sql:
             sql = 'AgentId == AgentId'
 
-        facilities = self.facilities.query(sql)
-        facilities = facilities[facilities.template == False]
+        facilities = self.Facility().query(sql)
 
         if len(facilities) == 1:
             fig, ax = facilities.iloc[0].obj.plot(timestep=timestep)
