@@ -23,4 +23,4 @@ db = Simulator('reactor_test_sample.sqlite')
 temps = {'Reactor1': ByronIL,
          'Reactor2': ByronIL}
 
-db.build('name', temps)
+db.build(temps)

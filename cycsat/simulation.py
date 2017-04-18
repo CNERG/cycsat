@@ -104,7 +104,7 @@ class Simulator(Database):
         self.duration = self.query(
             'SELECT Duration FROM Info')['Duration'][0]
 
-    def build(self, name, templates, attempts=100):
+    def build(self, templates, name='untitled', attempts=100):
         """Builds facilities.
 
         Keyword arguments:
@@ -113,35 +113,23 @@ class Simulator(Database):
         name -- (optional) name for the build 'Build'
         """
         build = Build(name=name)
-        self.save(build)
 
         # get Agents to build
         AgentEntry = self.query('select * from AgentEntry')
 
-        built_facilities = list()
         for agent in AgentEntry.iterrows():
             prototype = agent[1]['Prototype']
 
             if agent[1]['Kind'] == 'Facility':
-                # template = self.session.query(Facility).filter(Facility.prototype == prototype). \
-                #     filter(Facility.template == True).all()
-
                 if prototype in templates:
                     facility = templates[prototype]()
                     facility.AgentId = agent[1]['AgentId']
                     facility.prototype = prototype
-                    built_facilities.append(facility)
+                    build.facilities.append(facility)
 
-        build.facilities += built_facilities
-        self.session.expunge(build)
-        self.session.add(build)
-        self.session.commit()
-
-        facilities = self.session.query(Facility).filter(
-            Facility.build_id == build.id).all()
-        for facility in facilities:
-            facility.place_features(timestep=-1, attempts=attempts)
-            self.save(facility)
+        self.save(build)
+        build.assemble(attempts=attempts)
+        self.save(build)
 
     def simulate(self, build_id, name='None'):
         """Generates events for all facilties"""

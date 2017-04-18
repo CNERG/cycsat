@@ -22,9 +22,7 @@ import pandas as pd
 import numpy as np
 
 import copy
-from random import randint
 import operator
-import ast
 
 from shapely.geometry import Polygon, Point, LineString
 from shapely.wkt import loads as load_wkt
@@ -61,6 +59,11 @@ class Build(Base):
     __tablename__ = 'CycSat_Build'
     id = Column(Integer, primary_key=True)
     name = Column(String)
+
+    def assemble(self, attempts=100):
+        """Assembles the build, i.e. places all the features of all the facilities."""
+        for facility in self.facilities:
+            facility.place_features(timestep=-1, attempts=attempts)
 
 
 class Process(Base):
