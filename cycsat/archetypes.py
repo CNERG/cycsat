@@ -183,12 +183,12 @@ class Facility(Base):
     id = Column(Integer, primary_key=True)
     AgentId = Column(Integer)
     name = Column(String)
-    width = Column(Integer)
-    length = Column(Integer)
+    maxx = Column(Integer)
+    maxy = Column(Integer)
     defined = Column(Boolean, default=False)
     prototype = Column(String)
     template = Column(String)
-    wkt = Column(String)
+    geometry = Column(String)
 
     __mapper_args__ = {'polymorphic_on': template}
 
@@ -196,9 +196,10 @@ class Facility(Base):
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='facilities')
 
-    def geometry(self):
-        self.geo = build_geometry(self)
-        return self.geo
+    def bounds(self):
+        geometry = build_geometry(self)
+        self.geometry = geometry.wkt
+        return geometry
 
     def footprint(self):
         return build_footprint(self)
@@ -219,8 +220,6 @@ class Facility(Base):
 
     def dep_graph(self):
         """Returns groups of features based on their dependencies."""
-
-        # create dictionary of features with dependencies
         graph = dict((f.name, f.depends()) for f in self.features)
         name_to_instance = dict((f.name, f) for f in self.features)
 
@@ -327,8 +326,8 @@ class Facility(Base):
 
         # set up the plot
         # plt.axes().set_aspect('equal')
-        ax.set_xlim([0, self.length])
-        ax.set_ylim([0, self.width])
+        ax.set_xlim([0, self.maxx])
+        ax.set_ylim([0, self.maxy])
         ax.set_axis_bgcolor('green')
         ax.set_title('Agent: ' + str(self.AgentId) +
                      '\ntimestep:' + str(timestep))

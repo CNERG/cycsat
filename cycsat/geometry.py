@@ -26,13 +26,10 @@ from shapely.ops import cascaded_union
 
 def build_geometry(Entity):
     """Builds a geometry given an instance."""
-    if Entity.wkt:
-        geometry = load_wkt(Entity.wkt)
+    if Entity.geometry:
+        geometry = load_wkt(Entity.geometry)
     else:
-        width = Entity.width
-        length = Entity.length
-        geometry = Polygon([(0, 0), (0, width), (length, width), (length, 0)])
-
+        geometry = box(0, 0, Entity.maxx, Entity.maxy)
     return geometry
 
 
@@ -216,7 +213,7 @@ def assemble(Facility, timestep=-1, attempts=100):
                 placed_features.append(feature)
                 continue
 
-            footprint = Facility.geometry()
+            footprint = Facility.bounds()
 
             # find geometry of features that could overlap (share the same
             # z-level)
@@ -272,7 +269,8 @@ def list_bearings(Feature):
 
 
 def evaluate_rules(Feature, mask=None):
-    """Evaluates a a feature's rules and returns instructions.
+    """Evaluates a a feature's rules and returns instructions
+    for drawing that feature.
 
     Keyword arguments:
     mask -- the mask of possible areas
@@ -287,6 +285,8 @@ def evaluate_rules(Feature, mask=None):
         # get all the features 'targeted' in the rule
         targets = [feature for feature in Feature.facility.features
                    if (feature.name == rule.target)]
+
+        # use sql instead?
 
         # search the rules of the targets
         target_rules = list()
@@ -392,7 +392,7 @@ def place_feature(Feature, mask=None, build=False, rand=True, location=False, at
     build -- draws from the shapes stable_wkt
     """
     # the center for the facility for a center point for rotation
-    center = Feature.facility.geometry().centroid
+    center = Feature.facility.bounds().centroid
 
     # evalute the rules of the facility
     definition = Feature.eval_rules(mask=mask)

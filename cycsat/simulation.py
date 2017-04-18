@@ -6,12 +6,12 @@ import inspect
 import pandas as pd
 import geopandas as gpd
 
-import matplotlib as plt
-
 from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
 from .archetypes import Base, Satellite, Simulation, Build, Process
 
 import cycsat.archetypes as archetypes
+
+from shapely.wkt import loads as load_wkt
 
 from random import randint
 import os
@@ -23,7 +23,6 @@ from skimage.io import imread
 import imageio
 
 import sqlite3
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from sqlalchemy import text, exists
