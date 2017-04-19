@@ -276,6 +276,7 @@ def evaluate_rules(Feature, mask=None):
     mask -- the mask of possible areas
     """
     results = defaultdict(list)
+    print(Feature.name)
 
     for rule in Feature.rules:
         direction = rule.direction
@@ -295,7 +296,7 @@ def evaluate_rules(Feature, mask=None):
 
         # if the rotate rule has targets use them to align
         if rule.oper == 'ROTATE':
-            rotation = [r.value for r in target_rules if r.oper == 'ROTATE']
+            rotation = [target.rotation for target in targets]
             if rotation:
                 value = rotation[0]
             else:
@@ -402,6 +403,8 @@ def place_feature(Feature, mask=None, build=False, rand=True, location=False, at
         rotate = definition['rotate'][0]
     else:
         rotate = random.randint(-180, 180)
+
+    Feature.rotation = rotate
 
     for i in range(attempts):
         posited_point = posit_point(definition)

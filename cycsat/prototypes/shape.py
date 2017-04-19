@@ -30,7 +30,7 @@ class Circle(Shape):
 class Rectangle(Shape):
     __mapper_args__ = {'polymorphic_identity': 'rectangle'}
 
-    def __init__(self, material_code=None, rgb=[255, 255, 255], width=300, length=400, level=0, xoff=0, yoff=0, rotation=0, visibility=100):
+    def __init__(self, width, length, level=0, xoff=0, yoff=0, rotation=0, visibility=100, material_code=None, rgb=[255, 255, 255]):
         self.width = width
         self.length = length
         self.level = level

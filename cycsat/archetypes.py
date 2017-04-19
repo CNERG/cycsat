@@ -106,7 +106,6 @@ class Satellite(Base):
 
 class Instrument(Base):
     """Parameters for generating a scene"""
-
     __tablename__ = 'CycSat_Instrument'
 
     id = Column(Integer, primary_key=True)
@@ -175,9 +174,35 @@ Satellite.instruments = relationship(
     'Instrument', order_by=Instrument.id, back_populates='satellite')
 
 
+#------------------------------------------------------------------------------
+# OBERVABLES
+#------------------------------------------------------------------------------
+
+# class Observable:
+#     """A high level class for managing objects with geometry and turning
+#     intrumented lists into pandas dataframes."""
+
+#     def bounds(self):
+#         return load_wkt(self.geometry)
+
+#     def footprint(self):
+#         return load_wkt(self.geometry)
+
+#     def _get_children(self, archetype):
+#         cols = archetype.__table__.columns.keys()
+#         data = getattr(self, archetype.__tablename__)
+
+#         df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
+#                            for i in data], columns=cols + ['obj'])
+
+#         if 'geometry' in df.columns.tolist():
+#             df = df.assign(geometry=df.geometry.apply(load_wkt))
+#             df = gpd.GeoDataFrame(df, geometry='geometry')
+#         return df
+
+
 class Facility(Base):
     """A collection of features."""
-
     __tablename__ = 'CycSat_Facility'
 
     id = Column(Integer, primary_key=True)
@@ -325,7 +350,6 @@ class Facility(Base):
             fig, ax = plt.subplots(1, 1, sharex=True, sharey=True)
 
         # set up the plot
-        # plt.axes().set_aspect('equal')
         ax.set_xlim([0, self.maxx])
         ax.set_ylim([0, self.maxy])
         ax.set_axis_bgcolor('green')
@@ -394,6 +418,7 @@ class Feature(Base):
     prototype = Column(String)
     rgb = Column(String)
     level = Column(Integer)
+    rotation = Column(Integer)
 
     __mapper_args__ = {'polymorphic_on': prototype}
 
