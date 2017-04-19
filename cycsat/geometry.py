@@ -276,7 +276,6 @@ def evaluate_rules(Feature, mask=None):
     mask -- the mask of possible areas
     """
     results = defaultdict(list)
-    print(Feature.name)
 
     for rule in Feature.rules:
         direction = rule.direction
@@ -373,9 +372,9 @@ def place(Shape, placement, build=False, center=None, rotation=0):
     shift_y = placed_y - shape_y + yoff
 
     shifted = shift_shape(geometry, xoff=shift_x, yoff=shift_y)
+
     if rotation != 0:
         shifted = rotate(shifted, rotation, origin='center', use_radians=False)
-
     Shape.placed_wkt = shifted.wkt
 
     return Shape

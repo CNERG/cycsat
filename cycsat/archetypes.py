@@ -281,13 +281,13 @@ class Facility(Base):
                 self.defined = False
                 continue
 
-    def simulate(self, simulation, sim, timestep):
+    def simulate(self, Simulator, sim, timestep):
         """Evaluates the conditions for dynamic shapes at a given timestep and
         generates events. All conditions must be True in order for the event to be
         created.
 
         Keyword arguments:
-        simulation -- a cycsat simulation object
+        Simulator -- a cycsat Simulator object
         timestep -- the timestep for simulation
         """
         dynamic_features = [
@@ -299,7 +299,7 @@ class Facility(Base):
             for condition in feature.conditions:
                 qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (
                     condition.table, self.AgentId, timestep)
-                df = pd.read_sql_query(qry, simulation.reader)
+                df = Simulator.query(qry)
                 value = df['Value'][0]
 
                 if operations[condition.oper](value, condition.value):
@@ -317,12 +317,12 @@ class Facility(Base):
                     feature.events.append(event)
                     self.events.append(event)
                     sim.events.append(event)
-                    simulation.save(feature)
+                    Simulator.save(feature)
                 else:
                     continue
 
-        place_features(self, timestep=timestep)
-        simulation.save(self)
+        self.place_features(timestep=timestep)
+        Simulator.save(self)
 
     def timestep_shapes(self, timestep=0):
         """Returns the ordered shapes to draw at a facility for a given timestep."""
@@ -503,12 +503,12 @@ class Shape(Base):
     id = Column(Integer, primary_key=True)
     level = Column(Integer, default=0)
     prototype = Column(String)
-
     placed_wkt = Column(String)
     stable_wkt = Column(String)
-
     material_code = Column(Integer)
     rgb = Column(String)
+    xoff = Column(Integer, default=0)
+    yoff = Column(Integer, default=0)
 
     __mapper_args__ = {'polymorphic_on': prototype}
 

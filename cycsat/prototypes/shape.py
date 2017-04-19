@@ -15,7 +15,7 @@ import geopandas as gpd
 class Circle(Shape):
     __mapper_args__ = {'polymorphic_identity': 'circle'}
 
-    def __init__(self, material_code=None, rgb=[255, 255, 255], radius=400, level=0, xoff=0, yoff=0, rotation=0, visibility=100):
+    def __init__(self, radius, material_code=None, rgb=[255, 255, 255], level=0, xoff=0, yoff=0, rotation=0, visibility=100):
         self.radius = radius
         self.level = level
         self.material_code = material_code
