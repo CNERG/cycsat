@@ -537,53 +537,17 @@ class Feature(Base):
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
-    def evaluate_rules(self, mask=None):
+    def evaluate_rules(self, Simulator, mask=None):
         """Evaluates a a feature's rules and returns instructions
         for drawing that feature.
 
         Keyword arguments:
         mask -- the mask of possible areas
         """
-        results = defaultdict(list)
+        results = {'mask': list(), 'modifier': None}
 
-        for rule in self.rules:
-            direction = rule.direction
-            value = rule.value
-            event = None
-
-            # get all the features 'targeted' in the rule
-            targets = [feature for feature in self.facility.features
-                       if (feature.name == rule.target)]
-
-            # use sql instead?
-
-            # search the rules of the targets
-            target_rules = list()
-            for target in targets:
-                target_rules += target.rules
-
-            # if the rotate rule has targets use them to align
-            if rule.oper == 'ROTATE':
-                rotation = [target.rotation for target in targets]
-                if rotation:
-                    value = rotation[0]
-                else:
-                    value = rule.value
-            else:
-                value = rule.value
-
-            # otherwised merge all the targets
-            target_footprints = [target.footprint(
-                placed=True) for target in targets]
-            target_geometry = cascaded_union(target_footprints)
-
-            if value is None:
-                value = 0
-            result = rules[rule.oper](
-                self, target_geometry, value, direction, event)
-
-            for kind, data in result.items():
-                results[kind].append(data)
+        for rule in self.rules2:
+            results[rule.kind] = rule.run(Simulator)
 
         # combines the results of all the rules
         if results['mask']:
@@ -596,39 +560,39 @@ class Feature(Base):
 
         return results
 
-    def copy(self, session):
-        """Copies the Feature and all it's related records."""
+    # def copy(self, session):
+    #     """Copies the Feature and all it's related records."""
 
-        copies = {
-            'shapes': list(),
-            'rules': list(),
-            'conditions': list(),
-        }
+    #     copies = {
+    #         'shapes': list(),
+    #         'rules': list(),
+    #         'conditions': list(),
+    #     }
 
-        for records in copies.keys():
-            for record in getattr(self, records):
-                copy = record
-                try:
-                    session.expunge(copy)
-                except:
-                    pass
-                make_transient(copy)
-                copy.id = None
-                copies[records].append(copy)
+    #     for records in copies.keys():
+    #         for record in getattr(self, records):
+    #             copy = record
+    #             try:
+    #                 session.expunge(copy)
+    #             except:
+    #                 pass
+    #             make_transient(copy)
+    #             copy.id = None
+    #             copies[records].append(copy)
 
-        try:
-            session.expunge(self)
-        except:
-            pass
-        make_transient(self)
-        self.id = None
-        self.facility_id = None
+    #     try:
+    #         session.expunge(self)
+    #     except:
+    #         pass
+    #     make_transient(self)
+    #     self.id = None
+    #     self.facility_id = None
 
-        self.shapes = copies['shapes']
-        self.rules = copies['rules']
-        self.condition = copies['conditions']
+    #     self.shapes = copies['shapes']
+    #     self.rules = copies['rules']
+    #     self.condition = copies['conditions']
 
-        return self
+    #     return self
 
 
 Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
