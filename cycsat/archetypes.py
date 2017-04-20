@@ -202,7 +202,7 @@ Satellite.instruments = relationship(
 
 
 class Facility(Base):
-    """A collection of features."""
+    """A collection of features on a collection of terrains."""
     __tablename__ = 'CycSat_Facility'
 
     id = Column(Integer, primary_key=True)
@@ -434,18 +434,6 @@ class Feature(Base):
         """Returns a shapely geometry of the static shapes"""
         footprint = build_footprint(self, placed)
         return footprint
-
-    def get_rgb(self, plotting=False):
-        """Returns the RGB be value as a list [RGB] which is stored as text"""
-        try:
-            rgb = ast.literal_eval(self.rgb)
-        except:
-            rgb = self.rgb
-
-        if plotting:
-            return [x / 255 for x in rgb]
-        else:
-            return rgb
 
     def depends(self, mask=None):
         deps = set()
