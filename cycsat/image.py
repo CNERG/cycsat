@@ -5,8 +5,6 @@ import shapely
 import json
 import ast
 
-from .geometry import place
-
 from skimage.transform import resize, downscale_local_mean
 from skimage.draw import polygon
 from shapely.geometry import Polygon, Point
@@ -52,20 +50,20 @@ class Sensor(object):
         """Resets the capture array to the background array"""
         self.foreground = self.background.copy()
 
-    def focus(self, Facility):
-        """Shifts all the shapes of a facility to be aligned with 
-        an instrument's center"""
+    # def focus(self, Facility):
+    #     """Shifts all the shapes of a facility to be aligned with
+    #     an instrument's center"""
 
-        self.Facility = Facility
-        self.shapes = []
-        for feature in Facility.features:
-            for shape in feature.shapes:
-                self.shapes.append(shape)
+    #     self.Facility = Facility
+    #     self.shapes = []
+    #     for feature in Facility.features:
+    #         for shape in feature.shapes:
+    #             self.shapes.append(shape)
 
-        cross_hairs = self.ifov.centroid
+    #     cross_hairs = self.ifov.centroid
 
-        for shape in self.shapes:
-            place(shape, cross_hairs, Facility)
+    #     for shape in self.shapes:
+    #         place(shape, cross_hairs, Facility)
 
     def calibrate(self, Facility, method='normal'):
         """Generates a sensor with all the static shapes"""
