@@ -80,6 +80,22 @@ def posit_point(definition, attempts=1000):
     return False
 
 
+def posit_point2(bounds, attempts=1000):
+    """Generates a random point within a mask."""
+    x_min, y_min, x_max, y_max = mask.bounds
+
+    for i in range(attempts):
+        x = random.uniform(x_min, x_max + 1)
+        y = random.uniform(y_min, y_max + 1)
+        posited_point = Point(x, y)
+
+        if posited_point.within(mask):
+            return posited_point
+
+    print('point placement failed after {', attempts, '} attempts.')
+    return Point(0, 0)
+
+
 def line_func(line, precision=1):
     """Returns a list of coords for a staight line given end coords"""
     start, end = list(line.coords)
@@ -99,155 +115,27 @@ def line_func(line, precision=1):
 #------------------------------------------------------------------------------
 
 
-def axf(m, x, b, invert=False):
-    """Returns a LineString that represents a linear function."""
-    if invert:
-        return ((-1 / m) * x) + b
-    return (m * x) + b
+# def axf(m, x, b, invert=False):
+#     """Returns a LineString that represents a linear function."""
+#     if invert:
+#         return ((-1 / m) * x) + b
+#     return (m * x) + b
 
 
-def area_ratio(polygons):
-    """Returns the area ratio of two polygons"""
-    poly1 = polygons[0].area
-    poly2 = polygons[1].area
-    return poly1 / (poly1 + poly2)
+# # this is for creating terrain
+# def site_axis(Facility):
+#     """Generates a site axis."""
+#     site_axis = LineString([[-maxx, maxy / 2], [maxx * 2, maxy / 2]])
+#     rotate(site_axis, random.randint(-180, 180))
 
+#     # # create a site axis
+#     # site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
 
-def create_plan(Site, attempts=100):
-    """Creates a random layout for all the features of a facility and 
-    gives each feature a placed geometry
+#     # site_rotation = random.randint(-180,180)
+#     # site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
+#     # Facility.ax_angle = site_rotation
 
-    Keyword arguments:
-    attempts -- the maximum number attempts to be made
-    """
-    Site.build_geometry()
-    facilities = Site.facilities
-
-    for facility in facilities:
-        placed = place_facility(facility, Site.footprint)
-        if placed:
-            continue
-        else:
-            print('site plan failed')
-
-
-# this is for creating terrain
-def site_axis(Facility):
-    """Generates a site axis."""
-    site_axis = LineString([[-maxx, maxy / 2], [maxx * 2, maxy / 2]])
-    rotate(site_axis, random.randint(-180, 180))
-
-    # # create a site axis
-    # site_axis = LineString([[-maxx,maxy/2],[maxx*2,maxy/2]])
-
-    # site_rotation = random.randint(-180,180)
-    # site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-    # Facility.ax_angle = site_rotation
-
-    return site_axis
-
-
-#------------------------------------------------------------------------------
-# FACILITY CONSTRUCTION
-#------------------------------------------------------------------------------
-
-
-def dep_graph(features):
-    """Groups features based on dependencies."""
-
-    # create dictionary of features with dependencies
-    graph = dict((f.name, f.depends()) for f in features)
-    name_to_instance = dict((f.name, f) for f in features)
-
-    # where to store the batches
-    batches = list()
-
-    while graph:
-            # Get all features with no dependencies
-        ready = {name for name, deps in graph.items() if not deps}
-
-        if not ready:
-            msg = "Circular dependencies ofeatures found.\n"
-            raise ValueError(msg)
-
-        # Remove them from the dependency graph
-        for name in ready:
-            graph.pop(name)
-        for deps in graph.values():
-            deps.difference_update(ready)
-
-        # Add the batch to the list
-        batches.append([name_to_instance[name] for name in ready])
-
-    return batches
-
-
-def assemble(Facility, Simulator, timestep=-1, attempts=100):
-    """Assembles all the Features of a Facility according to their Rules.
-
-    Keyword arguments:
-    timestep -- the timestep of the Facility to draw
-    attempts -- the max # of attempts to place a feature
-    """
-    # determine which features to draw (by timestep) and creates a set of ids
-    if timestep > -1:
-        feature_ids = set()
-        events = [event for event in Facility.events if event.timestep == timestep]
-        for event in events:
-            feature_ids.add(event.feature.id)
-        if not feature_ids:
-            return True
-    else:
-        feature_ids = [
-            feature.id for feature in Facility.features if feature.visibility == 100]
-
-    # create dependency groups
-    dep_grps = Facility.dep_graph(Simulator)
-
-    # store placed features
-    placed_features = list()
-
-    for group in dep_grps:
-        for feature in group:
-            if feature.id not in feature_ids:
-                placed_features.append(feature)
-                continue
-
-            footprint = Facility.bounds()
-
-            # find geometry of features that could overlap (share the same
-            # z-level)
-            overlaps = [feat.footprint()
-                        for feat in placed_features if feat.level == feature.level]
-            overlaps = cascaded_union(overlaps)
-
-            # mask out placed features that could overlap
-            footprint = footprint.difference(overlaps)
-
-            # place the feature
-            placed = place_feature(
-                feature, footprint, attempts=attempts, build=True)
-
-            # if placement fails, the assemble fails
-            if not placed:
-                return False
-
-            placed_features.append(feature)
-            for shape in feature.shapes:
-                shape.add_location(timestep, shape.placed_wkt)
-
-    # if no Features fail then assembly succeeds
-    return True
-
-
-def rotate_facility(Facility, degrees=None):
-    """Rotates all the features of a facility."""
-    if not degrees:
-        degrees = random.randint(-180, 180) + 0.01
-
-    for feature in Facility.features:
-        rotate_feature(feature, degrees, Facility.geometry().centroid)
-
+#     return site_axis
 
 #------------------------------------------------------------------------------
 # FEATURE PLACEMENT
@@ -268,72 +156,72 @@ def list_bearings(Feature):
     return [N, E, S, W]
 
 
-def evaluate_rules(Feature, mask=None):
-    """Evaluates a a feature's rules and returns instructions
-    for drawing that feature.
+# def evaluate_rules(Feature, mask=None):
+#     """Evaluates a a feature's rules and returns instructions
+#     for drawing that feature.
 
-    Keyword arguments:
-    mask -- the mask of possible areas
-    """
-    results = defaultdict(list)
+#     Keyword arguments:
+#     mask -- the mask of possible areas
+#     """
+#     results = defaultdict(list)
 
-    for rule in Feature.rules:
-        direction = rule.direction
-        value = rule.value
-        event = None
+#     for rule in Feature.rules:
+#         direction = rule.direction
+#         value = rule.value
+#         event = None
 
-        # get all the features 'targeted' in the rule
-        targets = [feature for feature in Feature.facility.features
-                   if (feature.name == rule.target)]
+#         # get all the features 'targeted' in the rule
+#         targets = [feature for feature in Feature.facility.features
+#                    if (feature.name == rule.target)]
 
-        # use sql instead?
+#         # use sql instead?
 
-        # search the rules of the targets
-        target_rules = list()
-        for target in targets:
-            target_rules += target.rules
+#         # search the rules of the targets
+#         target_rules = list()
+#         for target in targets:
+#             target_rules += target.rules
 
-        # if the rotate rule has targets use them to align
-        if rule.oper == 'ROTATE':
-            rotation = [target.rotation for target in targets]
-            if rotation:
-                value = rotation[0]
-            else:
-                value = rule.value
-        else:
-            value = rule.value
+#         # if the rotate rule has targets use them to align
+#         if rule.oper == 'ROTATE':
+#             rotation = [target.rotation for target in targets]
+#             if rotation:
+#                 value = rotation[0]
+#             else:
+#                 value = rule.value
+#         else:
+#             value = rule.value
 
-        # if the rule is self-targeted get the event for placement info
-        if rule.target == "%self%":
-            lag = 0
-            if '%lag' in rule.value:
-                lag = rule.value.split('=')[-1]
-            value = rule.value - lag
-            event = rule.feature.sorted_events()[value]
+#         # # if the rule is self-targeted get the event for placement info
+#         # if rule.target == "%self%":
+#         #     lag = 0
+#         #     if '%lag' in rule.value:
+#         #         lag = rule.value.split('=')[-1]
+#         #     value = rule.value - lag
+#         #     event = rule.feature.sorted_events()[value]
 
-        # otherwised merge all the targets
-        target_footprints = [target.footprint(
-            placed=True) for target in targets]
-        target_geometry = cascaded_union(target_footprints)
+#         # otherwised merge all the targets
+#         target_footprints = [target.footprint(
+#             placed=True) for target in targets]
+#         target_geometry = cascaded_union(target_footprints)
 
-        if value is None:
-            value = 0
-        result = rules[rule.oper](
-            Feature, target_geometry, value, direction, event)
+#         if value is None:
+#             value = 0
+#         result = rules[rule.oper](
+#             Feature, target_geometry, value, direction, event)
 
-        for kind, data in result.items():
-            results[kind].append(data)
+#         for kind, data in result.items():
+#             results[kind].append(data)
 
-    # combines the results of all the rules
-    if results['mask']:
-        combined_mask = mask
-        for m in results['mask']:
-            combined_mask = combined_mask.intersection(m)
-        results['mask'] = combined_mask
-    else:
-        results['mask'] = mask
+#     # combines the results of all the rules
+#     if results['mask']:
+#         combined_mask = mask
+#         for m in results['mask']:
+#             combined_mask = combined_mask.intersection(m)
+#         results['mask'] = combined_mask
+#     else:
+#         results['mask'] = mask
 
-    return results
+#     return results
 
 
 def rotate_feature(Feature, rotation, center='center'):
@@ -429,42 +317,21 @@ def place_feature(Feature, mask=None, build=False, rand=True, location=False, at
     return False
 
 
-def placement_bounds(facility_footprint, placed_features):
-    """Takes a list of placed features and a facility footprint 
-    and generates a geometry of all possible locations to be placed."""
+# def placement_bounds(facility_footprint, placed_features):
+#     """Takes a list of placed features and a facility footprint
+#     and generates a geometry of all possible locations to be placed."""
 
-    placed_footprints = list()
-    for feature in placed_features:
-        feature_footprint = build_footprint(feature)
-        placed_footprints.append(feature_footprint)
+#     placed_footprints = list()
+#     for feature in placed_features:
+#         feature_footprint = build_footprint(feature)
+#         placed_footprints.append(feature_footprint)
 
-    # this needs to discriminate between within features and not
+#     # this needs to discriminate between within features and not
 
-    union_footprints = cascaded_union(placed_footprints)
-    bounds = facility_footprint.difference(union_footprints)
+#     union_footprints = cascaded_union(placed_footprints)
+#     bounds = facility_footprint.difference(union_footprints)
 
-    return bounds
-
-
-def place_facility(Facility, geometry, attempts=100):
-    """Places a facility within a site geometry and checks typology"""
-
-    attempts = 0
-    while attempts < attempts:
-
-        posited_point = posit_point(geometry)
-
-        place(Facility, posited_point)
-        placement = Facility.geometry()
-        typology_check = placement.within(geometry)
-
-        if typology_check:
-            return True
-        else:
-            attempts += 1
-
-    print(Facility.id, 'facility placement failed after', attempts, 'attempts.')
-    return False
+#     return bounds
 
 
 #------------------------------------------------------------------------------

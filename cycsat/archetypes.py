@@ -4,6 +4,7 @@ archetypes.py
 import ast
 import random
 import io
+from collections import defaultdict
 
 import imageio
 import tempfile
@@ -12,9 +13,9 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import assemble, place
+from .geometry import place, place_feature
 from .geometry import build_geometry, build_footprint, near_rule, line_func
-from .geometry import rotate_facility, evaluate_rules
+from .geometry import rotate_feature, posit_point, rules
 
 from .laboratory import materialize
 
@@ -206,8 +207,13 @@ class Facility(Base):
     def footprint(self):
         return build_footprint(self)
 
-    def rotate(self, degrees):
-        rotate_facility(self, degrees)
+    def rotate(self, degrees=None):
+        """Rotates all the features of a facility."""
+        if not degrees:
+            degrees = random.randint(-180, 180) + 0.01
+
+        for feature in self.features:
+            rotate_feature(feature, degrees, self.bounds().centroid)
 
     def axis(self):
         if self.ax_angle:
@@ -246,11 +252,69 @@ class Facility(Base):
         # Return the list of batches
         return batches
 
+    def assemble(self, Simulator, timestep=-1, attempts=100):
+        """Assembles all the Features of a Facility according to their Rules.
+
+        Keyword arguments:
+        timestep -- the timestep of the Facility to draw
+        attempts -- the max # of attempts to place a feature
+        """
+        # determine which features to draw (by timestep)
+        if timestep > -1:
+            feature_ids = set()
+            events = [
+                event for event in self.events if event.timestep == timestep]
+            for event in events:
+                feature_ids.add(event.feature.id)
+            if not feature_ids:
+                return True
+        else:
+            feature_ids = [
+                feature.id for feature in self.features if feature.visibility == 100]
+
+        # create dependency groups
+        dep_grps = self.dep_graph(Simulator)
+
+        # store placed features
+        placed_features = list()
+
+        for group in dep_grps:
+            for feature in group:
+                if feature.id not in feature_ids:
+                    placed_features.append(feature)
+                    continue
+
+                footprint = self.bounds()
+
+                # find geometry of features that could overlap (share the same
+                # z-level)
+                overlaps = [feat.footprint()
+                            for feat in placed_features if feat.level == feature.level]
+                overlaps = cascaded_union(overlaps)
+
+                # mask out placed features that could overlap
+                footprint = footprint.difference(overlaps)
+
+                # place the feature
+                placed = feature.place_feature(
+                    footprint, attempts=attempts, build=True)
+
+                # if placement fails, the assemble fails
+                if not placed:
+                    return False
+
+                placed_features.append(feature)
+                for shape in feature.shapes:
+                    shape.add_location(timestep, shape.placed_wkt)
+
+        # if no Features fail then assembly succeeds
+        return True
+
     def place_features(self, Simulator, timestep=-1, attempts=100):
         """Places all the features of a facility according to their rules
         and events at the provided timestep."""
         for x in range(attempts):
-            result = assemble(self, Simulator, timestep, attempts)
+            result = self.assemble(Simulator, timestep, attempts)
             if result:
                 self.defined = True
                 return True
@@ -427,8 +491,119 @@ class Feature(Base):
                 all_deps.add(d)
         return all_deps
 
-    def eval_rules(self, mask=None):
-        return evaluate_rules(self, mask)
+    def place_feature(self, mask=None, build=False, rand=True, location=False, attempts=100):
+        """Places a feature within a geometry and checks typology of shapes
+
+        Keyword arguments:
+        self -- feature to place
+        bounds -- containing bounds
+        random -- if 'True', placement is random, else Point feaure is required
+        location -- centroid location to place self
+        attempts -- the maximum number attempts to be made
+        build -- draws from the shapes stable_wkt
+        """
+        # the center for the facility for a center point for rotation
+        center = self.facility.bounds().centroid
+
+        # evalute the rules of the facility
+        definition = self.evaluate_rules(mask=mask)
+        mask = definition['mask']
+
+        if 'rotate' in definition:
+            rotate = definition['rotate'][0]
+        else:
+            rotate = random.randint(-180, 180)
+
+        self.rotation = rotate
+
+        for i in range(attempts):
+            posited_point = posit_point(definition)
+            if not posited_point:
+                return False
+
+            placed_shapes = list()
+            typology_checks = list()
+            for shape in self.shapes:
+
+                place(shape, posited_point, build, center, rotation=rotate)
+                placement = shape.geometry()
+
+                placed_shapes.append(placement)
+                typology_checks.append(placement.within(mask))
+
+            if False not in typology_checks:
+                self.wkt = cascaded_union(placed_shapes).wkt
+                return True
+
+        print(self.name, 'placement failed after {', attempts, '} attempts.')
+        return False
+
+    def evaluate_rules(self, mask=None):
+        """Evaluates a a feature's rules and returns instructions
+        for drawing that feature.
+
+        Keyword arguments:
+        mask -- the mask of possible areas
+        """
+        results = defaultdict(list)
+
+        for rule in self.rules:
+            direction = rule.direction
+            value = rule.value
+            event = None
+
+            # get all the features 'targeted' in the rule
+            targets = [feature for feature in self.facility.features
+                       if (feature.name == rule.target)]
+
+            # use sql instead?
+
+            # search the rules of the targets
+            target_rules = list()
+            for target in targets:
+                target_rules += target.rules
+
+            # if the rotate rule has targets use them to align
+            if rule.oper == 'ROTATE':
+                rotation = [target.rotation for target in targets]
+                if rotation:
+                    value = rotation[0]
+                else:
+                    value = rule.value
+            else:
+                value = rule.value
+
+            # # if the rule is self-targeted get the event for placement info
+            # if rule.target == "%self%":
+            #     lag = 0
+            #     if '%lag' in rule.value:
+            #         lag = rule.value.split('=')[-1]
+            #     value = rule.value - lag
+            #     event = rule.feature.sorted_events()[value]
+
+            # otherwised merge all the targets
+            target_footprints = [target.footprint(
+                placed=True) for target in targets]
+            target_geometry = cascaded_union(target_footprints)
+
+            if value is None:
+                value = 0
+            result = rules[rule.oper](
+                self, target_geometry, value, direction, event)
+
+            for kind, data in result.items():
+                results[kind].append(data)
+
+        # combines the results of all the rules
+        if results['mask']:
+            combined_mask = mask
+            for m in results['mask']:
+                combined_mask = combined_mask.intersection(m)
+            results['mask'] = combined_mask
+        else:
+            results['mask'] = mask
+
+        return results
 
     def copy(self, session):
         """Copies the Feature and all it's related records."""
@@ -610,6 +785,9 @@ class Rule2(Base):
     feature = relationship(Feature, back_populates='rule2s')
 
     def depends_on(self, Simulator):
+        """Finds any features at the same Facility that match the
+        pattern of the rule"""
+
         df = Simulator.Feature()
         return df[(df.name.str.startswith(self.pattern)) & (df.facility_id == self.feature.facility_id)]
 
