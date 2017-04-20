@@ -29,21 +29,22 @@ class WITHIN(Rule):
         return {'mask': mask.buffer(int(self.value))}
 
 
-# class ROTATE(Rule):
-#     __mapper_args__ = {'polymorphic_identity': 'ROTATE'}
+class ROTATE(Rule):
+    __mapper_args__ = {'polymorphic_identity': 'ROTATE'}
 
-#     def __init__(self, pattern=None, value=0):
-#         """Returns a Feature by "placing it."""
-#         self.kind = 'modifier'
-#         self.name = 'ROTATE'
-#         self.pattern = pattern
-#         self.value = value
+    def __init__(self, pattern=None, value=0):
+        """Returns a Feature by "placing it."""
+        self.kind = 'modifier'
+        self.name = 'ROTATE'
+        self.pattern = pattern
+        self.value = value
 
-#     def run(self, Simulator):
-#         # get the first found target
-#         if pattern
-#             targets = self.depends_on(Simulator)['obj'].tolist()
-#             if not targets:
-#                 return self.feature
+    def run(self, Simulator):
+        # get the first found target
+        if self.pattern:
+            targets = self.depends_on(Simulator)['obj'].tolist()
+            if not targets:
+                self.feature.rotation = self.value
+                return self.feature.rotate_feature()
 
-#         return None
+        return None
