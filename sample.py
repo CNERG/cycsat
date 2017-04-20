@@ -11,8 +11,9 @@ copyfile(src, dst)
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
 from cycsat.simulation import Simulator
-from cycsat.archetypes import Facility, Feature, Shape, Rule
+from cycsat.archetypes import Facility, Feature, Shape, Rule, Rule2
 from cycsat.prototypes.ByronIL import ByronIL
+from cycsat.prototypes.rule import WITHIN
 
 #------------------------------------------------------------------------
 # Define a Reactor
@@ -20,7 +21,14 @@ from cycsat.prototypes.ByronIL import ByronIL
 
 db = Simulator('reactor_test_sample.sqlite')
 
-temps = {'Reactor1': ByronIL,
-         'Reactor2': ByronIL}
+# temps = {'Reactor1': ByronIL,
+#          'Reactor2': ByronIL}
 
-db.build(temps)
+# db.build(temps)
+
+fac = Facility()
+fac.maxx = 1000
+fac.maxy = 1000
+feat = Feature()
+feat.rule2s.append(WITHIN(value='WITHIN'))
+fac.features.append(feat)

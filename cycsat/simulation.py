@@ -59,6 +59,21 @@ class Database:
 
     def query(self, sql):
         """Query the database and return a pandas dataframe."""
+        if 'CycSat_' in sql:
+            print(sql)
+            table = sql[sql.find('FROM') + 5:].split(' ')[0]
+            archetype = self.archetypes[table]
+            cols = archetype.__table__.columns.keys()
+            data = self.session.query(archetype).all()
+
+            df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
+                               for i in data], columns=cols + ['obj'])
+
+            if 'geometry' in df.columns.tolist():
+                df = df.assign(geometry=df.geometry.apply(load_wkt))
+                df = gpd.GeoDataFrame(df, geometry='geometry')
+            return df
+
         df = pd.read_sql_query(sql, self.connection)
         return df
 
@@ -71,22 +86,13 @@ class Database:
             self.session.add(Objects)
         self.session.commit()
 
-    def bind_table(self, table_name):
+    def bind_table(self, table):
         """Binds a database table to a function for retriving a pandas dataframe view of the database"""
-        def get_table(interface=self, table=table_name, sql=None):
-            archetype = interface.archetypes[table_name]
-            cols = archetype.__table__.columns.keys()
-            data = interface.session.query(archetype).all()
+        def get_table(table=table, interface=self, ):
+            sql = 'SELECT * FROM ' + table
+            return interface.query(sql)
 
-            df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
-                               for i in data], columns=cols + ['obj'])
-
-            if 'geometry' in df.columns.tolist():
-                df = df.assign(geometry=df.geometry.apply(load_wkt))
-                df = gpd.GeoDataFrame(df, geometry='geometry')
-            return df
-
-        get_table.__name__ = table_name
+        get_table.__name__ = table
         return get_table
 
 
@@ -99,7 +105,7 @@ class Simulator(Database):
             table_name = table.replace('CycSat_', '')
             setattr(self, table_name, func)
 
-        # get information about the simulation
+            # get information about the simulation
         self.duration = self.query(
             'SELECT Duration FROM Info')['Duration'][0]
 

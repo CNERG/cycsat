@@ -208,12 +208,12 @@ class Facility(Base):
     id = Column(Integer, primary_key=True)
     AgentId = Column(Integer)
     name = Column(String)
-    maxx = Column(Integer)
-    maxy = Column(Integer)
+    maxx = Column(Integer, default=1000)
+    maxy = Column(Integer, default=1000)
     defined = Column(Boolean, default=False)
     prototype = Column(String)
     template = Column(String)
-    geometry = Column(String)
+    #geometry = Column(String)
 
     __mapper_args__ = {'polymorphic_on': template}
 
@@ -616,19 +616,22 @@ class Rule2(Base):
     id = Column(Integer, primary_key=True)
     # this is the name of the function of the Rule object to apply to itself
     name = Column(String)
+    order = Column(Integer)
     target_sql = Column(Integer)
+
     __mapper_args__ = {'polymorphic_on': name}
 
     feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
     feature = relationship(Feature, back_populates='rule2s')
 
+    def get_targets(self, db):
+        df = target_sql
+
+    def evaluate(self):
+        return self.run()
+
 Feature.rule2s = relationship('Rule2', order_by=Rule2.id, back_populates='feature',
                               cascade='all, delete, delete-orphan')
-
-
-# class RuleDefinition(Rule2):
-#     """The user (or default) rule function to
-#     """
 
 
 class Event(Base):
