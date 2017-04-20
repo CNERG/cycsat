@@ -2,6 +2,10 @@ from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 import random
 
+# -----------------------------------------------------------------------------------------------
+# Site and feature definitions
+# -----------------------------------------------------------------------------------------------
+
 
 class ByronIL(Facility):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL'}
@@ -72,22 +76,6 @@ class ContainmentSupport(Feature):
         ]
 
 
-# class TriadBuilding(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.TriadBuilding'}
-
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 1
-#         self.shapes = [
-#             Rectangle(700, 100),
-#             Rectangle(700, 100, xoff=200)]
-
-#         self.rules = [
-#             Rule(target='concrete pad', oper='WITHIN'),
-#             Rule(target='concrete pad', oper='ROTATE', value=100)
-#         ]
-
-
 class ParkingLot(Feature):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
 
@@ -137,3 +125,13 @@ class Truck(Feature):
         self.rules = [
             Rule(target='parking lot', oper='WITHIN')
         ]
+
+
+# -----------------------------------------------------------------------------------------------
+# Spatial Rule defintions
+# -----------------------------------------------------------------------------------------------
+
+
+# -----------------------------------------------------------------------------------------------
+# Condition defintions
+# -----------------------------------------------------------------------------------------------

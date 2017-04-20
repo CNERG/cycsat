@@ -245,7 +245,7 @@ class Facility(Base):
 
     def dep_graph(self):
         """Returns groups of features based on their dependencies."""
-        graph = dict((f.name, f.depends()) for f in self.features)
+        graph = dict((f.name, f.depends_on()) for f in self.features)
         name_to_instance = dict((f.name, f) for f in self.features)
 
         # where to store the batches
@@ -435,7 +435,7 @@ class Feature(Base):
         footprint = build_footprint(self, placed)
         return footprint
 
-    def depends(self, mask=None):
+    def depends_on(self, mask=None):
         deps = set()
         for rule in self.rules:
             if rule.target:
@@ -603,20 +603,36 @@ class Rule(Base):
     feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
     feature = relationship(Feature, back_populates='rules')
 
-    def evaluate(self, placed_features, footprint):
-        evaluation = evaluate_rule(self, placed_features, footprint)
-        return evaluation
-
-    def describe(self):
-        print(self.oper, self.value, self.target, self.direction)
-
 
 Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
                              cascade='all, delete, delete-orphan')
 
 
+class Rule2(Base):
+    """Spatial rule for where a feature or shape can appear."""
+
+    __tablename__ = 'CycSat_Rule2'
+
+    id = Column(Integer, primary_key=True)
+    # this is the name of the function of the Rule object to apply to itself
+    name = Column(String)
+    target_sql = Column(Integer)
+    __mapper_args__ = {'polymorphic_on': name}
+
+    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
+    feature = relationship(Feature, back_populates='rule2s')
+
+Feature.rule2s = relationship('Rule2', order_by=Rule2.id, back_populates='feature',
+                              cascade='all, delete, delete-orphan')
+
+
+# class RuleDefinition(Rule2):
+#     """The user (or default) rule function to
+#     """
+
+
 class Event(Base):
-    """An instance of a non-static Shape at a facility for a given timestep. Modified
+    """An instance of a non - static Shape at a facility for a given timestep. Modified
     by rules."""
 
     __tablename__ = 'CycSat_Event'
