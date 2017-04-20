@@ -13,9 +13,8 @@ from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 from .image import Sensor
-from .geometry import place, place_feature
 from .geometry import build_geometry, build_footprint, near_rule, line_func
-from .geometry import rotate_feature, posit_point, rules
+from .geometry import posit_point, rules
 
 from .laboratory import materialize
 
@@ -525,7 +524,7 @@ class Feature(Base):
             typology_checks = list()
             for shape in self.shapes:
 
-                place(shape, posited_point, build, center, rotation=rotate)
+                shape.place(posited_point, build, center, rotation=rotate)
                 placement = shape.geometry()
 
                 placed_shapes.append(placement)
@@ -572,14 +571,6 @@ class Feature(Base):
                     value = rule.value
             else:
                 value = rule.value
-
-            # # if the rule is self-targeted get the event for placement info
-            # if rule.target == "%self%":
-            #     lag = 0
-            #     if '%lag' in rule.value:
-            #         lag = rule.value.split('=')[-1]
-            #     value = rule.value - lag
-            #     event = rule.feature.sorted_events()[value]
 
             # otherwised merge all the targets
             target_footprints = [target.footprint(
@@ -701,6 +692,42 @@ class Shape(Base):
 
     def materialize(self):
         materialize(self)
+
+    def place(self, placement, build=False, center=None, rotation=0):
+        """Places a self to a coordinate position.
+
+        Keyword arguments:
+        build -- draws from the shapes the stable_wkt rather than placed 
+        """
+        placed_x = placement.coords.xy[0][0]
+        placed_y = placement.coords.xy[1][0]
+
+        if build:
+            geometry = self.geometry(placed=False)
+        else:
+            geometry = self.geometry(placed=True)
+
+        shape_x = geometry.centroid.coords.xy[0][0]
+        shape_y = geometry.centroid.coords.xy[1][0]
+
+        try:
+            xoff = self.xoff
+            yoff = self.yoff
+        except:
+            xoff = 0
+            yoff = 0
+
+        shift_x = placed_x - shape_x + xoff
+        shift_y = placed_y - shape_y + yoff
+
+        shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
+
+        if rotation != 0:
+            shifted = rotate(shifted, rotation,
+                             origin='center', use_radians=False)
+        self.placed_wkt = shifted.wkt
+
+        return self
 
 
 Feature.shapes = relationship('Shape', order_by=Shape.id, back_populates='feature',
