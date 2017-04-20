@@ -504,7 +504,7 @@ class Feature(Base):
         # the center for the facility for a center point for rotation
         center = self.facility.bounds().centroid
 
-        # evalute the rules of the facility
+        # evalute the rules of the feature
         definition = self.evaluate_rules(mask=mask)
         mask = definition['mask']
 
@@ -544,7 +544,7 @@ class Feature(Base):
         Keyword arguments:
         mask -- the mask of possible areas
         """
-        results = {'mask': list(), 'modifier': None}
+        results = {'mask': list(), 'modifier': None, 'rotate': 0}
 
         for rule in self.rules2:
             results[rule.kind] = rule.run(Simulator)
