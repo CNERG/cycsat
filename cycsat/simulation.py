@@ -160,24 +160,23 @@ class Simulator(Database):
         facilities = self.Facility().query(sql)
 
         if len(facilities) == 1:
-            fig, ax = facilities.iloc[0].obj.plot(timestep=timestep)
-            return fig, ax
+            fig, axes = facilities.iloc[0].obj.plot(timestep=timestep)
+        else:
+            # find the factors
+            factors = set()
+            for i in range(1, len(facilities) + 1):
+                if len(facilities) % i == 0:
+                    factors.add(i)
 
-        # find the factors
-        factors = set()
-        for i in range(1, len(facilities) + 1):
-            if len(facilities) % i == 0:
-                factors.add(i)
+            # figure out the dimensions for the plot
+            factors = list(factors)
+            cols = factors[round(len(factors) / 2) - 1]
+            rows = int(len(facilities) / cols)
 
-        # figure out the dimensions for the plot
-        factors = list(factors)
-        cols = factors[round(len(factors) / 2) - 1]
-        rows = int(len(facilities) / cols)
+            fig, axes = plt.subplots(cols, rows)  # len(facilities))
 
-        fig, axes = plt.subplots(cols, rows)  # len(facilities))
-
-        for ax, facility in zip(axes.flatten(), facilities.iterrows()):
-            facility[1].obj.plot(ax=ax, timestep=timestep)
+            for ax, facility in zip(axes.flatten(), facilities.iterrows()):
+                facility[1].obj.plot(ax=ax, timestep=timestep)
 
         if virtual:
             plt.savefig(virtual, format='png')
@@ -192,13 +191,14 @@ class Simulator(Database):
         plots = list()
         for step in timesteps:
             f = io.BytesIO()
-            f = self.plot(sql=sql, timestep=step, virtual=f)
-            plots.append(f)
+            b = self.plot(sql=sql, timestep=step, virtual=f)
+            plots.append(b)
             plt.close()
 
         images = list()
         for plot in plots:
             plot.seek(0)
-            images.append(imageio.imread(plot))
+            image = imageio.imread(plot)
+            images.append(image)
         imageio.mimsave(name + '.gif', images, fps=fps)
         plt.ion()
