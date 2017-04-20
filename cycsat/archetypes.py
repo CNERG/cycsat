@@ -60,10 +60,10 @@ class Build(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
-    def assemble(self, attempts=100):
+    def assemble(self, Simulator, attempts=100):
         """Assembles the build, i.e. places all the features of all the facilities."""
         for facility in self.facilities:
-            facility.place_features(timestep=-1, attempts=attempts)
+            facility.place_features(Simulator, timestep=-1, attempts=attempts)
 
 
 class Process(Base):
@@ -178,29 +178,6 @@ Satellite.instruments = relationship(
 # OBERVABLES
 #------------------------------------------------------------------------------
 
-# class Observable:
-#     """A high level class for managing objects with geometry and turning
-#     intrumented lists into pandas dataframes."""
-
-#     def bounds(self):
-#         return load_wkt(self.geometry)
-
-#     def footprint(self):
-#         return load_wkt(self.geometry)
-
-#     def _get_children(self, archetype):
-#         cols = archetype.__table__.columns.keys()
-#         data = getattr(self, archetype.__tablename__)
-
-#         df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
-#                            for i in data], columns=cols + ['obj'])
-
-#         if 'geometry' in df.columns.tolist():
-#             df = df.assign(geometry=df.geometry.apply(load_wkt))
-#             df = gpd.GeoDataFrame(df, geometry='geometry')
-#         return df
-
-
 class Facility(Base):
     """A collection of features on a collection of terrains."""
     __tablename__ = 'CycSat_Facility'
@@ -243,9 +220,9 @@ class Facility(Base):
             print('This facility has not been built. Use the build() method \n'
                   'before creating the axis.')
 
-    def dep_graph(self):
+    def dep_graph(self, Simulator):
         """Returns groups of features based on their dependencies."""
-        graph = dict((f.name, f.depends_on()) for f in self.features)
+        graph = dict((f.name, f.depends_on2(Simulator)) for f in self.features)
         name_to_instance = dict((f.name, f) for f in self.features)
 
         # where to store the batches
@@ -269,11 +246,11 @@ class Facility(Base):
         # Return the list of batches
         return batches
 
-    def place_features(self, timestep=-1, attempts=100):
+    def place_features(self, Simulator, timestep=-1, attempts=100):
         """Places all the features of a facility according to their rules
         and events at the provided timestep."""
         for x in range(attempts):
-            result = assemble(self, timestep, attempts)
+            result = assemble(self, Simulator, timestep, attempts)
             if result:
                 self.defined = True
                 return True
@@ -441,6 +418,14 @@ class Feature(Base):
             if rule.target:
                 deps.add(rule.target)
         return deps
+
+    def depends_on2(self, Simulator):
+        all_deps = set()
+        for rule in self.rule2s:
+            deps = rule.depends_on(Simulator)
+            for d in deps['name'].tolist():
+                all_deps.add(d)
+        return all_deps
 
     def eval_rules(self, mask=None):
         return evaluate_rules(self, mask)
@@ -616,19 +601,21 @@ class Rule2(Base):
     id = Column(Integer, primary_key=True)
     # this is the name of the function of the Rule object to apply to itself
     name = Column(String)
-    order = Column(Integer)
-    target_sql = Column(Integer)
+    pattern = Column(String)
+    value = Column(String)
 
     __mapper_args__ = {'polymorphic_on': name}
 
     feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
     feature = relationship(Feature, back_populates='rule2s')
 
-    def get_targets(self, db):
-        df = target_sql
+    def depends_on(self, Simulator):
+        df = Simulator.Feature()
+        return df[(df.name.str.startswith(self.pattern)) & (df.facility_id == self.feature.facility_id)]
 
-    def evaluate(self):
-        return self.run()
+    def evaluate(self, Simulator):
+        features = Simulator.query('SELECT * FROM CycSat_Feature WHERE ' + sql)
+        return self.run(Simulator, features)
 
 Feature.rule2s = relationship('Rule2', order_by=Rule2.id, back_populates='feature',
                               cascade='all, delete, delete-orphan')

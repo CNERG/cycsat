@@ -79,7 +79,6 @@ class Database:
 
     def save(self, Objects):
         """Saves objects to the database. Takes a list of a single object."""
-
         if isinstance(Objects, list):
             self.session.add_all(Objects)
         else:
@@ -133,7 +132,7 @@ class Simulator(Database):
                     build.facilities.append(facility)
 
         self.save(build)
-        build.assemble(attempts=attempts)
+        build.assemble(self, attempts=attempts)
         self.save(build)
 
     def simulate(self, build_id, name='None'):

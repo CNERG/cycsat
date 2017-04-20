@@ -21,14 +21,7 @@ from cycsat.prototypes.rule import WITHIN
 
 db = Simulator('reactor_test_sample.sqlite')
 
-# temps = {'Reactor1': ByronIL,
-#          'Reactor2': ByronIL}
+temps = {'Reactor1': ByronIL,
+         'Reactor2': ByronIL}
 
-# db.build(temps)
-
-fac = Facility()
-fac.maxx = 1000
-fac.maxy = 1000
-feat = Feature()
-feat.rule2s.append(WITHIN(value='WITHIN'))
-fac.features.append(feat)
+db.build(temps)

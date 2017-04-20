@@ -26,9 +26,9 @@ from shapely.ops import cascaded_union
 
 def build_geometry(Entity):
     """Builds a geometry given an instance."""
-    if Entity.geometry:
+    try:
         geometry = load_wkt(Entity.geometry)
-    else:
+    except:
         geometry = box(0, 0, Entity.maxx, Entity.maxy)
     return geometry
 
@@ -182,7 +182,7 @@ def dep_graph(features):
     return batches
 
 
-def assemble(Facility, timestep=-1, attempts=100):
+def assemble(Facility, Simulator, timestep=-1, attempts=100):
     """Assembles all the Features of a Facility according to their Rules.
 
     Keyword arguments:
@@ -202,7 +202,7 @@ def assemble(Facility, timestep=-1, attempts=100):
             feature.id for feature in Facility.features if feature.visibility == 100]
 
     # create dependency groups
-    dep_grps = Facility.dep_graph()
+    dep_grps = Facility.dep_graph(Simulator)
 
     # store placed features
     placed_features = list()
@@ -324,6 +324,7 @@ def evaluate_rules(Feature, mask=None):
         for kind, data in result.items():
             results[kind].append(data)
 
+    # combines the results of all the rules
     if results['mask']:
         combined_mask = mask
         for m in results['mask']:
