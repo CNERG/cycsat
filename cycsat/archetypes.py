@@ -456,7 +456,6 @@ class Feature(Base):
     name = Column(String)
     visibility = Column(Integer, default=100)
     prototype = Column(String)
-    rgb = Column(String)
     level = Column(Integer)
     rotation = Column(Integer, default=0)
 
