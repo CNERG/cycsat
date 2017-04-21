@@ -9,6 +9,8 @@ from shapely.ops import cascaded_union
 from shapely.affinity import translate
 from shapely.affinity import rotate
 
+import random
+
 # masks return possible locations, modifiers return modified shapes to place
 
 
@@ -50,8 +52,13 @@ class ROTATE(Rule):
         #         self.feature.rotation = self.value
         #         return self.feature.rotate_feature()
 
+        if self.value == 'random':
+            angle = self.rotation = random.randint(-180, 180)
+        else:
+            angle = self.value
+
         for shape in self.feature.shapes:
-            geometry = shape.geometry()
-            rotated = rotate(geometry, self.value,
+            geometry = shape.geometry(placed=True)
+            rotated = rotate(geometry, 45,
                              origin='center', use_radians=False)
             shape.placed_wkt = rotated.wkt
