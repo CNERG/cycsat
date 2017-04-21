@@ -16,7 +16,7 @@ from .image import Sensor
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import posit_point, rules, posit_point2
 
-from .laboratory import materialize
+# from .laboratory import materialize
 
 import pandas as pd
 import numpy as np
@@ -293,6 +293,7 @@ class Facility(Base):
                 # mask out placed features that could overlap
                 footprint = footprint.difference(overlaps)
 
+                print(feature.name)
                 # place the feature
                 placed = feature.place_feature(Simulator,
                                                mask=footprint, attempts=attempts, build=True)
@@ -483,7 +484,7 @@ class Feature(Base):
 
     def depends_on2(self, Simulator):
         all_deps = set()
-        for rule in self.rule2s:
+        for rule in self.rules:
             deps = rule.depends_on(Simulator)
             for d in deps['name'].tolist():
                 all_deps.add(d)
@@ -511,7 +512,7 @@ class Feature(Base):
         # evalute the rules of the feature to determine the mask
         mask = self.evaluate_rules(Simulator, mask=mask)
         mods = [rule.run(Simulator)
-                for rule in self.rule2s if rule.kind == 'modifier']
+                for rule in self.rules if rule.kind == 'modifier']
 
         for i in range(attempts):
             posited_point = posit_point2(mask)
@@ -544,7 +545,7 @@ class Feature(Base):
         mask -- the mask of possible areas
         """
         results = [rule.run(Simulator)
-                   for rule in self.rule2s if rule.kind == 'mask']
+                   for rule in self.rules if rule.kind == 'mask']
 
         # combines the results of all the rules
         if results:
@@ -556,40 +557,6 @@ class Feature(Base):
             results = mask
 
         return results
-
-    # def copy(self, session):
-    #     """Copies the Feature and all it's related records."""
-
-    #     copies = {
-    #         'shapes': list(),
-    #         'rules': list(),
-    #         'conditions': list(),
-    #     }
-
-    #     for records in copies.keys():
-    #         for record in getattr(self, records):
-    #             copy = record
-    #             try:
-    #                 session.expunge(copy)
-    #             except:
-    #                 pass
-    #             make_transient(copy)
-    #             copy.id = None
-    #             copies[records].append(copy)
-
-    #     try:
-    #         session.expunge(self)
-    #     except:
-    #         pass
-    #     make_transient(self)
-    #     self.id = None
-    #     self.facility_id = None
-
-    #     self.shapes = copies['shapes']
-    #     self.rules = copies['rules']
-    #     self.condition = copies['conditions']
-
-    #     return self
 
 
 Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
@@ -738,29 +705,63 @@ Feature.conditions = relationship('Condition', order_by=Condition.id, back_popul
                                   cascade='all, delete, delete-orphan')
 
 
+class Material(Base):
+    """A material of a shape. Shapes can have many materials in many mass quantitites."""
+
+    __tablename__ = 'CycSat_Material'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    mass = Column(Integer, default=0)
+
+    shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
+    shape = relationship(Shape, back_populates='materials')
+
+    __mapper_args__ = {'polymorphic_on': name}
+
+    def plot(self):
+        sample = self.measure()
+
+        std = sample.describe().reflectance.loc['std']
+        top = sample.describe().reflectance.loc['75%']
+        bottom = sample.describe().reflectance.loc['25%']
+
+        df = sample[(sample.reflectance > bottom) & (sample.reflectance < top)]
+        if len(df) == 0:
+            df = sample
+        ax = df.plot(x='wavelength', y='reflectance')
+        ax.set_title(self.name)
+        return ax
+
+    def measure(self):
+        try:
+            return self.observe()
+
+        except:
+            try:
+                rgb = self.shape.get_rgb()
+            except:
+                rgb = [random.randint(0, 255) for i in range(3)]
+
+            wavelength = (np.arange(281) / 100) + 0.20
+            reflectance = np.zeros(281)
+            reflectance[(wavelength >= 0.64) & (wavelength <= 0.67)] = rgb[0]
+            reflectance[(wavelength >= 0.53) & (wavelength <= 0.59)] = rgb[1]
+            reflectance[(wavelength >= 0.45) & (wavelength <= 0.51)] = rgb[2]
+            std = np.zeros(281)
+
+            return pd.DataFrame({'wavelength': wavelength,
+                                 'reflectance': reflectance,
+                                 'std': std})
+
+Shape.materials = relationship('Material', order_by=Material.id, back_populates='shape',
+                               cascade='all, delete, delete-orphan')
+
+
 class Rule(Base):
     """Spatial rule for where a feature or shape can appear."""
 
     __tablename__ = 'CycSat_Rule'
-
-    id = Column(Integer, primary_key=True)
-    oper = Column(String)  # e.g. within, disjoint, near etc.
-    target = Column(Integer)
-    value = Column(Integer, default=0)
-    direction = Column(String)
-
-    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='rules')
-
-
-Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
-                             cascade='all, delete, delete-orphan')
-
-
-class Rule2(Base):
-    """Spatial rule for where a feature or shape can appear."""
-
-    __tablename__ = 'CycSat_Rule2'
 
     id = Column(Integer, primary_key=True)
     # this is the name of the function of the Rule object to apply to itself
@@ -772,21 +773,16 @@ class Rule2(Base):
     __mapper_args__ = {'polymorphic_on': name}
 
     feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='rule2s')
+    feature = relationship(Feature, back_populates='rules')
 
     def depends_on(self, Simulator):
         """Finds any features at the same Facility that match the
         pattern of the rule"""
-
         df = Simulator.Feature()
         return df[(df.name.str.startswith(self.pattern)) & (df.facility_id == self.feature.facility_id)]
 
-    def evaluate(self, Simulator):
-        features = Simulator.query('SELECT * FROM CycSat_Feature WHERE ' + sql)
-        return self.run(Simulator, features)
-
-Feature.rule2s = relationship('Rule2', order_by=Rule2.id, back_populates='feature',
-                              cascade='all, delete, delete-orphan')
+Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
+                             cascade='all, delete, delete-orphan')
 
 
 class Event(Base):
@@ -816,19 +812,19 @@ Simulation.events = relationship('Event', order_by=Event.id, back_populates='sim
                                  cascade='all, delete, delete-orphan')
 
 
-class Scene(Base):
-    __tablename__ = 'CycSat_Scene'
+# class Scene(Base):
+#     __tablename__ = 'CycSat_Scene'
 
-    id = Column(Integer, primary_key=True)
-    timestep = Column(Integer)
+#     id = Column(Integer, primary_key=True)
+#     timestep = Column(Integer)
 
-    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-    facility = relationship(Facility, back_populates='scenes')
+#     facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
+#     facility = relationship(Facility, back_populates='scenes')
 
-    instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
-    instrument = relationship(Instrument, back_populates='scenes')
+#     instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
+#     instrument = relationship(Instrument, back_populates='scenes')
 
-Facility.scenes = relationship(
-    'Scene', order_by=Scene.id, back_populates='facility')
-Instrument.scenes = relationship(
-    'Scene', order_by=Scene.id, back_populates='instrument')
+# Facility.scenes = relationship(
+#     'Scene', order_by=Scene.id, back_populates='facility')
+# Instrument.scenes = relationship(
+#     'Scene', order_by=Scene.id, back_populates='instrument')

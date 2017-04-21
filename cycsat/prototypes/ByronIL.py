@@ -1,6 +1,6 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN, ROTATE
+from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -17,12 +17,12 @@ class ByronIL(Facility):
         self.maxy = 700 * 10
 
         self.features = [
-            ConcretePad('concrete pad'),
+            #ConcretePad('concrete pad'),
             CoolingTower('cooling tower 1'),
             # Containment('containment'),
             #ContainmentSupport('containment support 1', 500, 500),
             #ContainmentSupport('containment support 2', 500, 700),
-            #ParkingLot('parking lot'),
+            ParkingLot('parking lot'),
             #Plume('plume 1')
         ]
 
@@ -39,7 +39,7 @@ class ConcretePad(Feature):
         self.name = name
         self.shapes = [Rectangle(4000, 4000, rgb='[209,209,209]')]
 
-        self.rule2s = [ROTATE(value='random')]
+        self.rules = [ROTATE()]
 
 
 class CoolingTower(Feature):
@@ -48,10 +48,10 @@ class CoolingTower(Feature):
     def __init__(self, name):
         self.name = name
         self.level = 1
-        self.shapes = [Circle(radius=750, rgb='[96, 96, 96]')]
-        self.rules = [Rule(target='concrete pad', oper='WITHIN')]
+        self.shapes = [Circle(radius=350, rgb='[88, 88, 88]', level=1),
+                       Circle(radius=750, rgb='[96, 96, 96]', level=0)]
 
-        self.rule2s = [WITHIN(pattern='concrete')]
+        self.rules = [WITHIN(pattern='concrete')]
 
 
 # class Containment(Feature):
@@ -81,20 +81,19 @@ class CoolingTower(Feature):
 #         ]
 
 
-# class ParkingLot(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
+class ParkingLot(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 1
-#         self.shapes = [
-#             Rectangle(1000, 800, rgb='[150,150,150]'),
-#         ]
-#         self.rules = [
-#             Rule(target='concrete pad', oper='WITHIN'),
-#             Rule(target='cooling tower 1', oper='NEAR', value=400),
-#             Rule(target='concrete pad', oper='ROTATE', value=100)
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 1
+        self.shapes = [
+            Rectangle(1000, 800, rgb='[150,150,150]'),
+        ]
+        self.rules = [WITHIN(pattern='concrete pad'),
+                      ROTATE(pattern='concrete pad'),
+                      NEAR(pattern='cooling tower', value=0)
+                      ]
 
 
 # class Plume(Feature):

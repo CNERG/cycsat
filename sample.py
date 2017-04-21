@@ -11,9 +11,8 @@ copyfile(src, dst)
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
 from cycsat.simulation import Simulator
-from cycsat.archetypes import Facility, Feature, Shape, Rule, Rule2
 from cycsat.prototypes.ByronIL import ByronIL
-from cycsat.prototypes.rule import WITHIN
+from cycsat.laboratory import USGSMaterial
 
 #------------------------------------------------------------------------
 # Define a Reactor
@@ -25,3 +24,5 @@ temps = {'Reactor1': ByronIL,
          'Reactor2': ByronIL}
 
 db.build(temps)
+
+m = USGSMaterial('whitebark-pine_ynp-wb-1.30869.asc')
