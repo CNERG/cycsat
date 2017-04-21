@@ -80,7 +80,7 @@ def posit_point(definition, attempts=1000):
     return False
 
 
-def posit_point2(bounds, attempts=1000):
+def posit_point2(mask, attempts=1000):
     """Generates a random point within a mask."""
     x_min, y_min, x_max, y_max = mask.bounds
 
@@ -93,7 +93,7 @@ def posit_point2(bounds, attempts=1000):
             return posited_point
 
     print('point placement failed after {', attempts, '} attempts.')
-    return Point(0, 0)
+    return False
 
 
 def line_func(line, precision=1):

@@ -6,6 +6,8 @@ a mask of location it can be placed.
 """
 from cycsat.archetypes import Rule2 as Rule
 from shapely.ops import cascaded_union
+from shapely.affinity import translate
+from shapely.affinity import rotate
 
 # masks return possible locations, modifiers return modified shapes to place
 
@@ -26,7 +28,7 @@ class WITHIN(Rule):
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 
-        return {'mask': mask.buffer(int(self.value))}
+        return mask.buffer(int(self.value))
 
 
 class ROTATE(Rule):
@@ -41,10 +43,15 @@ class ROTATE(Rule):
 
     def run(self, Simulator):
         # get the first found target
-        if self.pattern:
-            targets = self.depends_on(Simulator)['obj'].tolist()
-            if not targets:
-                self.feature.rotation = self.value
-                return self.feature.rotate_feature()
 
-        return None
+        # if self.pattern:
+        #     targets = self.depends_on(Simulator)['obj'].tolist()
+        #     if not targets:
+        #         self.feature.rotation = self.value
+        #         return self.feature.rotate_feature()
+
+        for shape in self.feature.shapes:
+            geometry = shape.geometry()
+            rotated = rotate(geometry, self.value,
+                             origin='center', use_radians=False)
+            shape.placed_wkt = rotated.wkt
