@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import build_geometry, build_footprint, near_rule, line_func
-from .geometry import posit_point, rules
+from .geometry import posit_point, rules, posit_point2
 
 from .laboratory import materialize
 
@@ -200,7 +200,6 @@ class Facility(Base):
 
     def bounds(self):
         geometry = build_geometry(self)
-        self.geometry = geometry.wkt
         return geometry
 
     def footprint(self):
@@ -295,8 +294,8 @@ class Facility(Base):
                 footprint = footprint.difference(overlaps)
 
                 # place the feature
-                placed = feature.place_feature(
-                    footprint, attempts=attempts, build=True)
+                placed = feature.place_feature(Simulator,
+                                               mask=footprint, attempts=attempts, build=True)
 
                 # if placement fails, the assemble fails
                 if not placed:
@@ -490,7 +489,7 @@ class Feature(Base):
                 all_deps.add(d)
         return all_deps
 
-    def place_feature(self, mask=None, build=False, rand=True, location=False, attempts=100):
+    def place_feature(self, Simulator, mask=None, build=False, rand=True, location=False, attempts=100):
         """Places a feature within a geometry and checks typology of shapes
 
         Keyword arguments:
@@ -505,18 +504,18 @@ class Feature(Base):
         center = self.facility.bounds().centroid
 
         # evalute the rules of the feature
-        definition = self.evaluate_rules(mask=mask)
-        mask = definition['mask']
+        definition = self.evaluate_rules(Simulator, mask=mask)
+        mask = definition
 
-        if 'rotate' in definition:
-            rotate = definition['rotate'][0]
-        else:
-            rotate = random.randint(-180, 180)
+        # if 'rotate' in definition:
+        #     rotate = definition['rotate'][0]
+        # else:
+        #     rotate = random.randint(-180, 180)
 
-        self.rotation = rotate
+        self.rotation = 0
 
         for i in range(attempts):
-            posited_point = posit_point(definition)
+            posited_point = posit_point2(definition)
             if not posited_point:
                 return False
 
@@ -524,7 +523,8 @@ class Feature(Base):
             typology_checks = list()
             for shape in self.shapes:
 
-                shape.place(posited_point, build, center, rotation=rotate)
+                shape.place(posited_point, build, center,
+                            rotation=self.rotation)
                 placement = shape.geometry()
 
                 placed_shapes.append(placement)
@@ -544,19 +544,17 @@ class Feature(Base):
         Keyword arguments:
         mask -- the mask of possible areas
         """
-        results = {'mask': list(), 'modifier': None, 'rotate': 0}
-
-        for rule in self.rules2:
-            results[rule.kind] = rule.run(Simulator)
+        results = [rule.run(Simulator)
+                   for rule in self.rule2s if rule.kind == 'mask']
 
         # combines the results of all the rules
-        if results['mask']:
+        if results:
             combined_mask = mask
-            for m in results['mask']:
+            for m in results:
                 combined_mask = combined_mask.intersection(m)
-            results['mask'] = combined_mask
+            results = combined_mask
         else:
-            results['mask'] = mask
+            results = mask
 
         return results
 
@@ -767,6 +765,7 @@ class Rule2(Base):
     id = Column(Integer, primary_key=True)
     # this is the name of the function of the Rule object to apply to itself
     name = Column(String)
+    kind = Column(String)
     pattern = Column(String)
     value = Column(String)
 
