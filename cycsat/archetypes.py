@@ -190,7 +190,7 @@ class Facility(Base):
     defined = Column(Boolean, default=False)
     prototype = Column(String)
     template = Column(String)
-    #geometry = Column(String)
+    # geometry = Column(String)
 
     __mapper_args__ = {'polymorphic_on': template}
 
@@ -457,7 +457,7 @@ class Feature(Base):
     prototype = Column(String)
     rgb = Column(String)
     level = Column(Integer)
-    rotation = Column(Integer)
+    rotation = Column(Integer, default=0)
 
     __mapper_args__ = {'polymorphic_on': prototype}
 
@@ -503,19 +503,18 @@ class Feature(Base):
         # the center for the facility for a center point for rotation
         center = self.facility.bounds().centroid
 
-        # evalute the rules of the feature
-        definition = self.evaluate_rules(Simulator, mask=mask)
-        mask = definition
+        # if building set reset the placement geometry
+        if build:
+            for shape in self.shapes:
+                shape.placed_wkt = shape.stable_wkt
 
-        # if 'rotate' in definition:
-        #     rotate = definition['rotate'][0]
-        # else:
-        #     rotate = random.randint(-180, 180)
-
-        self.rotation = 0
+        # evalute the rules of the feature to determine the mask
+        mask = self.evaluate_rules(Simulator, mask=mask)
+        mods = [rule.run(Simulator)
+                for rule in self.rule2s if rule.kind == 'modifier']
 
         for i in range(attempts):
-            posited_point = posit_point2(definition)
+            posited_point = posit_point2(mask)
             if not posited_point:
                 return False
 
@@ -523,8 +522,7 @@ class Feature(Base):
             typology_checks = list()
             for shape in self.shapes:
 
-                shape.place(posited_point, build, center,
-                            rotation=self.rotation)
+                shape.place(posited_point, build, center)
                 placement = shape.geometry()
 
                 placed_shapes.append(placement)
@@ -532,6 +530,7 @@ class Feature(Base):
 
             if False not in typology_checks:
                 self.wkt = cascaded_union(placed_shapes).wkt
+                Simulator.save(self)
                 return True
 
         print(self.name, 'placement failed after {', attempts, '} attempts.')
@@ -655,19 +654,20 @@ class Shape(Base):
     def materialize(self):
         materialize(self)
 
-    def place(self, placement, build=False, center=None, rotation=0):
+    def place(self, placement, build=False, center=None):  # , rotation=0):
         """Places a self to a coordinate position.
 
         Keyword arguments:
-        build -- draws from the shapes the stable_wkt rather than placed 
+        build -- draws from the shapes the stable_wkt rather than placed
         """
         placed_x = placement.coords.xy[0][0]
         placed_y = placement.coords.xy[1][0]
 
-        if build:
-            geometry = self.geometry(placed=False)
-        else:
-            geometry = self.geometry(placed=True)
+        # if build:
+        #     geometry = self.geometry(placed=False)
+        # else:
+        #     geometry = self.geometry(placed=True)
+        geometry = self.geometry(placed=True)
 
         shape_x = geometry.centroid.coords.xy[0][0]
         shape_y = geometry.centroid.coords.xy[1][0]
@@ -684,9 +684,9 @@ class Shape(Base):
 
         shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
 
-        if rotation != 0:
-            shifted = rotate(shifted, rotation,
-                             origin='center', use_radians=False)
+        # if rotation != 0:
+        #     shifted = rotate(shifted, rotation,
+        #                      origin='center', use_radians=False)
         self.placed_wkt = shifted.wkt
 
         return self

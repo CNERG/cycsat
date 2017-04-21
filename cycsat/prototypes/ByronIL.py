@@ -1,6 +1,6 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN
+from cycsat.prototypes.rule import WITHIN, ROTATE
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -38,6 +38,8 @@ class ConcretePad(Feature):
     def __init__(self, name):
         self.name = name
         self.shapes = [Rectangle(4000, 4000, rgb='[209,209,209]')]
+
+        self.rule2s = [ROTATE(value='random')]
 
 
 class CoolingTower(Feature):
