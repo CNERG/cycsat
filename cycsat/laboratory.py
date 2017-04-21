@@ -4,6 +4,8 @@ laboratory.py
 import pandas as pd
 import numpy as np
 
+from cycsat.archetypes import Material
+
 import os
 import ast
 
@@ -21,7 +23,22 @@ Library = pd.DataFrame(samples,
                        columns=['path', 'subdir', 'name']).sort_values('name')
 
 
-class Material(object):
+class USGSMaterial(Material):
+
+    def __init__(self, name, mass=1):
+        self.name = name
+        self.mass = mass
+
+    def observe(self):
+        global Library
+        path = Library[Library['name'] == self.name]['path'].iloc[0]
+        df = pd.read_table(path, sep='\s+', skiprows=16, header=None,
+                           names=['wavelength', 'reflectance', 'std'])
+
+        return df
+
+
+class Material2(object):
     """Material object"""
 
     def __init__(self, material_code=None, rgb=None):
@@ -44,44 +61,44 @@ class Material(object):
             self.df = pd.read_table(self.name, sep='\s+', skiprows=16, header=None,
                                     names=['wavelength', 'reflectance', 'std'])
 
-    def measure(self, wl_min=None, wl_max=None, wavelength=None, window=1, estimate=True):
-        """Looks up the nearest reflectance by wavelength
+    # def measure(self, wl_min=None, wl_max=None, wavelength=None, window=1, estimate=True):
+    #     """Looks up the nearest reflectance by wavelength
 
-        Keyword arguments:
-        wl_min -- minimum wavelength
-        wl_max -- maximum wavelength
-        wavelength -- specific wavelength to estimate
-        window -- number of records around the specific wavelength
-        estimate -- will use model error using the material std
-        """
-        df = self.df
-        if wavelength:
-            nearest = df.ix[
-                (df.wavelength - wavelength).abs().argsort()[:window]]
-        else:
-            nearest = df[(df.wavelength >= wl_min) & (df.wavelength <= wl_max)]
+    #     Keyword arguments:
+    #     wl_min -- minimum wavelength
+    #     wl_max -- maximum wavelength
+    #     wavelength -- specific wavelength to estimate
+    #     window -- number of records around the specific wavelength
+    #     estimate -- will use model error using the material std
+    #     """
+    #     df = self.df
+    #     if wavelength:
+    #         nearest = df.ix[
+    #             (df.wavelength - wavelength).abs().argsort()[:window]]
+    #     else:
+    #         nearest = df[(df.wavelength >= wl_min) & (df.wavelength <= wl_max)]
 
-        mean = nearest.reflectance.mean()
-        std = nearest['std'].mean() + 0.000001
+    #     mean = nearest.reflectance.mean()
+    #     std = nearest['std'].mean() + 0.000001
 
-        if self.name == 'rgb':
-            return round(mean)
+    #     if self.name == 'rgb':
+    #         return round(mean)
 
-        if estimate:
-            value = np.random.normal(loc=mean, scale=std)
-        else:
-            value = mean
+    #     if estimate:
+    #         value = np.random.normal(loc=mean, scale=std)
+    #     else:
+    #         value = mean
 
-        ubyte = round(value * 255)
-        return ubyte
+    #     ubyte = round(value * 255)
+    #     return ubyte
 
 
-def materialize(Shape):
-    """Takes a Shape object and adds its Material"""
+# def materialize(Shape):
+#     """Takes a Shape object and adds its Material"""
 
-    if Shape.material_code:
-        Shape.material = Material(material_code=Shape.material_code)
-    else:
-        Shape.material = Material(rgb=ast.literal_eval(Shape.rgb))
+#     if Shape.material_code:
+#         Shape.material = Material(material_code=Shape.material_code)
+#     else:
+#         Shape.material = Material(rgb=ast.literal_eval(Shape.rgb))
 
-    return Shape
+#     return Shape
