@@ -59,6 +59,6 @@ class ROTATE(Rule):
 
         for shape in self.feature.shapes:
             geometry = shape.geometry(placed=True)
-            rotated = rotate(geometry, 45,
+            rotated = rotate(geometry, angle,
                              origin='center', use_radians=False)
             shape.placed_wkt = rotated.wkt
