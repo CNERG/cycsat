@@ -64,6 +64,36 @@ class WITHIN(Rule):
         return mask.buffer(int(self.value))
 
 
+# class ALIGN(Rule):
+#     __mapper_args__ = {'polymorphic_identity': 'ALIGN'}
+
+#     def __init__(self, pattern, value, axis='X'):
+#         """Returns a Feature by "placing it."""
+#         self.kind = 'mask'
+#         self.pattern = pattern
+#         self.value = value
+#         self.axis = axis
+
+#     def run(self, Simulator):
+#         # get targets
+#         if self.value:
+
+#         targets = self.depends_on(Simulator)['obj'].tolist()
+#         if not targets:
+#             return self.feature.facility.bounds()
+
+#         mask = cascaded_union(
+#             [target.footprint(placed=True) for target in targets])
+
+#         x_min, y_min, x_max, y_max = mask.bounds
+
+#         site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
+
+#         if
+
+#         return mask.buffer(int(self.value))
+
+
 class ROTATE(Rule):
     __mapper_args__ = {'polymorphic_identity': 'ROTATE'}
 
