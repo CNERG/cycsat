@@ -226,7 +226,7 @@ class Facility(Base):
 
     def dep_graph(self, Simulator):
         """Returns groups of features based on their dependencies."""
-        graph = dict((f.name, f.depends_on2(Simulator)) for f in self.features)
+        graph = dict((f.name, f.depends_on(Simulator)) for f in self.features)
         name_to_instance = dict((f.name, f) for f in self.features)
 
         # where to store the batches
@@ -273,7 +273,6 @@ class Facility(Base):
         # create dependency groups
         dep_grps = self.dep_graph(Simulator)
 
-        # store placed features
         placed_features = list()
 
         for group in dep_grps:
@@ -293,7 +292,6 @@ class Facility(Base):
                 # mask out placed features that could overlap
                 footprint = footprint.difference(overlaps)
 
-                print(feature.name)
                 # place the feature
                 placed = feature.place_feature(Simulator,
                                                mask=footprint, attempts=attempts, build=True)
@@ -348,7 +346,7 @@ class Facility(Base):
                     evaluations.append(False)
 
             if False in evaluations:
-                print(feature.name, timestep, 'False')
+                #print(feature.name, timestep, 'False')
                 continue
             else:
                 if random.randint(1, 100) < feature.visibility:
@@ -361,9 +359,10 @@ class Facility(Base):
                 else:
                     continue
 
-        self.place_features(timestep=timestep)
+        self.place_features(Simulator, timestep=timestep)
         Simulator.save(self)
 
+# this needs to be fixed
     def timestep_shapes(self, timestep=0):
         """Returns the ordered shapes to draw at a facility for a given timestep."""
         shapes = list()
@@ -474,14 +473,14 @@ class Feature(Base):
         footprint = build_footprint(self, placed)
         return footprint
 
-    def depends_on(self, mask=None):
-        deps = set()
-        for rule in self.rules:
-            if rule.target:
-                deps.add(rule.target)
-        return deps
+    # def depends_on(self, mask=None):
+    #     deps = set()
+    #     for rule in self.rules:
+    #         if rule.target:
+    #             deps.add(rule.target)
+    #     return deps
 
-    def depends_on2(self, Simulator):
+    def depends_on(self, Simulator):
         all_deps = set()
         for rule in self.rules:
             deps = rule.depends_on(Simulator)
@@ -777,8 +776,11 @@ class Rule(Base):
     def depends_on(self, Simulator):
         """Finds any features at the same Facility that match the
         pattern of the rule"""
+        # should use REGEX
         df = Simulator.Feature()
-        return df[(df.name.str.startswith(self.pattern)) & (df.facility_id == self.feature.facility_id)]
+        df = df[(df.name.str.startswith(self.pattern)) & (
+            df.facility_id == self.feature.facility_id)]
+        return df
 
 Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
                              cascade='all, delete, delete-orphan')

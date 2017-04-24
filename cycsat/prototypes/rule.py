@@ -27,6 +27,8 @@ class NEAR(Rule):
     def run(self, Simulator):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
+        if not targets:
+            return self.feature.facility.bounds()
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 

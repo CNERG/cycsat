@@ -60,7 +60,6 @@ class Database:
     def query(self, sql):
         """Query the database and return a pandas dataframe."""
         if 'CycSat_' in sql:
-            print(sql)
             table = sql[sql.find('FROM') + 5:].split(' ')[0]
             archetype = self.archetypes[table]
             cols = archetype.__table__.columns.keys()
