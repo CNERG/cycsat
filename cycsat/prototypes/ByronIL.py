@@ -53,7 +53,7 @@ class CoolingTower(Feature):
         self.shapes = [Circle(radius=350, rgb='[88, 88, 88]', level=1),
                        Circle(radius=750, rgb='[96, 96, 96]', level=0)]
 
-        self.rules = [WITHIN(pattern='concrete')]
+        self.rules = [WITHIN(pattern='concrete', value=-300)]
 
 
 class Containment(Feature):
@@ -64,7 +64,7 @@ class Containment(Feature):
         self.level = 1
         self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
         self.rules = [
-            NEAR(pattern='1 cooling tower', value=0),
+            NEAR(pattern='1 cooling tower', value=-50),
             WITHIN(pattern='concrete')
         ]
 

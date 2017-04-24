@@ -214,15 +214,11 @@ class Facility(Base):
             rotate_feature(feature, degrees, self.bounds().centroid)
 
     def axis(self):
-        if self.ax_angle:
-            footprint = self.geometry()
-            minx, miny, maxx, maxy = footprint.bounds
-            site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
-            site_axis = rotate(site_axis, self.ax_angle)
-            return site_axis
-        else:
-            print('This facility has not been built. Use the build() method \n'
-                  'before creating the axis.')
+        footprint = self.bounds()
+        minx, miny, maxx, maxy = footprint.bounds
+        site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
+        #site_axis = rotate(site_axis, self.ax_angle)
+        return site_axis
 
     def dep_graph(self, Simulator):
         """Returns groups of features based on their dependencies."""
