@@ -17,19 +17,21 @@ class ByronIL(Facility):
         self.maxy = 700 * 10
 
         self.features = [
-            #ConcretePad('concrete pad'),
-            CoolingTower('cooling tower 1'),
-            # Containment('containment'),
-            #ContainmentSupport('containment support 1', 500, 500),
-            #ContainmentSupport('containment support 2', 500, 700),
+            ConcretePad('concrete pad'),
+            CoolingTower('1 cooling tower'),
+            Containment('1 containment'),
+            Containment('2 containment'),
+            ContainmentSupport('support containment 1',
+                               '1 containment', 500, 500),
+            ContainmentSupport('support containment 2',
+                               '2 containment', 500, 700),
             ParkingLot('parking lot'),
-            #Plume('plume 1')
+            Plume('plume 1')
         ]
 
-        # add some trucksexit
-        # for x in range(5):
-        #     t = Truck('truck ' + str(x + 1))
-        #     self.features.append(t)
+        for x in range(5):
+            t = Truck('truck ' + str(x + 1))
+            self.features.append(t)
 
 
 class ConcretePad(Feature):
@@ -54,31 +56,31 @@ class CoolingTower(Feature):
         self.rules = [WITHIN(pattern='concrete')]
 
 
-# class Containment(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Containment1'}
+class Containment(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Containment1'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 1
-#         self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
-#         self.rules = [
-#             Rule(target='cooling tower 1', oper='NEAR', value=0),
-#             Rule(target='concrete pad', oper='WITHIN')
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 1
+        self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
+        self.rules = [
+            NEAR(pattern='1 cooling tower', value=0),
+            WITHIN(pattern='concrete')
+        ]
 
 
-# class ContainmentSupport(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ContainmentSupport'}
+class ContainmentSupport(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.ContainmentSupport'}
 
-#     def __init__(self, name, w, l):
-#         self.name = name
-#         self.level = 1
-#         self.shapes = [Rectangle(w, l, rgb='[85,85,85]')]
-#         self.rules = [
-#             Rule(target='containment', oper='NEAR', value=0),
-#             Rule(target='concrete pad', oper='WITHIN'),
-#             Rule(target='concrete pad', oper='ROTATE', value=100)
-#         ]
+    def __init__(self, name, support, w, l):
+        self.name = name
+        self.level = 1
+        self.shapes = [Rectangle(w, l, rgb='[85,85,85]')]
+        self.rules = [
+            NEAR(pattern=support, value=0),
+            WITHIN(pattern='concrete'),
+            ROTATE(pattern='concrete')
+        ]
 
 
 class ParkingLot(Feature):
@@ -92,43 +94,43 @@ class ParkingLot(Feature):
         ]
         self.rules = [WITHIN(pattern='concrete pad'),
                       ROTATE(pattern='concrete pad'),
-                      NEAR(pattern='cooling tower', value=0)
+                      NEAR(pattern='1 cooling tower', value=0)
                       ]
 
 
-# class Plume(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Plume'}
+class Plume(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Plume'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 3
-#         self.visibility = 98
-#         self.shapes = [
-#             Circle(650)
-#         ]
-#         self.rules = [
-#             Rule(target='cooling tower 1', oper='WITHIN', value=300)
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 4
+        self.visibility = 98
+        self.shapes = [
+            Circle(650, level=4)
+        ]
+        self.rules = [
+            WITHIN(pattern='1 cooling tower', value=300)
+        ]
 
-#         self.conditions = [
-#             Condition(table='TimeSeriesPower', oper='greater than', value=0)
-#         ]
+        self.conditions = [
+            Condition(table='TimeSeriesPower', oper='greater than', value=0)
+        ]
 
 
-# class Truck(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Truck'}
+class Truck(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Truck'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 2
-#         self.visibility = 50
-#         rgb = random.choice(['[22,29,163]', '[163,43,22]'])
-#         self.shapes = [
-#             Rectangle(30, 15, rgb=rgb),
-#         ]
-#         self.rules = [
-#             Rule(target='parking lot', oper='WITHIN')
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 2
+        self.visibility = 50
+        rgb = random.choice(['[22,29,163]', '[163,43,22]'])
+        self.shapes = [
+            Rectangle(30, 15, rgb=rgb),
+        ]
+        self.rules = [
+            WITHIN(pattern='parking lot')
+        ]
 
 
 # -----------------------------------------------------------------------------------------------
