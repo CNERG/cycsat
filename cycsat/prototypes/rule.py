@@ -67,10 +67,10 @@ class WITHIN(Rule):
 class XALIGN(Rule):
     __mapper_args__ = {'polymorphic_identity': 'XALIGN'}
 
-    def __init__(self, value=None):
+    def __init__(self, pattern=None, value=None):
         """Returns a Feature by "placing it."""
         self.kind = 'mask'
-        self.pattern = None
+        self.pattern = pattern
         self.value = value
 
     def run(self, Simulator):
@@ -78,6 +78,7 @@ class XALIGN(Rule):
         maxy = self.feature.facility.maxy
         if self.value:
             line = LineString([[int(self.value), 0], [int(self.value), maxy]])
+
         else:
             targets = self.depends_on(Simulator)['obj'].tolist()
             if not targets:
@@ -90,7 +91,7 @@ class XALIGN(Rule):
             value = (x_max - x_min) + x_min
             line = LineString([[value, 0], [value, maxy]])
 
-        return line.buffer(500)
+        return line.buffer(10)
 
 
 class ROTATE(Rule):
