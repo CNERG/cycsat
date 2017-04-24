@@ -1,6 +1,6 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
+from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, XALIGN
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -17,16 +17,16 @@ class ByronIL(Facility):
         self.maxy = 700 * 10
 
         self.features = [
-            ConcretePad('concrete pad'),
-            CoolingTower('1 cooling tower'),
+            #ConcretePad('concrete pad'),
+            #CoolingTower('1 cooling tower'),
             Containment('1 containment'),
             Containment('2 containment'),
-            ContainmentSupport('support containment 1',
-                               '1 containment', 500, 500),
-            ContainmentSupport('support containment 2',
-                               '2 containment', 500, 700),
-            ParkingLot('parking lot'),
-            Plume('plume 1')
+            # ContainmentSupport('support containment 1',
+            #                   '1 containment', 500, 500),
+            # ContainmentSupport('support containment 2',
+            #                   '2 containment', 500, 700),
+            #ParkingLot('parking lot'),
+            #Plume('plume 1')
         ]
 
         for x in range(5):
@@ -64,9 +64,14 @@ class Containment(Feature):
         self.level = 1
         self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
         self.rules = [
-            NEAR(pattern='1 cooling tower', value=-50),
-            WITHIN(pattern='concrete')
+            #NEAR(pattern='1 cooling tower', value=-50),
+            # WITHIN(pattern='concrete')
         ]
+
+        if name == '2 containment':
+            self.rules.append(
+                XALIGN(value=500)
+            )
 
 
 class ContainmentSupport(Feature):

@@ -6,7 +6,7 @@ a mask of location it can be placed.
 """
 from cycsat.archetypes import Rule
 from shapely.ops import cascaded_union
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 from shapely.affinity import translate
 from shapely.affinity import rotate
 
@@ -64,34 +64,33 @@ class WITHIN(Rule):
         return mask.buffer(int(self.value))
 
 
-# class ALIGN(Rule):
-#     __mapper_args__ = {'polymorphic_identity': 'ALIGN'}
+class XALIGN(Rule):
+    __mapper_args__ = {'polymorphic_identity': 'XALIGN'}
 
-#     def __init__(self, pattern, value, axis='X'):
-#         """Returns a Feature by "placing it."""
-#         self.kind = 'mask'
-#         self.pattern = pattern
-#         self.value = value
-#         self.axis = axis
+    def __init__(self, value=None):
+        """Returns a Feature by "placing it."""
+        self.kind = 'mask'
+        self.pattern = None
+        self.value = value
 
-#     def run(self, Simulator):
-#         # get targets
-#         if self.value:
+    def run(self, Simulator):
+        # get targets
+        maxy = self.feature.facility.maxy
+        if self.value:
+            line = LineString([[int(self.value), 0], [int(self.value), maxy]])
+        else:
+            targets = self.depends_on(Simulator)['obj'].tolist()
+            if not targets:
+                return self.feature.facility.bounds()
 
-#         targets = self.depends_on(Simulator)['obj'].tolist()
-#         if not targets:
-#             return self.feature.facility.bounds()
+            mask = cascaded_union(
+                [target.footprint(placed=True) for target in targets])
+            x_min, y_min, x_max, y_max = mask.bounds
 
-#         mask = cascaded_union(
-#             [target.footprint(placed=True) for target in targets])
+            value = (x_max - x_min) + x_min
+            line = LineString([[value, 0], [value, maxy]])
 
-#         x_min, y_min, x_max, y_max = mask.bounds
-
-#         site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
-
-#         if
-
-#         return mask.buffer(int(self.value))
+        return line.buffer(500)
 
 
 class ROTATE(Rule):
