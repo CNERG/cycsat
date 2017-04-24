@@ -538,6 +538,8 @@ class Feature(Base):
         Keyword arguments:
         mask -- the mask of possible areas
         """
+        if not mask:
+            mask = self.facility.bounds()
         results = [rule.run(Simulator)
                    for rule in self.rules if rule.kind == 'mask']
 
