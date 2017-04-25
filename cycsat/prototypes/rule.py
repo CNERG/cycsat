@@ -12,7 +12,19 @@ from shapely.affinity import rotate
 
 import random
 
-# masks return possible locations, modifiers return modified shapes to place
+
+class OUTSIDE(Rule):
+    """Allows a feature to appear outside the facility bounds."""
+    __mapper_args__ = {'polymorphic_identity': 'OUTSIDE'}
+
+    def __init__(self, value=10000):
+        """Returns a Feature by "placing it."""
+        self.kind = 'rpl'
+        self.pattern = None
+        self.value = value
+
+    def run(self, Simulator):
+        return self.feature.facility.bounds().buffer(int(self.value))
 
 
 class NEAR(Rule):
@@ -20,7 +32,7 @@ class NEAR(Rule):
 
     def __init__(self, pattern, value=100):
         """Returns a Feature by "placing it."""
-        self.kind = 'mask'
+        self.kind = 'rpl'
         self.pattern = pattern
         self.value = value
 
@@ -49,7 +61,7 @@ class WITHIN(Rule):
 
     def __init__(self, pattern, value=0):
         """Returns a Feature by "placing it."""
-        self.kind = 'mask'
+        self.kind = 'rpl'
         self.pattern = pattern
         self.value = value
 
@@ -69,7 +81,7 @@ class XALIGN(Rule):
 
     def __init__(self, pattern=None, value=None):
         """Returns a Feature by "placing it."""
-        self.kind = 'mask'
+        self.kind = 'pl'
         self.pattern = pattern
         self.value = value
 
@@ -99,7 +111,7 @@ class ROTATE(Rule):
 
     def __init__(self, pattern=None, value='random'):
         """Returns a Feature by "placing it."""
-        self.kind = 'modifier'
+        self.kind = 'transform'
         self.pattern = pattern
         self.value = value
 
