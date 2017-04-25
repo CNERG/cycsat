@@ -1,6 +1,6 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, XALIGN
+from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, OUTSIDE
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -29,9 +29,9 @@ class ByronIL(Facility):
             #Plume('plume 1')
         ]
 
-        for x in range(5):
-            t = Truck('truck ' + str(x + 1))
-            self.features.append(t)
+        # for x in range(5):
+        #     t = Truck('truck ' + str(x + 1))
+        #     self.features.append(t)
 
 
 class ConcretePad(Feature):
@@ -69,9 +69,10 @@ class Containment(Feature):
         ]
 
         if name == '2 containment':
-            self.rules.append(
-                XALIGN(value=500)
-            )
+            self.rules += [
+                #NEAR(pattern='1 containment', value=10),
+                OUTSIDE()
+            ]
 
 
 class ContainmentSupport(Feature):

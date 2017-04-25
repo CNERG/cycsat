@@ -504,12 +504,12 @@ class Feature(Base):
                 shape.placed_wkt = shape.stable_wkt
 
         # evalute the rules of the feature to determine the mask
-        mask = self.evaluate_rules(Simulator, mask=mask)
+        results = self.evaluate_rules(Simulator, mask=mask)
         mods = [rule.run(Simulator)
-                for rule in self.rules if rule.kind == 'modifier']
+                for rule in self.rules if rule.kind == 'transform']
 
         for i in range(attempts):
-            posited_point = posit_point2(mask)
+            posited_point = posit_point2(results['union'])
             if not posited_point:
                 return False
 
@@ -521,7 +521,7 @@ class Feature(Base):
                 placement = shape.geometry()
 
                 placed_shapes.append(placement)
-                typology_checks.append(placement.within(mask))
+                typology_checks.append(placement.within(results['rpl']))
 
             if False not in typology_checks:
                 self.wkt = cascaded_union(placed_shapes).wkt
@@ -531,27 +531,36 @@ class Feature(Base):
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
-    def evaluate_rules(self, Simulator, mask=None):
+    def evaluate_rules(self, Simulator, kinds=['rpl', 'pl'], mask=None):
         """Evaluates a a feature's rules and returns instructions
         for drawing that feature.
 
         Keyword arguments:
+        types -- the types of rules to evaluate
         mask -- the mask of possible areas
         """
         if not mask:
             mask = self.facility.bounds()
-        results = [rule.run(Simulator)
-                   for rule in self.rules if rule.kind == 'mask']
 
-        # combines the results of all the rules
-        if results:
-            combined_mask = mask
-            for m in results:
-                combined_mask = combined_mask.intersection(m)
-            results = combined_mask
-        else:
-            results = mask
+        union_mask = [mask]
+        results = dict()
 
+        for kind in kinds:
+            # the default of rpl (restrict) rules is the mask
+            evals = [rule.run(Simulator)
+                     for rule in self.rules if rule.kind == kind]
+
+            if len(evals) == 0:
+                results[kind] = mask
+            elif len(evals) == 1:
+                results[kind] = evals[0]
+            else:
+                results[kind] = evals[0]
+                for e in evals[1:]:
+                    results[kind] = results[kind].intersection(e)
+            union_mask += [results[kind]]
+
+        results['union'] = cascaded_union(union_mask)
         return results
 
 
@@ -626,10 +635,6 @@ class Shape(Base):
         placed_x = placement.coords.xy[0][0]
         placed_y = placement.coords.xy[1][0]
 
-        # if build:
-        #     geometry = self.geometry(placed=False)
-        # else:
-        #     geometry = self.geometry(placed=True)
         geometry = self.geometry(placed=True)
 
         shape_x = geometry.centroid.coords.xy[0][0]
@@ -646,10 +651,6 @@ class Shape(Base):
         shift_y = placed_y - shape_y + yoff
 
         shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
-
-        # if rotation != 0:
-        #     shifted = rotate(shifted, rotation,
-        #                      origin='center', use_radians=False)
         self.placed_wkt = shifted.wkt
 
         return self
