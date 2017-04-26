@@ -32,6 +32,10 @@ def intersect(polygons, default=None):
     polygons -- a list of polygons
     default -- the default mask
     """
+    if len(polygons) == 0:
+        return default
+    if len(polygons) == 1:
+        return polygons[0]
 
     rings = [LineString(pol.exterior.coords) for pol in polygons]
     union = unary_union(rings)
@@ -39,7 +43,7 @@ def intersect(polygons, default=None):
 
     points = [poly.representative_point() for poly in results]
 
-    # first check if one polygon conatins all the points
+    # first check if one polygon contains all the points
     for poly in polygons:
         checks = list()
         for point in points:
@@ -47,7 +51,6 @@ def intersect(polygons, default=None):
         if False not in checks:
             return poly
 
-    final = default
     for point, result in zip(points, results):
         checks = list()
         for poly in polygons:
@@ -56,7 +59,7 @@ def intersect(polygons, default=None):
             continue
         else:
             return result
-    return default
+    return False
 
 
 def build_geometry(Entity):

@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 from .image import Sensor
 from .geometry import build_geometry, build_footprint, near_rule, line_func
-from .geometry import posit_point, rules, posit_point2
+from .geometry import posit_point, rules, posit_point2, intersect
 
 # from .laboratory import materialize
 
@@ -504,11 +504,14 @@ class Feature(Base):
 
         # evalute the rules of the feature to determine the mask
         results = self.evaluate_rules(Simulator, mask=mask)
+        if not results:
+            return False
+
         mods = [rule.run(Simulator)
                 for rule in self.rules if rule.kind == 'transform']
 
         for i in range(attempts):
-            posited_point = posit_point2(results['placement'])
+            posited_point = posit_point2(results['union'])
             if not posited_point:
                 return False
 
@@ -530,7 +533,7 @@ class Feature(Base):
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
-    def evaluate_rules(self, Simulator, kinds=['rpl', 'pl'], mask=None):
+    def evaluate_rules(self, Simulator, mask=None):
         """Evaluates a a feature's rules and returns instructions
         for drawing that feature.
 
@@ -540,19 +543,25 @@ class Feature(Base):
         """
         if not mask:
             mask = self.facility.bounds()
+        print(self.name)
 
-        results = dict()
+        restrict = intersect([rule.run(Simulator)
+                              for rule in self.rules if rule.kind == 'restrict'], mask)
 
-        for kind in kinds:
-            evals = [rule.run(Simulator)
-                     for rule in self.rules if rule.kind == kind]
+        place = intersect([rule.run(Simulator)
+                           for rule in self.rules if rule.kind == 'place'], mask)
+        print(place)
 
-            results[kind] evals
-
-        for result in union_mask:
-            results['placement'] = results['union'].intersection(result)
-
-        return results
+        if place and restrict:
+            results = dict()
+            print('place',  place)
+            results['restrict'] = restrict
+            results['place'] = place
+            results['union'] = intersect([restrict, place])
+            print(results)
+            return results
+        else:
+            return False
 
 
 Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
