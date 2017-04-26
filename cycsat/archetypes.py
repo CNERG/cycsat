@@ -504,14 +504,14 @@ class Feature(Base):
 
         # evalute the rules of the feature to determine the mask
         results = self.evaluate_rules(Simulator, mask=mask)
-        if not results:
+        if not results['place']:
             return False
 
         mods = [rule.run(Simulator)
                 for rule in self.rules if rule.kind == 'transform']
 
         for i in range(attempts):
-            posited_point = posit_point2(results['union'])
+            posited_point = posit_point2(results['place'])
             if not posited_point:
                 return False
 
@@ -561,16 +561,7 @@ class Feature(Base):
             'place': intersect(place, mask)
         }
 
-        if place and restrict:
-            results = dict()
-            print('place',  place)
-            results['restrict'] = restrict
-            results['place'] = place
-            results['union'] = intersect([restrict, place])
-            print(results)
-            return results
-        else:
-            return False
+        return results
 
 
 Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
