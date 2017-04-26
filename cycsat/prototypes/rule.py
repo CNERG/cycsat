@@ -19,7 +19,7 @@ class OUTSIDE(Rule):
 
     def __init__(self, value=10000):
         """Returns a Feature by "placing it."""
-        self.kind = 'rpl'
+        self.kind = 'restrict'
         self.pattern = None
         self.value = value
 
@@ -32,7 +32,7 @@ class NEAR(Rule):
 
     def __init__(self, pattern, value=100):
         """Returns a Feature by "placing it."""
-        self.kind = 'rpl'
+        self.kind = 'restrict'
         self.pattern = pattern
         self.value = value
 
@@ -61,7 +61,7 @@ class WITHIN(Rule):
 
     def __init__(self, pattern, value=0):
         """Returns a Feature by "placing it."""
-        self.kind = 'rpl'
+        self.kind = 'restrict'
         self.pattern = pattern
         self.value = value
 
@@ -81,7 +81,7 @@ class XALIGN(Rule):
 
     def __init__(self, pattern=None, value=None):
         """Returns a Feature by "placing it."""
-        self.kind = 'pl'
+        self.kind = 'place'
         self.pattern = pattern
         self.value = value
 
