@@ -543,14 +543,23 @@ class Feature(Base):
         """
         if not mask:
             mask = self.facility.bounds()
-        print(self.name)
 
-        restrict = intersect([rule.run(Simulator)
-                              for rule in self.rules if rule.kind == 'restrict'], mask)
+        restrict = list()
+        place = list()
 
-        place = intersect([rule.run(Simulator)
-                           for rule in self.rules if rule.kind == 'place'], mask)
-        print(place)
+        for rule in self.rules:
+            result = rule.run(Simulator)
+            if rule.kind == 'restrict':
+                restrict.append(result)
+
+            if rule.kind == 'place':
+                place.append(result)
+                restrict.append(result)
+
+        results = {
+            'restrict': intersect(restrict, mask),
+            'place': intersect(place, mask)
+        }
 
         if place and restrict:
             results = dict()

@@ -43,14 +43,6 @@ def intersect(polygons, default=None):
 
     points = [poly.representative_point() for poly in results]
 
-    # first check if one polygon contains all the points
-    for poly in polygons:
-        checks = list()
-        for point in points:
-            checks.append(point.within(poly))
-        if False not in checks:
-            return poly
-
     for point, result in zip(points, results):
         checks = list()
         for poly in polygons:
@@ -59,6 +51,15 @@ def intersect(polygons, default=None):
             continue
         else:
             return result
+
+    # first check if one polygon contains all the points
+    for poly in polygons:
+        checks = list()
+        for point in points:
+            checks.append(point.within(poly))
+        if False not in checks:
+            return poly
+
     return False
 
 
