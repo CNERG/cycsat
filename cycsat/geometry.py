@@ -41,7 +41,7 @@ def intersect(polygons, default=None):
         polygons, 2) if poly1.intersects(poly2)]
 
     # if there is more than one result try again
-    if len(result) > 1:
+    if len(results) > 1:
         results = [poly1.intersection(poly2) for poly1, poly2 in itertools.combinations(
             results, 2) if poly1.intersects(poly2)]
 
