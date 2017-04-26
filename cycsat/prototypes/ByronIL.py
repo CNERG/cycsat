@@ -63,15 +63,15 @@ class Containment(Feature):
         self.name = name
         self.level = 1
         self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
-        self.rules = [
-            #NEAR(pattern='1 cooling tower', value=-50),
-            # WITHIN(pattern='concrete')
-        ]
+        # self.rules = [
+        #     #NEAR(pattern='1 cooling tower', value=-50),
+        #     # WITHIN(pattern='concrete')
+        # ]
 
         if name == '2 containment':
-            self.rules += [
-                #NEAR(pattern='1 containment', value=10),
-                XALIGN(value=1000)
+            self.rules = [
+                NEAR(pattern='1 containment', value=10),
+                # XALIGN(value=1000)
             ]
 
 

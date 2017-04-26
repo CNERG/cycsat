@@ -180,7 +180,7 @@ class Simulator(Database):
             fig, axes = plt.subplots(cols, rows)  # len(facilities))
 
             for ax, facility in zip(axes.flatten(), facilities.iterrows()):
-                facility[1].obj.plot(ax=ax, timestep=timestep, label=True)
+                facility[1].obj.plot(ax=ax, timestep=timestep, label=label)
 
         if virtual:
             plt.savefig(virtual, format='png')
