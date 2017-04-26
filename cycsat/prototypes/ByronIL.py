@@ -70,7 +70,7 @@ class Containment(Feature):
 
         if name == '2 containment':
             self.rules = [
-                NEAR(pattern='1 containment', value=20),
+                YALIGN(pattern='1 containment'),
             ]
 
 
