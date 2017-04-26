@@ -17,11 +17,46 @@ from shapely.geometry import Polygon, Point, LineString, box
 from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
-from shapely.ops import cascaded_union
+from shapely.ops import cascaded_union, unary_union, polygonize
+
 
 #------------------------------------------------------------------------------
 # GENERAL
 #------------------------------------------------------------------------------
+
+
+def intersect(polygons, default=None):
+    """Finds the intersection of a list of polygons.
+
+    Keyword arguments:
+    polygons -- a list of polygons
+    default -- the default mask
+    """
+
+    rings = [LineString(pol.exterior.coords) for pol in polygons]
+    union = unary_union(rings)
+    results = [geom for geom in polygonize(union)]
+
+    points = [poly.representative_point() for poly in results]
+
+    # first check if one polygon conatins all the points
+    for poly in polygons:
+        checks = list()
+        for point in points:
+            checks.append(point.within(poly))
+        if False not in checks:
+            return poly
+
+    final = default
+    for point, result in zip(points, results):
+        checks = list()
+        for poly in polygons:
+            checks.append(point.within(poly))
+        if False in checks:
+            continue
+        else:
+            return result
+    return default
 
 
 def build_geometry(Entity):
@@ -48,7 +83,7 @@ def build_footprint(Entity, placed=True):
 
 
 def posit_point(definition, attempts=1000):
-    """Generates a random point given a defintion of contraints. Currently a 'mask' and an 'alignment'
+    """Generates a random point given a defintion of constraints. Currently a 'mask' and an 'alignment'
     (or axis).
     """
     mask = definition['mask']
@@ -142,7 +177,7 @@ def line_func(line, precision=1):
 #------------------------------------------------------------------------------
 
 def list_bearings(Feature):
-    """List the bearings of the feature (N,E,S,W) as points."""
+    """List the bearings of the feature (N, E, S, W) as points."""
     footprint = Feature.footprint()
     minx, miny, maxx, maxy = footprint.bounds
     halfx = (maxx - minx) / 2

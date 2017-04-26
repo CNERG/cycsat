@@ -150,7 +150,7 @@ class Simulator(Database):
         self.session.add(simulation)
         self.session.commit()
 
-    def plot(self, sql=None, timestep=-1, virtual=None):
+    def plot(self, sql=None, timestep=-1, virtual=None, label=False):
         """Plots facilites that meet a sql query at a given timestep
 
         Keyword arguments:
@@ -180,7 +180,7 @@ class Simulator(Database):
             fig, axes = plt.subplots(cols, rows)  # len(facilities))
 
             for ax, facility in zip(axes.flatten(), facilities.iterrows()):
-                facility[1].obj.plot(ax=ax, timestep=timestep)
+                facility[1].obj.plot(ax=ax, timestep=timestep, label=True)
 
         if virtual:
             plt.savefig(virtual, format='png')

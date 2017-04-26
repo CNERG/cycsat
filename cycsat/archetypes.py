@@ -375,7 +375,7 @@ class Facility(Base):
 
         return sorted(shapes, key=lambda x: x[0])
 
-    def plot(self, ax=None, timestep=-1, labels=False, save=False, name='plot.png', virtual=None):
+    def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
         """plots a facility and its static features or a timestep."""
         if ax:
             new_fig = False
@@ -392,6 +392,7 @@ class Facility(Base):
                      '\ntimestep:' + str(timestep))
         ax.set_aspect('equal')
 
+        feature_ids = set()
         shapes = self.timestep_shapes(timestep)
         for shape in shapes:
             shape = shape[1]
@@ -404,9 +405,14 @@ class Facility(Base):
             patch = PolygonPatch(geometry, facecolor=rgb)
             ax.add_patch(patch)
 
-            if labels:
-                plt.text(feature.geo.centroid.x,
-                         feature.geo.centroid.y, feature.name)
+            if label:
+                feature_ids.add(shape.feature_id)
+
+        if label:
+            for feature in self.features:
+                if feature.id in feature_ids:
+                    c = feature.footprint(placed=True).centroid
+                    plt.text(c.x, c.y, feature.name)
 
         plt.tight_layout()
 
@@ -469,13 +475,6 @@ class Feature(Base):
         footprint = build_footprint(self, placed)
         return footprint
 
-    # def depends_on(self, mask=None):
-    #     deps = set()
-    #     for rule in self.rules:
-    #         if rule.target:
-    #             deps.add(rule.target)
-    #     return deps
-
     def depends_on(self, Simulator):
         all_deps = set()
         for rule in self.rules:
@@ -509,7 +508,7 @@ class Feature(Base):
                 for rule in self.rules if rule.kind == 'transform']
 
         for i in range(attempts):
-            posited_point = posit_point2(results['union'])
+            posited_point = posit_point2(results['placement'])
             if not posited_point:
                 return False
 
@@ -521,7 +520,7 @@ class Feature(Base):
                 placement = shape.geometry()
 
                 placed_shapes.append(placement)
-                typology_checks.append(placement.within(results['rpl']))
+                typology_checks.append(placement.within(results['restrict']))
 
             if False not in typology_checks:
                 self.wkt = cascaded_union(placed_shapes).wkt
@@ -542,25 +541,17 @@ class Feature(Base):
         if not mask:
             mask = self.facility.bounds()
 
-        union_mask = [mask]
         results = dict()
 
         for kind in kinds:
-            # the default of rpl (restrict) rules is the mask
             evals = [rule.run(Simulator)
                      for rule in self.rules if rule.kind == kind]
 
-            if len(evals) == 0:
-                results[kind] = mask
-            elif len(evals) == 1:
-                results[kind] = evals[0]
-            else:
-                results[kind] = evals[0]
-                for e in evals[1:]:
-                    results[kind] = results[kind].intersection(e)
-            union_mask += [results[kind]]
+            results[kind] evals
 
-        results['union'] = cascaded_union(union_mask)
+        for result in union_mask:
+            results['placement'] = results['union'].intersection(result)
+
         return results
 
 

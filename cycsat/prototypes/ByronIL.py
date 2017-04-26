@@ -1,6 +1,6 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, OUTSIDE
+from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, OUTSIDE, XALIGN
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ class Containment(Feature):
         if name == '2 containment':
             self.rules += [
                 #NEAR(pattern='1 containment', value=10),
-                OUTSIDE()
+                XALIGN(value=1000)
             ]
 
 
