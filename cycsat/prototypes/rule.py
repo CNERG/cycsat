@@ -98,9 +98,8 @@ class XALIGN(Rule):
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])
-            x_min, y_min, x_max, y_max = mask.bounds
 
-            value = (x_max - x_min) + x_min
+            value = mask.centroid.x
             line = LineString([[value, 0], [value, maxy]])
 
         return line.buffer(10)
@@ -128,10 +127,9 @@ class YALIGN(Rule):
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])
-            x_min, y_min, x_max, y_max = mask.bounds
 
-            value = (x_max - x_min) + x_min
-            line = LineString([[value, 0], [value, maxy]])
+            value = mask.centroid.y
+            line = LineString([[0, value], [maxx, value]])
 
         return line.buffer(10)
 
