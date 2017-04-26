@@ -551,10 +551,10 @@ class Feature(Base):
             result = rule.run(Simulator)
             if rule.kind == 'restrict':
                 restrict.append(result)
+                place.append(result)
 
             if rule.kind == 'place':
                 place.append(result)
-                restrict.append(result)
 
         results = {
             'restrict': intersect(restrict, mask),

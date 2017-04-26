@@ -106,6 +106,36 @@ class XALIGN(Rule):
         return line.buffer(10)
 
 
+class YALIGN(Rule):
+    __mapper_args__ = {'polymorphic_identity': 'YALIGN'}
+
+    def __init__(self, pattern=None, value=None):
+        """Returns a Feature by "placing it."""
+        self.kind = 'place'
+        self.pattern = pattern
+        self.value = value
+
+    def run(self, Simulator):
+        # get targets
+        maxx = self.feature.facility.maxx
+        if self.value:
+            line = LineString([[0, int(self.value)], [maxx, int(self.value)]])
+
+        else:
+            targets = self.depends_on(Simulator)['obj'].tolist()
+            if not targets:
+                return self.feature.facility.bounds()
+
+            mask = cascaded_union(
+                [target.footprint(placed=True) for target in targets])
+            x_min, y_min, x_max, y_max = mask.bounds
+
+            value = (x_max - x_min) + x_min
+            line = LineString([[value, 0], [value, maxy]])
+
+        return line.buffer(10)
+
+
 class ROTATE(Rule):
     __mapper_args__ = {'polymorphic_identity': 'ROTATE'}
 
