@@ -74,7 +74,7 @@ def build_geometry(Entity):
 def build_footprint(Entity, placed=True):
     """Returns a geometry that is the union of all a feature's static shapes."""
     archetype = Entity.__class__.__bases__[0].__name__
-    if archetype == 'Facility':
+    if archetype == 'Site':
         shapes = [feature.footprint()
                   for feature in Entity.observables if feature.visibility == 100]
     else:
@@ -161,7 +161,7 @@ def line_func(line, precision=1):
 
 
 # # this is for creating terrain
-# def site_axis(Facility):
+# def site_axis(Site):
 #     """Generates a site axis."""
 #     site_axis = LineString([[-maxx, maxy / 2], [maxx * 2, maxy / 2]])
 #     rotate(site_axis, random.randint(-180, 180))
@@ -171,7 +171,7 @@ def line_func(line, precision=1):
 
 #     # site_rotation = random.randint(-180,180)
 #     # site_axis = rotate(site_axis,site_rotation,'center',use_radians=False)
-#     # Facility.ax_angle = site_rotation
+#     # Site.ax_angle = site_rotation
 
 #     return site_axis
 

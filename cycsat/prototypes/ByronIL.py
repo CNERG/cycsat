@@ -1,4 +1,4 @@
-from cycsat.archetypes import Facility, Observable, Shape, Rule, Condition
+from cycsat.archetypes import Site, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
 from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN
@@ -9,7 +9,7 @@ import random
 # -----------------------------------------------------------------------------------------------
 
 
-class ByronIL(Facility):
+class ByronIL(Site):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL'}
 
     def __init__(self):

@@ -54,7 +54,7 @@ operations = {
 
 
 # class Event(Base):
-#     """A possible realization of all Facilities and Observables in a simulation."""
+#     """A possible realization of all sites and Observables in a simulation."""
 
 #     __tablename__ = 'CycSat_Event'
 #     id = Column(Integer, primary_key=True)
@@ -62,16 +62,16 @@ operations = {
 
 
 class Build(Base):
-    """A possible realization of all Facilities and Observables in a simulation."""
+    """A possible realization of all sites and Observables in a simulation."""
 
     __tablename__ = 'CycSat_Build'
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
     def assemble(self, Simulator, attempts=100):
-        """Assembles the build, i.e. places all the observables of all the facilities."""
-        for facility in self.facilities:
-            facility.place_observables(
+        """Assembles the build, i.e. places all the observables of all the sites."""
+        for site in self.sites:
+            site.place_observables(
                 Simulator, timestep=-1, attempts=attempts)
 
 
@@ -136,18 +136,18 @@ class Instrument(Base):
         self.geo = build_geometry(self)
         return self.geo
 
-    def target(self, Facility):
-        """Creates a sensor object and focuses it on a facility"""
+    def target(self, Site):
+        """Creates a sensor object and focuses it on a site"""
         self.Sensor = Sensor(self)
-        self.Facility = Facility
+        self.Site = Site
 
         self.shapes = []
-        for observable in Facility.observables:
+        for observable in Site.observables:
             for shape in observable.shapes:
                 self.shapes.append(materialize(shape))
 
-        self.Sensor.focus(Facility)
-        self.Sensor.calibrate(Facility)
+        self.Sensor.focus(Site)
+        self.Sensor.calibrate(Site)
 
     def capture(self, timestep, path, Mission=None, World=None):
         """Adds shapes at timestep to a image"""
@@ -156,7 +156,7 @@ class Instrument(Base):
 
         # gets all events from a timestep
         events = [
-            Event.shape_id for Event in self.Facility.events if Event.timestep == timestep]
+            Event.shape_id for Event in self.Site.events if Event.timestep == timestep]
         # get all shapes from a timestep (if there is an event)
         shapes = [Shape for Shape in self.shapes if Shape.id in events]
 
@@ -174,7 +174,7 @@ class Instrument(Base):
         # create and save the scene object
         scene = Scene(timestep=timestep)
         self.scenes.append(scene)
-        self.Facility.scenes.append(scene)
+        self.Site.scenes.append(scene)
 
         path = path + str(scene.id)
         self.Sensor.write(path)
@@ -187,9 +187,9 @@ Satellite.instruments = relationship(
 # OBERVABLES
 #------------------------------------------------------------------------------
 
-class Facility(Base):
+class Site(Base):
     """A collection of observables on a collection of terrains."""
-    __tablename__ = 'CycSat_Facility'
+    __tablename__ = 'CycSat_Site'
 
     id = Column(Integer, primary_key=True)
     AgentId = Column(Integer)
@@ -205,7 +205,7 @@ class Facility(Base):
 
     # __mapper_args__ = {'polymorphic_on': prototype}
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-    build = relationship(Build, back_populates='facilities')
+    build = relationship(Build, back_populates='sites')
 
     def bounds(self):
         geometry = build_geometry(self)
@@ -215,7 +215,7 @@ class Facility(Base):
         return build_footprint(self)
 
     def rotate(self, degrees=None):
-        """Rotates all the observables of a facility."""
+        """Rotates all the observables of a site."""
         if not degrees:
             degrees = random.randint(-180, 180) + 0.01
 
@@ -269,10 +269,10 @@ class Facility(Base):
         return batches
 
     def assemble(self, Simulator, timestep=-1, attempts=100):
-        """Assembles all the Observables of a Facility according to their Rules.
+        """Assembles all the Observables of a Site according to their Rules.
 
         Keyword arguments:
-        timestep -- the timestep of the Facility to draw
+        timestep -- the timestep of the Site to draw
         attempts -- the max # of attempts to place a observable
         """
         # determine which observables to draw (by timestep)
@@ -326,7 +326,7 @@ class Facility(Base):
         return True
 
     def place_observables(self, Simulator, timestep=-1, attempts=100):
-        """Places all the observables of a facility according to their rules
+        """Places all the observables of a site according to their rules
         and events at the provided timestep."""
         for x in range(attempts):
             result = self.assemble(Simulator, timestep, attempts)
@@ -383,7 +383,7 @@ class Facility(Base):
 
 # this needs to be fixed
     def timestep_shapes(self, timestep=0):
-        """Returns the ordered shapes to draw at a facility for a given timestep."""
+        """Returns the ordered shapes to draw at a site for a given timestep."""
         shapes = list()
 
         for observable in self.observables:
@@ -399,7 +399,7 @@ class Facility(Base):
         return sorted(shapes, key=lambda x: x[0])
 
     def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
-        """plots a facility and its static observables or a timestep."""
+        """plots a site and its static observables or a timestep."""
         if ax:
             new_fig = False
             ax.set_aspect('equal')
@@ -450,7 +450,7 @@ class Facility(Base):
             return fig, ax
 
     def gif(self, timesteps, name, fps=1):
-        """plots a facility and its static observables or a timestep."""
+        """plots a site and its static observables or a timestep."""
         plt.ioff()
         plots = list()
         for step in timesteps:
@@ -467,8 +467,8 @@ class Facility(Base):
         plt.ion()
 
 
-Build.facilities = relationship(
-    'Facility', order_by=Facility.id, back_populates='build')
+Build.sites = relationship(
+    'Site', order_by=Site.id, back_populates='build')
 
 
 class Observable(Base):
@@ -485,8 +485,8 @@ class Observable(Base):
 
     __mapper_args__ = {'polymorphic_on': prototype}
 
-    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-    facility = relationship(Facility, back_populates='observables')
+    site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
+    site = relationship(Site, back_populates='observables')
 
     def sorted_events(self):
         """Returns a sorted list (by timestep) of events."""
@@ -499,7 +499,7 @@ class Observable(Base):
         return footprint
 
     def rotate(self, degree):
-        center = self.facility.bounds().centroid
+        center = self.site.bounds().centroid
         for shape in self.shapes:
             geometry = shape.geometry(placed=True)
             rotated = rotate(geometry, degree,
@@ -529,14 +529,14 @@ class Observable(Base):
         attempts -- the maximum number attempts to be made
         build -- draws from the shapes stable_wkt
         """
-        # the center for the facility for a center point for rotation
-        center = self.facility.bounds().centroid
+        # the center for the site for a center point for rotation
+        center = self.site.bounds().centroid
 
         # if building set reset the placement geometry
         if build:
             for shape in self.shapes:
                 shape.placed_wkt = shape.stable_wkt
-            self.rotate(self.facility.ax_angle)
+            self.rotate(self.site.ax_angle)
 
         # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(Simulator, overlaps=mask)
@@ -578,7 +578,7 @@ class Observable(Base):
         mask -- the mask of possible areas
         """
         if not mask:
-            mask = self.facility.bounds()
+            mask = self.site.bounds()
 
         restrict = list()
         place = list()
@@ -606,8 +606,8 @@ class Observable(Base):
         return results
 
 
-Facility.observables = relationship('Observable', order_by=Observable.id, back_populates='facility',
-                                    cascade='all, delete, delete-orphan')
+Site.observables = relationship('Observable', order_by=Observable.id, back_populates='site',
+                                cascade='all, delete, delete-orphan')
 
 
 class Shape(Base):
@@ -820,12 +820,12 @@ class Rule(Base):
     observable = relationship(Observable, back_populates='rules')
 
     def depends_on(self, Simulator):
-        """Finds any observables at the same Facility that match the
+        """Finds any observables at the same Site that match the
         pattern of the rule"""
         # should use REGEX
         df = Simulator.Observable()
         df = df[(df.name.str.startswith(self.pattern)) & (
-            df.facility_id == self.observable.facility_id)]
+            df.site_id == self.observable.site_id)]
         return df
 
 Observable.rules = relationship('Rule', order_by=Rule.id, back_populates='observable',
@@ -833,7 +833,7 @@ Observable.rules = relationship('Rule', order_by=Rule.id, back_populates='observ
 
 
 class Event(Base):
-    """An instance of a non - static Shape at a facility for a given timestep. Modified
+    """An instance of a non - static Shape at a site for a given timestep. Modified
     by rules."""
 
     __tablename__ = 'CycSat_Event'
@@ -845,15 +845,15 @@ class Event(Base):
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='events')
 
-    facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-    facility = relationship(Facility, back_populates='events')
+    site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
+    site = relationship(Site, back_populates='events')
 
     simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
     simulation = relationship(Simulation, back_populates='events')
 
 Observable.events = relationship(
     'Event', order_by=Event.id, back_populates='observable')
-Facility.events = relationship(
-    'Event', order_by=Event.id, back_populates='facility')
+Site.events = relationship(
+    'Event', order_by=Event.id, back_populates='site')
 Simulation.events = relationship('Event', order_by=Event.id, back_populates='simulation',
                                  cascade='all, delete, delete-orphan')
