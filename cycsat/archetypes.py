@@ -190,7 +190,7 @@ class Facility(Base):
     defined = Column(Boolean, default=False)
     prototype = Column(String)
     template = Column(String)
-    # geometry = Column(String)
+    ax_angle = Column(Integer, default=0)
 
     __mapper_args__ = {'polymorphic_on': template}
 
@@ -210,14 +210,26 @@ class Facility(Base):
         if not degrees:
             degrees = random.randint(-180, 180) + 0.01
 
+        self.ax_angle = degrees
+
         for feature in self.features:
-            rotate_feature(feature, degrees, self.bounds().centroid)
+            feature.rotate(degrees)
+
+    def center(self):
+        fcenter = self.footprint().centroid
+        bcenter = self.bounds().centroid
+
+        shift_x = bcenter.x - fcenter.x
+        shift_y = bcenter.y - fcenter.y
+
+        for feature in self.features:
+            feature.shift(shift_x, shift_y)
 
     def axis(self):
         footprint = self.bounds()
         minx, miny, maxx, maxy = footprint.bounds
         site_axis = LineString([[-maxx, 0], [maxx * 2, 0]])
-        #site_axis = rotate(site_axis, self.ax_angle)
+        site_axis = rotate(site_axis, self.ax_angle, center=footprint.centroid)
         return site_axis
 
     def dep_graph(self, Simulator):
@@ -285,12 +297,9 @@ class Facility(Base):
                             for feat in placed_features if feat.level == feature.level]
                 overlaps = cascaded_union(overlaps)
 
-                # mask out placed features that could overlap
-                footprint = footprint.difference(overlaps)
-
                 # place the feature
-                placed = feature.place_feature(Simulator,
-                                               mask=footprint, attempts=attempts, build=True)
+                placed = feature.place_feature(
+                    Simulator, mask=overlaps, attempts=attempts, build=True)
 
                 # if placement fails, the assemble fails
                 if not placed:
@@ -301,6 +310,9 @@ class Facility(Base):
                     shape.add_location(timestep, shape.placed_wkt)
 
         # if no Features fail then assembly succeeds
+        if timestep == -1:
+            self.rotate()
+            self.center()
         return True
 
     def place_features(self, Simulator, timestep=-1, attempts=100):
@@ -475,6 +487,18 @@ class Feature(Base):
         footprint = build_footprint(self, placed)
         return footprint
 
+    def rotate(self, degree):
+        center = self.facility.bounds().centroid
+        for shape in self.shapes:
+            geometry = shape.geometry(placed=True)
+            rotated = rotate(geometry, degree,
+                             origin=center, use_radians=False)
+            shape.placed_wkt = rotated.wkt
+
+    def shift(self, shift_x, shift_y):
+        for shape in self.shapes:
+            shape.shift(shift_x, shift_y)
+
     def depends_on(self, Simulator):
         all_deps = set()
         for rule in self.rules:
@@ -503,7 +527,7 @@ class Feature(Base):
                 shape.placed_wkt = shape.stable_wkt
 
         # evalute the rules of the feature to determine the mask
-        results = self.evaluate_rules(Simulator, mask=mask)
+        results = self.evaluate_rules(Simulator, overlaps=mask)
         if not results['place']:
             return False
 
@@ -533,7 +557,7 @@ class Feature(Base):
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
-    def evaluate_rules(self, Simulator, mask=None):
+    def evaluate_rules(self, Simulator, mask=None, overlaps=None):
         """Evaluates a a feature's rules and returns instructions
         for drawing that feature.
 
@@ -560,6 +584,12 @@ class Feature(Base):
             'restrict': intersect(restrict, mask),
             'place': intersect(place, mask)
         }
+
+        if overlaps:
+            if results['restrict']:
+                results['restrict'] = results['restrict'].difference(overlaps)
+            if results['place']:
+                results['place'] = results['place'].difference(overlaps)
 
         return results
 
@@ -654,6 +684,11 @@ class Shape(Base):
         self.placed_wkt = shifted.wkt
 
         return self
+
+    def shift(self, shift_x, shift_y):
+        geometry = self.geometry(placed=True)
+        shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
+        self.placed_wkt = shifted.wkt
 
 
 Feature.shapes = relationship('Shape', order_by=Shape.id, back_populates='feature',
