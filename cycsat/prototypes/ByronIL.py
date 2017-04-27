@@ -1,4 +1,4 @@
-from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
+from cycsat.archetypes import Facility, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
 from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN
@@ -17,7 +17,7 @@ class ByronIL(Facility):
         self.maxx = 700 * 10
         self.maxy = 700 * 10
 
-        self.features = [
+        self.observables = [
             ConcretePad('concrete pad'),
             CoolingTower('1 cooling tower'),
             Containment('1 containment'),
@@ -32,10 +32,10 @@ class ByronIL(Facility):
 
         for x in range(5):
             t = Truck('truck ' + str(x + 1))
-            self.features.append(t)
+            self.observables.append(t)
 
 
-class ConcretePad(Feature):
+class ConcretePad(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ConcretePad'}
 
     def __init__(self, name):
@@ -45,7 +45,7 @@ class ConcretePad(Feature):
         self.rules = []
 
 
-class CoolingTower(Feature):
+class CoolingTower(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.CoolingTower'}
 
     def __init__(self, name):
@@ -57,7 +57,7 @@ class CoolingTower(Feature):
         self.rules = [WITHIN(pattern='concrete', value=-300)]
 
 
-class Containment(Feature):
+class Containment(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Containment1'}
 
     def __init__(self, name):
@@ -74,7 +74,7 @@ class Containment(Feature):
             ]
 
 
-class ContainmentSupport(Feature):
+class ContainmentSupport(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ContainmentSupport'}
 
     def __init__(self, name, support, w, l):
@@ -95,7 +95,7 @@ class ContainmentSupport(Feature):
             )
 
 
-class ParkingLot(Feature):
+class ParkingLot(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
 
     def __init__(self, name):
@@ -107,7 +107,7 @@ class ParkingLot(Feature):
         self.rules = [WITHIN(pattern='concrete pad')]
 
 
-class Plume(Feature):
+class Plume(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Plume'}
 
     def __init__(self, name):
@@ -126,7 +126,7 @@ class Plume(Feature):
         ]
 
 
-class Truck(Feature):
+class Truck(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Truck'}
 
     def __init__(self, name):

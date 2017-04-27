@@ -14,7 +14,7 @@ import random
 
 
 class OUTSIDE(Rule):
-    """Allows a feature to appear outside the facility bounds."""
+    """Allows a observable to appear outside the facility bounds."""
     __mapper_args__ = {'polymorphic_identity': 'OUTSIDE'}
 
     def __init__(self, value=10000):
@@ -24,7 +24,7 @@ class OUTSIDE(Rule):
         self.value = value
 
     def run(self, Simulator):
-        return self.feature.facility.bounds().buffer(int(self.value))
+        return self.observable.facility.bounds().buffer(int(self.value))
 
 
 class NEAR(Rule):
@@ -40,12 +40,12 @@ class NEAR(Rule):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
-            return self.feature.facility.bounds()
+            return self.observable.facility.bounds()
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 
         inner_buffer = mask.buffer(int(self.value))
-        mask = self.feature.footprint().bounds
+        mask = self.observable.footprint().bounds
 
         diagaonal_dist = Point(mask[0:2]).distance(Point(mask[2:]))
 
@@ -69,7 +69,7 @@ class WITHIN(Rule):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
-            return self.feature.facility.bounds()
+            return self.observable.facility.bounds()
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 
@@ -87,14 +87,14 @@ class XALIGN(Rule):
 
     def run(self, Simulator):
         # get targets
-        maxy = self.feature.facility.maxy
+        maxy = self.observable.facility.maxy
         if self.value:
             line = LineString([[int(self.value), 0], [int(self.value), maxy]])
 
         else:
             targets = self.depends_on(Simulator)['obj'].tolist()
             if not targets:
-                return self.feature.facility.bounds()
+                return self.observable.facility.bounds()
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])
@@ -116,14 +116,14 @@ class YALIGN(Rule):
 
     def run(self, Simulator):
         # get targets
-        maxx = self.feature.facility.maxx
+        maxx = self.observable.facility.maxx
         if self.value:
             line = LineString([[0, int(self.value)], [maxx, int(self.value)]])
 
         else:
             targets = self.depends_on(Simulator)['obj'].tolist()
             if not targets:
-                return self.feature.facility.bounds()
+                return self.observable.facility.bounds()
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])
@@ -154,13 +154,13 @@ class ROTATE(Rule):
                 if targets:
                     angle = targets[0].rotation
 
-        for shape in self.feature.shapes:
+        for shape in self.observable.shapes:
             geometry = shape.geometry(placed=True)
             rotated = rotate(geometry, angle,
                              origin='center', use_radians=False)
             shape.placed_wkt = rotated.wkt
 
-        self.feature.rotation = angle
+        self.observable.rotation = angle
 
 
 # class DISPURSE_PLUME(Rule):
