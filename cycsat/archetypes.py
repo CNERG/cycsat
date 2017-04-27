@@ -301,30 +301,23 @@ class Site(Base):
 
                 footprint = self.bounds()
 
-                # find geometry of observables that could overlap (share the same
-                # z-level)
-                overlaps = [feat.footprint()
-                            for feat in placed_observables if feat.level == observable.level]
-                overlaps = cascaded_union(overlaps)
+                overlaps = cascaded_union([feat.footprint(timestep)
+                                           for feat in placed_observables if feat.level == observable.level])
 
-                if observable.consistent and (timestep > -1):
-                    placed = observable.morph(Simulator)
-                else:
-                    placed = observable.place(
-                        Simulator, mask=overlaps, attempts=attempts, build=True)
+                placed = observable.place(
+                    Simulator, mask=overlaps, attempts=attempts, timestep=timestep)
 
-                # if placement fails, the assemble fails
                 if not placed:
                     return False
 
                 placed_observables.append(observable)
-                for shape in observable.shapes:
-                    shape.add_location(timestep, shape.placed_wkt)
 
-        # if no Observables fail then assembly succeeds
+        # rotate and center
         if timestep == -1:
             self.rotate()
             self.center()
+
+        # assemble is successful
         return True
 
     def place_observables(self, Simulator, timestep=-1, attempts=100):
@@ -498,26 +491,24 @@ class Observable(Base):
                         for feature in self.features)
         return features
 
-    def footprint(self, placed=True):
+    def footprint(self, timestep=-1):
         """Returns a shapely geometry of the static shapes"""
-        footprint = build_footprint(self, placed)
+        footprint = build_footprint(self, timestep)
         return footprint
 
-    def rotate(self, degree):
+    def rotate(self, degrees, timestep=-1):
         center = self.site.bounds().centroid
+        self.rotation = degrees
         for shape in self.shapes:
-            geometry = shape.geometry(placed=True)
-            rotated = rotate(geometry, degree,
-                             origin=center, use_radians=False)
-            shape.placed_wkt = rotated.wkt
+            shape.rotate(degrees=degrees, timestep=timestep, center=center)
 
-    def shift(self, shift_x, shift_y):
+    def shift(self, shift_x, shift_y, timestep=-1):
         for shape in self.shapes:
-            shape.shift(shift_x, shift_y)
+            shape.shift(shift_x, shift_y, timestep=timestep)
 
-    def morph(self, Simulator):
+    def morph(self, Simulator, timestep=-1):
         """Runs a observable's transform rules that modify it's shape inplace."""
-        mods = [rule.run(Simulator)
+        mods = [rule.run(Simulator, timestep=timestep)
                 for rule in self.rules if rule.kind == 'transform']
         return True
 
@@ -529,7 +520,7 @@ class Observable(Base):
                 all_deps.add(d)
         return all_deps
 
-    def place(self, Simulator, mask=None, build=False, rand=True, location=False, attempts=100):
+    def place(self, Simulator, mask=None, timestep=-1, rand=True, location=False, attempts=100):
         """Places a observable within a geometry and checks typology of shapes
 
         Keyword arguments:
@@ -544,15 +535,17 @@ class Observable(Base):
         center = self.site.bounds().centroid
 
         # if building set reset the placement geometry
-        if build:
-            for shape in self.shapes:
-                shape.placed_wkt = shape.stable_wkt
-            self.rotate(self.site.ax_angle)
+        # if timestep == -1:
+        #     for shape in self.shapes:
+        #         shape.placed_wkt = shape.stable_wkt
+        #     self.rotate(self.site.ax_angle)
 
-        self.morph(Simulator)
+        if self.consistent:
+            self.morph(Simulator, timestep)
 
         # evalute the rules of the observable to determine the mask
-        results = self.evaluate_rules(Simulator, overlaps=mask)
+        results = self.evaluate_rules(
+            Simulator, timestep=timestep, overlaps=mask)
         if not results['place']:
             return False
 
@@ -565,8 +558,8 @@ class Observable(Base):
             typology_checks = list()
             for shape in self.shapes:
 
-                shape.place(posited_point, build, center)
-                placement = shape.geometry()
+                shape.place(posited_point, timestep=timestep)
+                placement = shape.geometry(timestep=timestep)
 
                 placed_shapes.append(placement)
                 typology_checks.append(placement.within(results['restrict']))
@@ -579,7 +572,7 @@ class Observable(Base):
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
-    def evaluate_rules(self, Simulator, mask=None, overlaps=None):
+    def evaluate_rules(self, Simulator, timestep=-1, mask=None, overlaps=None):
         """Evaluates a a observable's rules and returns instructions
         for drawing that observable.
 
@@ -594,7 +587,7 @@ class Observable(Base):
         place = list()
 
         for rule in self.rules:
-            result = rule.run(Simulator)
+            result = rule.run(Simulator, timestep=timestep)
             if rule.kind == 'restrict':
                 restrict.append(result)
                 place.append(result)
@@ -627,8 +620,9 @@ class Shape(Base):
     id = Column(Integer, primary_key=True)
     level = Column(Integer, default=0)
     prototype = Column(String)
-    placed_wkt = Column(String)
-    stable_wkt = Column(String)
+    # placed_wkt = Column(String)
+    # stable_wkt = Column(String)
+    wkt = Column(String)
     material_code = Column(Integer)
     rgb = Column(String)
     xoff = Column(Integer, default=0)
@@ -639,9 +633,25 @@ class Shape(Base):
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='shapes')
 
-    def add_location(self, timestep, wkt):
-        loc = Location(timestep=timestep, wkt=self.placed_wkt)
-        self.locations.append(loc)
+    def add_loc(self, timestep=-1, wkt=None):
+        # looks for existing location
+        loc = [loc for loc in self.locations if timestep == timestep]
+        if loc:
+            if wkt:
+                loc[0].wkt = wkt
+            else:
+                return loc[0]
+
+        if wkt:
+            # otherwise return a new location
+            loc = Location(timestep=timestep, wkt=wkt)
+            self.locations.append(loc)
+            return loc
+
+        else:
+            loc = Location(timestep=timestep, wkt=self.wkt)
+            self.locations.append(loc)
+            return loc
 
     def get_rgb(self, plotting=False):
         """Returns the RGB be value as a list [RGB] which is stored as text"""
@@ -655,39 +665,25 @@ class Shape(Base):
         else:
             return rgb
 
-    def geometry(self, placed=True, timestep=None):
+    def geometry(self, timestep=-1):
         """Returns a shapely geometry"""
-
-        if timestep:
-            locations = [
-                loc for loc in self.locations if loc.timestep == timestep]
-            if locations:
-                return load_wkt(locations[0].wkt)
-
-        if not self.placed_wkt:
-            geom = self.stable_wkt
-        else:
-            if placed:
-                geom = self.placed_wkt
-            else:
-                geom = self.stable_wkt
-
-        self.geo = load_wkt(geom)
-        return self.geo
+        return self.add_loc(timestep).geometry
 
     def materialize(self):
         materialize(self)
 
-    def place(self, placement, build=False, center=None):  # , rotation=0):
+    def place(self, placement, timestep=-1):  # , rotation=0):
         """Places a self to a coordinate position.
 
         Keyword arguments:
         build -- draws from the shapes the stable_wkt rather than placed
         """
+        loc = self.add_loc(timestep)
+
         placed_x = placement.coords.xy[0][0]
         placed_y = placement.coords.xy[1][0]
 
-        geometry = self.geometry(placed=True)
+        geometry = loc.geometry
 
         shape_x = geometry.centroid.coords.xy[0][0]
         shape_y = geometry.centroid.coords.xy[1][0]
@@ -702,15 +698,19 @@ class Shape(Base):
         shift_x = placed_x - shape_x + xoff
         shift_y = placed_y - shape_y + yoff
 
-        shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
-        self.placed_wkt = shifted.wkt
+        loc.wkt = translate(geometry, xoff=shift_x, yoff=shift_y).wkt
+        return loc
 
-        return self
+    def rotate(self, degrees, center='center', timestep=-1):
+        loc = self.add_loc(timestep)
+        loc.wkt = rotate(
+            loc.geometry, degrees, origin=center, use_radians=False).wkt
+        return loc
 
-    def shift(self, shift_x, shift_y):
-        geometry = self.geometry(placed=True)
-        shifted = translate(geometry, xoff=shift_x, yoff=shift_y)
-        self.placed_wkt = shifted.wkt
+    def shift(self, shift_x, shift_y, timestep=-1):
+        loc = self.add_loc(timestep)
+        loc.wkt = translate(loc.geometry, xoff=shift_x, yoff=shift_y).wkt
+        return loc
 
 
 Observable.shapes = relationship('Shape', order_by=Shape.id, back_populates='observable',

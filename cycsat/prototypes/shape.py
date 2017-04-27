@@ -24,7 +24,7 @@ class Circle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.stable_wkt = Point(xoff, yoff).buffer(self.radius).wkt
+        self.wkt = Point(xoff, yoff).buffer(self.radius).wkt
 
 
 class Rectangle(Shape):
@@ -40,5 +40,5 @@ class Rectangle(Shape):
         self.yoff = yoff
         self.visibility = visibility
 
-        self.stable_wkt = Polygon(
+        self.wkt = Polygon(
             [(xoff, yoff), (xoff, self.width), (self.length, self.width), (self.length, yoff)]).wkt

@@ -23,7 +23,7 @@ class OUTSIDE(Rule):
         self.pattern = None
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         return self.observable.site.bounds().buffer(int(self.value))
 
 
@@ -36,13 +36,13 @@ class NEAR(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(placed=True) for target in targets])
+            [target.footprint(timestep=params['timestep']) for target in targets])
 
         inner_buffer = mask.buffer(int(self.value))
         mask = self.observable.footprint().bounds
@@ -65,13 +65,13 @@ class WITHIN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(placed=True) for target in targets])
+            [target.footprint(timestep=params['timestep']) for target in targets])
 
         return mask.buffer(int(self.value))
 
@@ -85,7 +85,7 @@ class XALIGN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         # get targets
         maxy = self.observable.site.maxy
         if self.value:
@@ -97,7 +97,7 @@ class XALIGN(Rule):
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(placed=True) for target in targets])
+                [target.footprint(timestep=params['timestep']) for target in targets])
 
             value = mask.centroid.x
             line = LineString([[value, 0], [value, maxy]])
@@ -114,7 +114,7 @@ class YALIGN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         # get targets
         maxx = self.observable.site.maxx
         if self.value:
@@ -126,7 +126,7 @@ class YALIGN(Rule):
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(placed=True) for target in targets])
+                [target.footprint(timestep=params['timestep']) for target in targets])
 
             value = mask.centroid.y
             line = LineString([[0, value], [maxx, value]])
@@ -143,7 +143,7 @@ class ROTATE(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator):
+    def run(self, Simulator, **params):
         # if there are any targets get the first angle
         angle = self.rotation = random.randint(-180, 180)
         try:
@@ -154,29 +154,23 @@ class ROTATE(Rule):
                 if targets:
                     angle = targets[0].rotation
 
-        for shape in self.observable.shapes:
-            geometry = shape.geometry(placed=True)
-            rotated = rotate(geometry, angle,
-                             origin='center', use_radians=False)
-            shape.placed_wkt = rotated.wkt
-
-        self.observable.rotation = angle
+        self.observable.rotate(angle, params['timestep'])
 
 
-class DISPURSE_PLUME(Rule):
-    __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
+# class DISPURSE_PLUME(Rule):
+#     __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
 
-    def __init__(self, pattern=None):
-        """Returns a Feature by "placing it."""
-        self.kind = 'transform'
-        self.pattern = pattern
-        self.value = None
+#     def __init__(self, pattern=None):
+#         """Returns a Feature by "placing it."""
+#         self.kind = 'transform'
+#         self.pattern = pattern
+#         self.value = None
 
-    def run(self, Simulator, **params):
+#     def run(self, Simulator, **params):
 
-        wind_dir = random.randint(300, 1000)
-        wind_speed = random.random()
+#         wind_dir = random.randint(300, 1000)
+#         wind_speed = random.random()
 
-        for shape in self.observable.shapes:
-            shape.placed_wkt = shape.geometry(
-                placed=True).buffer(wind_dir).wkt
+#         for shape in self.observable.shapes:
+#             shape.placed_wkt = shape.geometry(
+#                 placed=True).buffer(wind_dir).wkt
