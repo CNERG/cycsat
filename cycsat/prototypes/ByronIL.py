@@ -1,7 +1,7 @@
 from cycsat.archetypes import Site, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
-from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN
+from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -30,9 +30,9 @@ class ByronIL(Site):
             Plume('plume 1')
         ]
 
-        for x in range(5):
-            t = Truck('truck ' + str(x + 1))
-            self.observables.append(t)
+        # for x in range(5):
+        #     t = Truck('truck ' + str(x + 1))
+        #     self.observables.append(t)
 
 
 class ConcretePad(Observable):
@@ -118,7 +118,9 @@ class Plume(Observable):
             Circle(650, level=4)
         ]
         self.rules = [
-            WITHIN(pattern='1 cooling tower', value=300)
+            XALIGN(pattern='1 cooling tower'),
+            YALIGN(pattern='1 cooling tower'),
+            DISPURSE_PLUME()
         ]
 
         self.conditions = [
