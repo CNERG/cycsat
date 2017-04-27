@@ -14,7 +14,7 @@ import random
 
 
 class OUTSIDE(Rule):
-    """Allows a observable to appear outside the facility bounds."""
+    """Allows a observable to appear outside the site bounds."""
     __mapper_args__ = {'polymorphic_identity': 'OUTSIDE'}
 
     def __init__(self, value=10000):
@@ -24,7 +24,7 @@ class OUTSIDE(Rule):
         self.value = value
 
     def run(self, Simulator):
-        return self.observable.facility.bounds().buffer(int(self.value))
+        return self.observable.site.bounds().buffer(int(self.value))
 
 
 class NEAR(Rule):
@@ -40,7 +40,7 @@ class NEAR(Rule):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
-            return self.observable.facility.bounds()
+            return self.observable.site.bounds()
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 
@@ -69,7 +69,7 @@ class WITHIN(Rule):
         # get targets
         targets = self.depends_on(Simulator)['obj'].tolist()
         if not targets:
-            return self.observable.facility.bounds()
+            return self.observable.site.bounds()
         mask = cascaded_union(
             [target.footprint(placed=True) for target in targets])
 
@@ -87,14 +87,14 @@ class XALIGN(Rule):
 
     def run(self, Simulator):
         # get targets
-        maxy = self.observable.facility.maxy
+        maxy = self.observable.site.maxy
         if self.value:
             line = LineString([[int(self.value), 0], [int(self.value), maxy]])
 
         else:
             targets = self.depends_on(Simulator)['obj'].tolist()
             if not targets:
-                return self.observable.facility.bounds()
+                return self.observable.site.bounds()
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])
@@ -116,14 +116,14 @@ class YALIGN(Rule):
 
     def run(self, Simulator):
         # get targets
-        maxx = self.observable.facility.maxx
+        maxx = self.observable.site.maxx
         if self.value:
             line = LineString([[0, int(self.value)], [maxx, int(self.value)]])
 
         else:
             targets = self.depends_on(Simulator)['obj'].tolist()
             if not targets:
-                return self.observable.facility.bounds()
+                return self.observable.site.bounds()
 
             mask = cascaded_union(
                 [target.footprint(placed=True) for target in targets])

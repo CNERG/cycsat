@@ -6,7 +6,7 @@ import inspect
 import pandas as pd
 import geopandas as gpd
 
-from .archetypes import Facility, Instrument, Observable, Shape, Event, Rule
+from .archetypes import Site, Instrument, Observable, Shape, Event, Rule
 from .archetypes import Base, Satellite, Simulation, Build, Process
 
 import cycsat.archetypes as archetypes
@@ -108,11 +108,11 @@ class Simulator(Database):
             'SELECT Duration FROM Info')['Duration'][0]
 
     def build(self, templates, name='untitled', attempts=100):
-        """Builds facilities.
+        """Builds sites.
 
         Keyword arguments:
         attempts -- (optional) max number of of attempts
-        facilities -- (optional) a list of facilities to build, default all
+        sites -- (optional) a list of sites to build, default all
         name -- (optional) name for the build 'Build'
         """
         build = Build(name=name)
@@ -123,39 +123,40 @@ class Simulator(Database):
         for agent in AgentEntry.iterrows():
             prototype = agent[1]['Prototype']
 
+            # this will need to be changed with other kinds are used
             if agent[1]['Kind'] == 'Facility':
                 if prototype in templates:
-                    facility = templates[prototype]()
-                    facility.AgentId = agent[1]['AgentId']
-                    facility.prototype = prototype
-                    build.facilities.append(facility)
+                    site = templates[prototype]()
+                    site.AgentId = agent[1]['AgentId']
+                    site.prototype = prototype
+                    build.sites.append(site)
 
         self.save(build)
         build.assemble(self, attempts=attempts)
         self.save(build)
 
     def simulate(self, sql=None, name='None'):
-        """Generates events for all facilties"""
+        """Generates events for all site"""
         simulation = Simulation(name=name)
 
         self.duration = self.query(
             'SELECT Duration FROM Info')['Duration'][0]
 
         if sql:
-            facilities = self.Facility().query(sql)
+            sites = self.Site().query(sql)
         else:
-            facilities = self.Facility()
+            sites = self.Site()
 
-        for facility in facilities.iterrows():
-            if facility[1]['defined']:
+        for site in sites.iterrows():
+            if site[1]['defined']:
                 for timestep in range(self.duration):
-                    facility[1]['obj'].simulate(self, simulation, timestep)
+                    site[1]['obj'].simulate(self, simulation, timestep)
 
         self.session.add(simulation)
         self.session.commit()
 
     def plot(self, sql=None, timestep=-1, virtual=None, label=False):
-        """Plots facilites that meet a sql query at a given timestep
+        """Plots site that meet a sql query at a given timestep
 
         Keyword arguments:
         sql -- sql to select Facilities, default all
@@ -165,26 +166,26 @@ class Simulator(Database):
         if not sql:
             sql = 'AgentId == AgentId'
 
-        facilities = self.Facility().query(sql)
+        sites = self.Site().query(sql)
 
-        if len(facilities) == 1:
-            fig, axes = facilities.iloc[0].obj.plot(timestep=timestep)
+        if len(sites) == 1:
+            fig, axes = sites.iloc[0].obj.plot(timestep=timestep)
         else:
             # find the factors
             factors = set()
-            for i in range(1, len(facilities) + 1):
-                if len(facilities) % i == 0:
+            for i in range(1, len(sites) + 1):
+                if len(sites) % i == 0:
                     factors.add(i)
 
             # figure out the dimensions for the plot
             factors = list(factors)
             cols = factors[round(len(factors) / 2) - 1]
-            rows = int(len(facilities) / cols)
+            rows = int(len(sites) / cols)
 
-            fig, axes = plt.subplots(cols, rows)  # len(facilities))
+            fig, axes = plt.subplots(cols, rows)  # len(sites))
 
-            for ax, facility in zip(axes.flatten(), facilities.iterrows()):
-                facility[1].obj.plot(ax=ax, timestep=timestep, label=label)
+            for ax, site in zip(axes.flatten(), sites.iterrows()):
+                site[1].obj.plot(ax=ax, timestep=timestep, label=label)
 
         if virtual:
             plt.savefig(virtual, format='png')
