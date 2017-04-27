@@ -71,14 +71,14 @@ def build_geometry(Entity):
     return geometry
 
 
-def build_footprint(Entity, placed=True):
+def build_footprint(Entity, timestep=-1):
     """Returns a geometry that is the union of all a feature's static shapes."""
     archetype = Entity.__class__.__bases__[0].__name__
     if archetype == 'Site':
         shapes = [feature.footprint()
                   for feature in Entity.observables if feature.visibility == 100]
     else:
-        shapes = [shape.geometry(placed=placed) for shape in Entity.shapes]
+        shapes = [shape.geometry(timestep) for shape in Entity.shapes]
     union = cascaded_union(shapes)
     if union.__class__.__name__ == 'MultiPolygon':
         return box(union)

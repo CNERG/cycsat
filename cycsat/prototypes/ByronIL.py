@@ -1,7 +1,7 @@
 from cycsat.archetypes import Site, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
-from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
+from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN  # , DISPURSE_PLUME
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ class Plume(Observable):
         self.rules = [
             XALIGN(pattern='1 cooling tower'),
             YALIGN(pattern='1 cooling tower'),
-            DISPURSE_PLUME()
+            # DISPURSE_PLUME()
         ]
 
         self.conditions = [
