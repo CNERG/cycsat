@@ -53,6 +53,14 @@ operations = {
 }
 
 
+# class Event(Base):
+#     """A possible realization of all Facilities and Features in a simulation."""
+
+#     __tablename__ = 'CycSat_Event'
+#     id = Column(Integer, primary_key=True)
+#     name = Column(String)
+
+
 class Build(Base):
     """A possible realization of all Facilities and Features in a simulation."""
 
@@ -244,7 +252,7 @@ class Facility(Base):
             # Get all features with no dependencies
             ready = {name for name, deps in graph.items() if not deps}
             if not ready:
-                msg = "Circular dependencies found!\n"
+                msg = "Circular dependencies found!"
                 raise ValueError(msg)
             # Remove them from the dependency graph
             for name in ready:
@@ -298,7 +306,7 @@ class Facility(Base):
                 overlaps = cascaded_union(overlaps)
 
                 # place the feature
-                placed = feature.place_feature(
+                placed = feature.place(
                     Simulator, mask=overlaps, attempts=attempts, build=True)
 
                 # if placement fails, the assemble fails
@@ -336,6 +344,7 @@ class Facility(Base):
         Simulator -- a cycsat Simulator object
         timestep -- the timestep for simulation
         """
+        print('simulating', timestep)
         dynamic_features = [
             feature for feature in self.features if feature.visibility != 100]
 
@@ -358,7 +367,7 @@ class Facility(Base):
                 continue
             else:
                 if random.randint(1, 100) < feature.visibility:
-                    print(feature.name, timestep, 'True')
+                    #print(feature.name, timestep, 'True')
                     event = Event(timestep=timestep)
                     feature.events.append(event)
                     self.events.append(event)
@@ -507,7 +516,7 @@ class Feature(Base):
                 all_deps.add(d)
         return all_deps
 
-    def place_feature(self, Simulator, mask=None, build=False, rand=True, location=False, attempts=100):
+    def place(self, Simulator, mask=None, build=False, rand=True, location=False, attempts=100):
         """Places a feature within a geometry and checks typology of shapes
 
         Keyword arguments:
@@ -525,6 +534,7 @@ class Feature(Base):
         if build:
             for shape in self.shapes:
                 shape.placed_wkt = shape.stable_wkt
+            self.rotate(self.facility.ax_angle)
 
         # evalute the rules of the feature to determine the mask
         results = self.evaluate_rules(Simulator, overlaps=mask)

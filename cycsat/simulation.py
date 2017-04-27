@@ -134,14 +134,18 @@ class Simulator(Database):
         build.assemble(self, attempts=attempts)
         self.save(build)
 
-    def simulate(self, build_id, name='None'):
+    def simulate(self, sql=None, name='None'):
         """Generates events for all facilties"""
         simulation = Simulation(name=name)
 
         self.duration = self.query(
             'SELECT Duration FROM Info')['Duration'][0]
 
-        facilities = self.Facility()[self.Facility().build_id == build_id]
+        if sql:
+            facilities = self.Facility().query(sql)
+        else:
+            facilities = self.Facility()
+
         for facility in facilities.iterrows():
             if facility[1]['defined']:
                 for timestep in range(self.duration):
