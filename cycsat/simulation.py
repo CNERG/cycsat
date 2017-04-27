@@ -1,7 +1,6 @@
 """
 simulation.py
 """
-import math
 import inspect
 import pandas as pd
 import geopandas as gpd
@@ -13,15 +12,9 @@ import cycsat.archetypes as archetypes
 
 from shapely.wkt import loads as load_wkt
 
-from random import randint
-import os
-import shutil
 import io
-
 from skimage.io import imread
-
 import imageio
-
 import sqlite3
 import matplotlib.pyplot as plt
 

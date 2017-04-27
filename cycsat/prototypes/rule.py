@@ -8,7 +8,7 @@ from cycsat.archetypes import Rule
 from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from shapely.affinity import translate
-from shapely.affinity import rotate
+from shapely.affinity import rotate, scale
 
 import random
 
@@ -59,9 +59,9 @@ class NEAR(Rule):
 class WITHIN(Rule):
     __mapper_args__ = {'polymorphic_identity': 'WITHIN'}
 
-    def __init__(self, pattern, value=0):
+    def __init__(self, pattern, value=0, kind='restrict'):
         """Returns a Feature by "placing it."""
-        self.kind = 'restrict'
+        self.kind = kind
         self.pattern = pattern
         self.value = value
 
@@ -163,19 +163,20 @@ class ROTATE(Rule):
         self.observable.rotation = angle
 
 
-# class DISPURSE_PLUME(Rule):
-#     __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
+class DISPURSE_PLUME(Rule):
+    __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
 
-#     def __init__(self, pattern=None, wind='random'):
-#         """Returns a Feature by "placing it."""
-#         self.kind = 'transform'
-#         self.pattern = pattern
-#         self.value = value
+    def __init__(self, pattern=None):
+        """Returns a Feature by "placing it."""
+        self.kind = 'transform'
+        self.pattern = pattern
+        self.value = None
 
-#     def run(self, Simulator, **params):
+    def run(self, Simulator, **params):
 
-#         wind_dir = params['wind_dir']
-#         wind_speed = params['wind_speed']
-#         timestep = params['timestep']
+        wind_dir = random.randint(300, 1000)
+        wind_speed = random.random()
 
-#         re
+        for shape in self.observable.shapes:
+            shape.placed_wkt = shape.geometry(
+                placed=True).buffer(wind_dir).wkt

@@ -53,12 +53,12 @@ operations = {
 }
 
 
-# class Feature(Base):
-#     """A possible realization of all sites and Observables in a simulation."""
+class Event(Base):
+    """A possible realization of all sites and Observables in a simulation."""
 
-#     __tablename__ = 'CycSat_Feature'
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String)
+    __tablename__ = 'CycSat_Event'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
 
 
 class Build(Base):
@@ -286,7 +286,7 @@ class Site(Base):
                 return True
         else:
             observable_ids = [
-                observable.id for observable in self.observables if observable.visibility == 100]
+                observable.id for observable in self.observables if observable.consistent]
 
         # create dependency groups
         dep_grps = self.dep_graph(Simulator)
@@ -307,9 +307,11 @@ class Site(Base):
                             for feat in placed_observables if feat.level == observable.level]
                 overlaps = cascaded_union(overlaps)
 
-                # place the observable
-                placed = observable.place(
-                    Simulator, mask=overlaps, attempts=attempts, build=True)
+                if observable.consistent and (timestep > -1):
+                    placed = observable.morph(Simulator)
+                else:
+                    placed = observable.place(
+                        Simulator, mask=overlaps, attempts=attempts, build=True)
 
                 # if placement fails, the assemble fails
                 if not placed:
@@ -480,6 +482,7 @@ class Observable(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     visibility = Column(Integer, default=100)
+    consistent = Column(Boolean, default=True)
     prototype = Column(String)
     level = Column(Integer)
     rotation = Column(Integer, default=0)
@@ -512,6 +515,12 @@ class Observable(Base):
         for shape in self.shapes:
             shape.shift(shift_x, shift_y)
 
+    def morph(self, Simulator):
+        """Runs a observable's transform rules that modify it's shape inplace."""
+        mods = [rule.run(Simulator)
+                for rule in self.rules if rule.kind == 'transform']
+        return True
+
     def depends_on(self, Simulator):
         all_deps = set()
         for rule in self.rules:
@@ -540,13 +549,12 @@ class Observable(Base):
                 shape.placed_wkt = shape.stable_wkt
             self.rotate(self.site.ax_angle)
 
+        self.morph(Simulator)
+
         # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(Simulator, overlaps=mask)
         if not results['place']:
             return False
-
-        mods = [rule.run(Simulator)
-                for rule in self.rules if rule.kind == 'transform']
 
         for i in range(attempts):
             posited_point = posit_point2(results['place'])
