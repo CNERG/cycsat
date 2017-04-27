@@ -5,6 +5,7 @@ import ast
 import random
 import io
 from collections import defaultdict
+import sys
 
 import imageio
 import tempfile
@@ -305,7 +306,7 @@ class Site(Base):
                                            for feat in placed_observables if feat.level == observable.level])
 
                 placed = observable.place(
-                    Simulator, mask=overlaps, attempts=attempts, timestep=timestep)
+                    Simulator, mask=overlaps, attempts=100, timestep=timestep)
 
                 if not placed:
                     return False
@@ -324,7 +325,8 @@ class Site(Base):
         """Places all the observables of a site according to their rules
         and features at the provided timestep."""
         for x in range(attempts):
-            result = self.assemble(Simulator, timestep, attempts)
+            result = self.assemble(
+                Simulator, timestep=timestep, attempts=attempts)
             if result:
                 self.defined = True
                 return True
@@ -360,11 +362,10 @@ class Site(Base):
                     evaluations.append(False)
 
             if False in evaluations:
-                #print(observable.name, timestep, 'False')
                 continue
             else:
                 if random.randint(1, 100) < observable.visibility:
-                    #print(observable.name, timestep, 'True')
+                    # print(observable.name, timestep, 'True')
                     feature = Feature(timestep=timestep)
                     observable.features.append(feature)
                     self.features.append(feature)
@@ -375,6 +376,7 @@ class Site(Base):
 
         self.place_observables(Simulator, timestep=timestep)
         Simulator.save(self)
+        Simulator.session.commit()
 
 # this needs to be fixed
     def timestep_shapes(self, timestep=0):
@@ -540,13 +542,13 @@ class Observable(Base):
         #         shape.placed_wkt = shape.stable_wkt
         #     self.rotate(self.site.ax_angle)
 
-        if self.consistent:
-            self.morph(Simulator, timestep)
+        self.morph(Simulator, timestep)
 
         # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             Simulator, timestep=timestep, overlaps=mask)
         if not results['place']:
+            print('no place')
             return False
 
         for i in range(attempts):
@@ -554,21 +556,29 @@ class Observable(Base):
             if not posited_point:
                 return False
 
-            placed_shapes = list()
+            locations = list()
             typology_checks = list()
             for shape in self.shapes:
 
-                shape.place(posited_point, timestep=timestep)
-                placement = shape.geometry(timestep=timestep)
-
-                placed_shapes.append(placement)
-                typology_checks.append(placement.within(results['restrict']))
+                loc = shape.place(posited_point, timestep=timestep)
+                typology_checks.append(
+                    loc.geometry.within(results['restrict']))
 
             if False not in typology_checks:
-                self.wkt = cascaded_union(placed_shapes).wkt
+                # self.wkt = cascaded_union(placed_shapes).wkt
                 Simulator.save(self)
                 return True
 
+        ax = plt.subplot(111)
+        ax.set_xlim([0, self.site.maxx])
+        ax.set_ylim([0, self.site.maxy])
+
+        ax.add_patch(PolygonPatch(results['restrict']))
+        ax.add_patch(PolygonPatch(results['place'], facecolor='red'))
+
+        print(results['place'])
+
+        sys.exit()
         print(self.name, 'placement failed after {', attempts, '} attempts.')
         return False
 
@@ -635,7 +645,7 @@ class Shape(Base):
 
     def add_loc(self, timestep=-1, wkt=None):
         # looks for existing location
-        loc = [loc for loc in self.locations if timestep == timestep]
+        loc = [loc for loc in self.locations if loc.timestep == timestep]
         if loc:
             if wkt:
                 loc[0].wkt = wkt
