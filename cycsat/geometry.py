@@ -76,7 +76,7 @@ def build_footprint(Entity, placed=True):
     archetype = Entity.__class__.__bases__[0].__name__
     if archetype == 'Facility':
         shapes = [feature.footprint()
-                  for feature in Entity.features if feature.visibility == 100]
+                  for feature in Entity.observables if feature.visibility == 100]
     else:
         shapes = [shape.geometry(placed=placed) for shape in Entity.shapes]
     union = cascaded_union(shapes)

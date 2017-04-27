@@ -54,7 +54,7 @@ operations = {
 
 
 # class Event(Base):
-#     """A possible realization of all Facilities and Features in a simulation."""
+#     """A possible realization of all Facilities and Observables in a simulation."""
 
 #     __tablename__ = 'CycSat_Event'
 #     id = Column(Integer, primary_key=True)
@@ -62,16 +62,17 @@ operations = {
 
 
 class Build(Base):
-    """A possible realization of all Facilities and Features in a simulation."""
+    """A possible realization of all Facilities and Observables in a simulation."""
 
     __tablename__ = 'CycSat_Build'
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
     def assemble(self, Simulator, attempts=100):
-        """Assembles the build, i.e. places all the features of all the facilities."""
+        """Assembles the build, i.e. places all the observables of all the facilities."""
         for facility in self.facilities:
-            facility.place_features(Simulator, timestep=-1, attempts=attempts)
+            facility.place_observables(
+                Simulator, timestep=-1, attempts=attempts)
 
 
 class Process(Base):
@@ -141,8 +142,8 @@ class Instrument(Base):
         self.Facility = Facility
 
         self.shapes = []
-        for feature in Facility.features:
-            for shape in feature.shapes:
+        for observable in Facility.observables:
+            for shape in observable.shapes:
                 self.shapes.append(materialize(shape))
 
         self.Sensor.focus(Facility)
@@ -187,7 +188,7 @@ Satellite.instruments = relationship(
 #------------------------------------------------------------------------------
 
 class Facility(Base):
-    """A collection of features on a collection of terrains."""
+    """A collection of observables on a collection of terrains."""
     __tablename__ = 'CycSat_Facility'
 
     id = Column(Integer, primary_key=True)
@@ -214,14 +215,14 @@ class Facility(Base):
         return build_footprint(self)
 
     def rotate(self, degrees=None):
-        """Rotates all the features of a facility."""
+        """Rotates all the observables of a facility."""
         if not degrees:
             degrees = random.randint(-180, 180) + 0.01
 
         self.ax_angle = degrees
 
-        for feature in self.features:
-            feature.rotate(degrees)
+        for observable in self.observables:
+            observable.rotate(degrees)
 
     def center(self):
         fcenter = self.footprint().centroid
@@ -230,8 +231,8 @@ class Facility(Base):
         shift_x = bcenter.x - fcenter.x
         shift_y = bcenter.y - fcenter.y
 
-        for feature in self.features:
-            feature.shift(shift_x, shift_y)
+        for observable in self.observables:
+            observable.shift(shift_x, shift_y)
 
     def axis(self):
         footprint = self.bounds()
@@ -241,15 +242,16 @@ class Facility(Base):
         return site_axis
 
     def dep_graph(self, Simulator):
-        """Returns groups of features based on their dependencies."""
-        graph = dict((f.name, f.depends_on(Simulator)) for f in self.features)
-        name_to_instance = dict((f.name, f) for f in self.features)
+        """Returns groups of observables based on their dependencies."""
+        graph = dict((f.name, f.depends_on(Simulator))
+                     for f in self.observables)
+        name_to_instance = dict((f.name, f) for f in self.observables)
 
         # where to store the batches
         batches = list()
 
         while graph:
-            # Get all features with no dependencies
+            # Get all observables with no dependencies
             ready = {name for name, deps in graph.items() if not deps}
             if not ready:
                 msg = "Circular dependencies found!"
@@ -267,64 +269,64 @@ class Facility(Base):
         return batches
 
     def assemble(self, Simulator, timestep=-1, attempts=100):
-        """Assembles all the Features of a Facility according to their Rules.
+        """Assembles all the Observables of a Facility according to their Rules.
 
         Keyword arguments:
         timestep -- the timestep of the Facility to draw
-        attempts -- the max # of attempts to place a feature
+        attempts -- the max # of attempts to place a observable
         """
-        # determine which features to draw (by timestep)
+        # determine which observables to draw (by timestep)
         if timestep > -1:
-            feature_ids = set()
+            observable_ids = set()
             events = [
                 event for event in self.events if event.timestep == timestep]
             for event in events:
-                feature_ids.add(event.feature.id)
-            if not feature_ids:
+                observable_ids.add(event.observable.id)
+            if not observable_ids:
                 return True
         else:
-            feature_ids = [
-                feature.id for feature in self.features if feature.visibility == 100]
+            observable_ids = [
+                observable.id for observable in self.observables if observable.visibility == 100]
 
         # create dependency groups
         dep_grps = self.dep_graph(Simulator)
 
-        placed_features = list()
+        placed_observables = list()
 
         for group in dep_grps:
-            for feature in group:
-                if feature.id not in feature_ids:
-                    placed_features.append(feature)
+            for observable in group:
+                if observable.id not in observable_ids:
+                    placed_observables.append(observable)
                     continue
 
                 footprint = self.bounds()
 
-                # find geometry of features that could overlap (share the same
+                # find geometry of observables that could overlap (share the same
                 # z-level)
                 overlaps = [feat.footprint()
-                            for feat in placed_features if feat.level == feature.level]
+                            for feat in placed_observables if feat.level == observable.level]
                 overlaps = cascaded_union(overlaps)
 
-                # place the feature
-                placed = feature.place(
+                # place the observable
+                placed = observable.place(
                     Simulator, mask=overlaps, attempts=attempts, build=True)
 
                 # if placement fails, the assemble fails
                 if not placed:
                     return False
 
-                placed_features.append(feature)
-                for shape in feature.shapes:
+                placed_observables.append(observable)
+                for shape in observable.shapes:
                     shape.add_location(timestep, shape.placed_wkt)
 
-        # if no Features fail then assembly succeeds
+        # if no Observables fail then assembly succeeds
         if timestep == -1:
             self.rotate()
             self.center()
         return True
 
-    def place_features(self, Simulator, timestep=-1, attempts=100):
-        """Places all the features of a facility according to their rules
+    def place_observables(self, Simulator, timestep=-1, attempts=100):
+        """Places all the observables of a facility according to their rules
         and events at the provided timestep."""
         for x in range(attempts):
             result = self.assemble(Simulator, timestep, attempts)
@@ -345,13 +347,13 @@ class Facility(Base):
         timestep -- the timestep for simulation
         """
         print('simulating', timestep)
-        dynamic_features = [
-            feature for feature in self.features if feature.visibility != 100]
+        dynamic_observables = [
+            observable for observable in self.observables if observable.visibility != 100]
 
         events = list()
-        for feature in dynamic_features:
+        for observable in dynamic_observables:
             evaluations = []
-            for condition in feature.conditions:
+            for condition in observable.conditions:
                 qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (
                     condition.table, self.AgentId, timestep)
                 df = Simulator.query(qry)
@@ -363,20 +365,20 @@ class Facility(Base):
                     evaluations.append(False)
 
             if False in evaluations:
-                #print(feature.name, timestep, 'False')
+                #print(observable.name, timestep, 'False')
                 continue
             else:
-                if random.randint(1, 100) < feature.visibility:
-                    #print(feature.name, timestep, 'True')
+                if random.randint(1, 100) < observable.visibility:
+                    #print(observable.name, timestep, 'True')
                     event = Event(timestep=timestep)
-                    feature.events.append(event)
+                    observable.events.append(event)
                     self.events.append(event)
                     sim.events.append(event)
-                    Simulator.save(feature)
+                    Simulator.save(observable)
                 else:
                     continue
 
-        self.place_features(Simulator, timestep=timestep)
+        self.place_observables(Simulator, timestep=timestep)
         Simulator.save(self)
 
 # this needs to be fixed
@@ -384,20 +386,20 @@ class Facility(Base):
         """Returns the ordered shapes to draw at a facility for a given timestep."""
         shapes = list()
 
-        for feature in self.features:
-            # add all if a static feature
-            if feature.visibility == 100:
-                shapes += [(shape.level, shape) for shape in feature.shapes]
+        for observable in self.observables:
+            # add all if a static observable
+            if observable.visibility == 100:
+                shapes += [(shape.level, shape) for shape in observable.shapes]
             else:
-                events = [e for e in feature.events if e.timestep == timestep]
+                events = [e for e in observable.events if e.timestep == timestep]
                 if len(events) > 0:
                     shapes += [(shape.level, shape)
-                               for shape in feature.shapes]
+                               for shape in observable.shapes]
 
         return sorted(shapes, key=lambda x: x[0])
 
     def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
-        """plots a facility and its static features or a timestep."""
+        """plots a facility and its static observables or a timestep."""
         if ax:
             new_fig = False
             ax.set_aspect('equal')
@@ -413,11 +415,11 @@ class Facility(Base):
                      '\ntimestep:' + str(timestep))
         ax.set_aspect('equal')
 
-        feature_ids = set()
+        observable_ids = set()
         shapes = self.timestep_shapes(timestep)
         for shape in shapes:
             shape = shape[1]
-            if shape.feature.visibility == 100:
+            if shape.observable.visibility == 100:
                 geometry = shape.geometry()
             else:
                 geometry = shape.geometry(timestep=timestep)
@@ -427,13 +429,13 @@ class Facility(Base):
             ax.add_patch(patch)
 
             if label:
-                feature_ids.add(shape.feature_id)
+                observable_ids.add(shape.observable_id)
 
         if label:
-            for feature in self.features:
-                if feature.id in feature_ids:
-                    c = feature.footprint(placed=True).centroid
-                    plt.text(c.x, c.y, feature.name)
+            for observable in self.observables:
+                if observable.id in observable_ids:
+                    c = observable.footprint(placed=True).centroid
+                    plt.text(c.x, c.y, observable.name)
 
         plt.tight_layout()
 
@@ -448,7 +450,7 @@ class Facility(Base):
             return fig, ax
 
     def gif(self, timesteps, name, fps=1):
-        """plots a facility and its static features or a timestep."""
+        """plots a facility and its static observables or a timestep."""
         plt.ioff()
         plots = list()
         for step in timesteps:
@@ -469,10 +471,10 @@ Build.facilities = relationship(
     'Facility', order_by=Facility.id, back_populates='build')
 
 
-class Feature(Base):
+class Observable(Base):
     """Collection of shapes"""
 
-    __tablename__ = 'CycSat_Feature'
+    __tablename__ = 'CycSat_Observable'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -484,7 +486,7 @@ class Feature(Base):
     __mapper_args__ = {'polymorphic_on': prototype}
 
     facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-    facility = relationship(Facility, back_populates='features')
+    facility = relationship(Facility, back_populates='observables')
 
     def sorted_events(self):
         """Returns a sorted list (by timestep) of events."""
@@ -517,10 +519,10 @@ class Feature(Base):
         return all_deps
 
     def place(self, Simulator, mask=None, build=False, rand=True, location=False, attempts=100):
-        """Places a feature within a geometry and checks typology of shapes
+        """Places a observable within a geometry and checks typology of shapes
 
         Keyword arguments:
-        self -- feature to place
+        self -- observable to place
         bounds -- containing bounds
         random -- if 'True', placement is random, else Point feaure is required
         location -- centroid location to place self
@@ -536,7 +538,7 @@ class Feature(Base):
                 shape.placed_wkt = shape.stable_wkt
             self.rotate(self.facility.ax_angle)
 
-        # evalute the rules of the feature to determine the mask
+        # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(Simulator, overlaps=mask)
         if not results['place']:
             return False
@@ -568,8 +570,8 @@ class Feature(Base):
         return False
 
     def evaluate_rules(self, Simulator, mask=None, overlaps=None):
-        """Evaluates a a feature's rules and returns instructions
-        for drawing that feature.
+        """Evaluates a a observable's rules and returns instructions
+        for drawing that observable.
 
         Keyword arguments:
         types -- the types of rules to evaluate
@@ -604,8 +606,8 @@ class Feature(Base):
         return results
 
 
-Facility.features = relationship('Feature', order_by=Feature.id, back_populates='facility',
-                                 cascade='all, delete, delete-orphan')
+Facility.observables = relationship('Observable', order_by=Observable.id, back_populates='facility',
+                                    cascade='all, delete, delete-orphan')
 
 
 class Shape(Base):
@@ -624,8 +626,8 @@ class Shape(Base):
 
     __mapper_args__ = {'polymorphic_on': prototype}
 
-    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='shapes')
+    observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
+    observable = relationship(Observable, back_populates='shapes')
 
     def add_location(self, timestep, wkt):
         loc = Location(timestep=timestep, wkt=self.placed_wkt)
@@ -701,8 +703,8 @@ class Shape(Base):
         self.placed_wkt = shifted.wkt
 
 
-Feature.shapes = relationship('Shape', order_by=Shape.id, back_populates='feature',
-                              cascade='all, delete, delete-orphan')
+Observable.shapes = relationship('Shape', order_by=Shape.id, back_populates='observable',
+                                 cascade='all, delete, delete-orphan')
 
 
 class Location(Base):
@@ -731,7 +733,7 @@ Simulation.locations = relationship('Location', order_by=Location.id, back_popul
 
 
 class Condition(Base):
-    """Condition for a shape or feature to have an event (appear) in a timestep (scene)"""
+    """Condition for a shape or observable to have an event (appear) in a timestep (scene)"""
 
     __tablename__ = 'CycSat_Condition'
 
@@ -740,11 +742,11 @@ class Condition(Base):
     oper = Column(String)
     value = Column(Integer)
 
-    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='conditions')
+    observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
+    observable = relationship(Observable, back_populates='conditions')
 
-Feature.conditions = relationship('Condition', order_by=Condition.id, back_populates='feature',
-                                  cascade='all, delete, delete-orphan')
+Observable.conditions = relationship('Condition', order_by=Condition.id, back_populates='observable',
+                                     cascade='all, delete, delete-orphan')
 
 
 class Material(Base):
@@ -801,7 +803,7 @@ Shape.materials = relationship('Material', order_by=Material.id, back_populates=
 
 
 class Rule(Base):
-    """Spatial rule for where a feature or shape can appear."""
+    """Spatial rule for where a observable or shape can appear."""
 
     __tablename__ = 'CycSat_Rule'
 
@@ -814,20 +816,20 @@ class Rule(Base):
 
     __mapper_args__ = {'polymorphic_on': name}
 
-    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='rules')
+    observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
+    observable = relationship(Observable, back_populates='rules')
 
     def depends_on(self, Simulator):
-        """Finds any features at the same Facility that match the
+        """Finds any observables at the same Facility that match the
         pattern of the rule"""
         # should use REGEX
-        df = Simulator.Feature()
+        df = Simulator.Observable()
         df = df[(df.name.str.startswith(self.pattern)) & (
-            df.facility_id == self.feature.facility_id)]
+            df.facility_id == self.observable.facility_id)]
         return df
 
-Feature.rules = relationship('Rule', order_by=Rule.id, back_populates='feature',
-                             cascade='all, delete, delete-orphan')
+Observable.rules = relationship('Rule', order_by=Rule.id, back_populates='observable',
+                                cascade='all, delete, delete-orphan')
 
 
 class Event(Base):
@@ -840,8 +842,8 @@ class Event(Base):
     timestep = Column(Integer)
     wkt = Column(String)
 
-    feature_id = Column(Integer, ForeignKey('CycSat_Feature.id'))
-    feature = relationship(Feature, back_populates='events')
+    observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
+    observable = relationship(Observable, back_populates='events')
 
     facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
     facility = relationship(Facility, back_populates='events')
@@ -849,27 +851,9 @@ class Event(Base):
     simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
     simulation = relationship(Simulation, back_populates='events')
 
-Feature.events = relationship(
-    'Event', order_by=Event.id, back_populates='feature')
+Observable.events = relationship(
+    'Event', order_by=Event.id, back_populates='observable')
 Facility.events = relationship(
     'Event', order_by=Event.id, back_populates='facility')
 Simulation.events = relationship('Event', order_by=Event.id, back_populates='simulation',
                                  cascade='all, delete, delete-orphan')
-
-
-# class Scene(Base):
-#     __tablename__ = 'CycSat_Scene'
-
-#     id = Column(Integer, primary_key=True)
-#     timestep = Column(Integer)
-
-#     facility_id = Column(Integer, ForeignKey('CycSat_Facility.id'))
-#     facility = relationship(Facility, back_populates='scenes')
-
-#     instrument_id = Column(Integer, ForeignKey('CycSat_Instrument.id'))
-#     instrument = relationship(Instrument, back_populates='scenes')
-
-# Facility.scenes = relationship(
-#     'Scene', order_by=Scene.id, back_populates='facility')
-# Instrument.scenes = relationship(
-#     'Scene', order_by=Scene.id, back_populates='instrument')

@@ -6,7 +6,7 @@ import inspect
 import pandas as pd
 import geopandas as gpd
 
-from .archetypes import Facility, Instrument, Feature, Shape, Event, Rule
+from .archetypes import Facility, Instrument, Observable, Shape, Event, Rule
 from .archetypes import Base, Satellite, Simulation, Build, Process
 
 import cycsat.archetypes as archetypes
