@@ -6,7 +6,7 @@ import inspect
 import pandas as pd
 import geopandas as gpd
 
-from .archetypes import Site, Instrument, Observable, Shape, Event, Rule
+from .archetypes import Site, Instrument, Observable, Shape, Rule
 from .archetypes import Base, Satellite, Simulation, Build, Process
 
 import cycsat.archetypes as archetypes
@@ -136,7 +136,7 @@ class Simulator(Database):
         self.save(build)
 
     def simulate(self, sql=None, name='None'):
-        """Generates events for all site"""
+        """Generates features for all site"""
         simulation = Simulation(name=name)
 
         self.duration = self.query(

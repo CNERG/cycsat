@@ -53,10 +53,10 @@ operations = {
 }
 
 
-# class Event(Base):
+# class Feature(Base):
 #     """A possible realization of all sites and Observables in a simulation."""
 
-#     __tablename__ = 'CycSat_Event'
+#     __tablename__ = 'CycSat_Feature'
 #     id = Column(Integer, primary_key=True)
 #     name = Column(String)
 
@@ -81,7 +81,7 @@ class Process(Base):
     __tablename__ = 'CycSat_Procces'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)  # description of the the event/error
+    name = Column(String)  # description of the the feature/error
     result = Column(Integer, default=0)
     message = Column(String)
 
@@ -154,11 +154,11 @@ class Instrument(Base):
 
         self.Sensor.reset()
 
-        # gets all events from a timestep
-        events = [
-            Event.shape_id for Event in self.Site.events if Event.timestep == timestep]
-        # get all shapes from a timestep (if there is an event)
-        shapes = [Shape for Shape in self.shapes if Shape.id in events]
+        # gets all features from a timestep
+        features = [
+            Feature.shape_id for Feature in self.Site.features if Feature.timestep == timestep]
+        # get all shapes from a timestep (if there is an feature)
+        shapes = [Shape for Shape in self.shapes if Shape.id in features]
 
         shape_stack = dict()
         for shape in shapes:
@@ -278,10 +278,10 @@ class Site(Base):
         # determine which observables to draw (by timestep)
         if timestep > -1:
             observable_ids = set()
-            events = [
-                event for event in self.events if event.timestep == timestep]
-            for event in events:
-                observable_ids.add(event.observable.id)
+            features = [
+                feature for feature in self.features if feature.timestep == timestep]
+            for feature in features:
+                observable_ids.add(feature.observable.id)
             if not observable_ids:
                 return True
         else:
@@ -327,7 +327,7 @@ class Site(Base):
 
     def place_observables(self, Simulator, timestep=-1, attempts=100):
         """Places all the observables of a site according to their rules
-        and events at the provided timestep."""
+        and features at the provided timestep."""
         for x in range(attempts):
             result = self.assemble(Simulator, timestep, attempts)
             if result:
@@ -339,7 +339,7 @@ class Site(Base):
 
     def simulate(self, Simulator, sim, timestep):
         """Evaluates the conditions for dynamic shapes at a given timestep and
-        generates events. All conditions must be True in order for the event to be
+        generates features. All conditions must be True in order for the feature to be
         created.
 
         Keyword arguments:
@@ -350,7 +350,7 @@ class Site(Base):
         dynamic_observables = [
             observable for observable in self.observables if observable.visibility != 100]
 
-        events = list()
+        features = list()
         for observable in dynamic_observables:
             evaluations = []
             for condition in observable.conditions:
@@ -370,10 +370,10 @@ class Site(Base):
             else:
                 if random.randint(1, 100) < observable.visibility:
                     #print(observable.name, timestep, 'True')
-                    event = Event(timestep=timestep)
-                    observable.events.append(event)
-                    self.events.append(event)
-                    sim.events.append(event)
+                    feature = Feature(timestep=timestep)
+                    observable.features.append(feature)
+                    self.features.append(feature)
+                    sim.features.append(feature)
                     Simulator.save(observable)
                 else:
                     continue
@@ -391,8 +391,9 @@ class Site(Base):
             if observable.visibility == 100:
                 shapes += [(shape.level, shape) for shape in observable.shapes]
             else:
-                events = [e for e in observable.events if e.timestep == timestep]
-                if len(events) > 0:
+                features = [
+                    e for e in observable.features if e.timestep == timestep]
+                if len(features) > 0:
                     shapes += [(shape.level, shape)
                                for shape in observable.shapes]
 
@@ -488,10 +489,11 @@ class Observable(Base):
     site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
     site = relationship(Site, back_populates='observables')
 
-    def sorted_events(self):
-        """Returns a sorted list (by timestep) of events."""
-        events = dict((event.timestep, event) for event in self.events)
-        return events
+    def sorted_features(self):
+        """Returns a sorted list (by timestep) of features."""
+        features = dict((feature.timestep, feature)
+                        for feature in self.features)
+        return features
 
     def footprint(self, placed=True):
         """Returns a shapely geometry of the static shapes"""
@@ -733,7 +735,7 @@ Simulation.locations = relationship('Location', order_by=Location.id, back_popul
 
 
 class Condition(Base):
-    """Condition for a shape or observable to have an event (appear) in a timestep (scene)"""
+    """Condition for a shape or observable to have an feature (appear) in a timestep (scene)"""
 
     __tablename__ = 'CycSat_Condition'
 
@@ -832,28 +834,28 @@ Observable.rules = relationship('Rule', order_by=Rule.id, back_populates='observ
                                 cascade='all, delete, delete-orphan')
 
 
-class Event(Base):
+class Feature(Base):
     """An instance of a non - static Shape at a site for a given timestep. Modified
     by rules."""
 
-    __tablename__ = 'CycSat_Event'
+    __tablename__ = 'CycSat_Feature'
 
     id = Column(Integer, primary_key=True)
     timestep = Column(Integer)
     wkt = Column(String)
 
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
-    observable = relationship(Observable, back_populates='events')
+    observable = relationship(Observable, back_populates='features')
 
     site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
-    site = relationship(Site, back_populates='events')
+    site = relationship(Site, back_populates='features')
 
     simulation_id = Column(Integer, ForeignKey('CycSat_Simulation.id'))
-    simulation = relationship(Simulation, back_populates='events')
+    simulation = relationship(Simulation, back_populates='features')
 
-Observable.events = relationship(
-    'Event', order_by=Event.id, back_populates='observable')
-Site.events = relationship(
-    'Event', order_by=Event.id, back_populates='site')
-Simulation.events = relationship('Event', order_by=Event.id, back_populates='simulation',
-                                 cascade='all, delete, delete-orphan')
+Observable.features = relationship(
+    'Feature', order_by=Feature.id, back_populates='observable')
+Site.features = relationship(
+    'Feature', order_by=Feature.id, back_populates='site')
+Simulation.features = relationship('Feature', order_by=Feature.id, back_populates='simulation',
+                                   cascade='all, delete, delete-orphan')
