@@ -1,6 +1,7 @@
 from cycsat.archetypes import Facility, Feature, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
-from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR, OUTSIDE, XALIGN, YALIGN
+from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
+from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -25,13 +26,13 @@ class ByronIL(Facility):
                                '1 containment', 500, 500),
             ContainmentSupport('support containment 2',
                                '2 containment', 500, 700),
-            #ParkingLot('parking lot'),
-            #Plume('plume 1')
+            ParkingLot('parking lot'),
+            Plume('plume 1')
         ]
 
-        # for x in range(5):
-        #     t = Truck('truck ' + str(x + 1))
-        #     self.features.append(t)
+        for x in range(5):
+            t = Truck('truck ' + str(x + 1))
+            self.features.append(t)
 
 
 class ConcretePad(Feature):
@@ -94,54 +95,52 @@ class ContainmentSupport(Feature):
             )
 
 
-# class ParkingLot(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
+class ParkingLot(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.ParkingLot'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 1
-#         self.shapes = [
-#             Rectangle(1000, 800, rgb='[150,150,150]'),
-#         ]
-#         self.rules = [WITHIN(pattern='concrete pad'),
-#                       ROTATE(pattern='concrete pad'),
-#                       NEAR(pattern='1 cooling tower', value=0)
-#                       ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 1
+        self.shapes = [
+            Rectangle(1000, 800, rgb='[150,150,150]'),
+        ]
+        self.rules = [WITHIN(pattern='concrete pad')]
 
 
-# class Plume(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Plume'}
+class Plume(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Plume'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 4
-#         self.visibility = 98
-#         self.shapes = [
-#             Circle(650, level=4)
-#         ]
-#         self.rules = [
-#             WITHIN(pattern='1 cooling tower', value=300)
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 4
+        self.visibility = 95
+        self.shapes = [
+            Circle(650, level=4)
+        ]
+        self.rules = [
+            WITHIN(pattern='1 cooling tower', value=300)
+        ]
 
-#         self.conditions = [
-#             Condition(table='TimeSeriesPower', oper='greater than', value=0)
-#         ]
+        self.conditions = [
+            Condition(table='TimeSeriesPower', oper='greater than', value=0)
+        ]
 
 
-# class Truck(Feature):
-#     __mapper_args__ = {'polymorphic_identity': 'ByronIL.Truck'}
+class Truck(Feature):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Truck'}
 
-#     def __init__(self, name):
-#         self.name = name
-#         self.level = 2
-#         self.visibility = 50
-#         rgb = random.choice(['[22,29,163]', '[163,43,22]'])
-#         self.shapes = [
-#             Rectangle(30, 15, rgb=rgb),
-#         ]
-#         self.rules = [
-#             WITHIN(pattern='parking lot')
-#         ]
+    def __init__(self, name):
+        self.name = name
+        self.level = 2
+        self.visibility = 50
+        rgb = random.choice(['[22,29,163]', '[163,43,22]'])
+        self.shapes = [
+            Rectangle(30, 15, rgb=rgb),
+        ]
+        self.rules = [
+            WITHIN(pattern='parking lot'),
+            ROTATE(value=90)
+        ]
 
 
 # -----------------------------------------------------------------------------------------------

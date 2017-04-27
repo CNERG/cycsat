@@ -161,3 +161,21 @@ class ROTATE(Rule):
             shape.placed_wkt = rotated.wkt
 
         self.feature.rotation = angle
+
+
+# class DISPURSE_PLUME(Rule):
+#     __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
+
+#     def __init__(self, pattern=None, wind='random'):
+#         """Returns a Feature by "placing it."""
+#         self.kind = 'transform'
+#         self.pattern = pattern
+#         self.value = value
+
+#     def run(self, Simulator, **params):
+
+#         wind_dir = params['wind_dir']
+#         wind_speed = params['wind_speed']
+#         timestep = params['timestep']
+
+#         re
