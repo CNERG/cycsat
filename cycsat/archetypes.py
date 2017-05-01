@@ -223,7 +223,7 @@ class Site(Base):
         self.ax_angle = degrees
 
         for observable in self.observables:
-            observable.rotate(degrees)
+            observable.rotate(degrees, by='facility')
 
     def center(self):
         fcenter = self.footprint().centroid
@@ -287,7 +287,7 @@ class Site(Base):
                 return True
         else:
             observable_ids = [
-                observable.id for observable in self.observables if observable.consistent]
+                observable.id for observable in self.observables if observable.visibility == 100]
 
         # create dependency groups
         dep_grps = self.dep_graph(Simulator)
@@ -301,7 +301,6 @@ class Site(Base):
                     continue
 
                 footprint = self.bounds()
-
                 overlaps = cascaded_union([feat.footprint(timestep)
                                            for feat in placed_observables if feat.level == observable.level])
 
@@ -435,8 +434,6 @@ class Site(Base):
                     c = observable.footprint(placed=True).centroid
                     plt.text(c.x, c.y, observable.name)
 
-        plt.tight_layout()
-
         if save:
             plt.savefig(name)
 
@@ -498,8 +495,11 @@ class Observable(Base):
         footprint = build_footprint(self, timestep)
         return footprint
 
-    def rotate(self, degrees, timestep=-1):
-        center = self.site.bounds().centroid
+    def rotate(self, degrees, timestep=-1, by='itself'):
+        if by == 'facility':
+            center = self.site.bounds().centroid
+        else:
+            center = 'center'
         self.rotation = degrees
         for shape in self.shapes:
             shape.rotate(degrees=degrees, timestep=timestep, center=center)
@@ -536,14 +536,6 @@ class Observable(Base):
         # the center for the site for a center point for rotation
         center = self.site.bounds().centroid
 
-        # if building set reset the placement geometry
-        # if timestep == -1:
-        #     for shape in self.shapes:
-        #         shape.placed_wkt = shape.stable_wkt
-        #     self.rotate(self.site.ax_angle)
-
-        self.morph(Simulator, timestep)
-
         # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             Simulator, timestep=timestep, overlaps=mask)
@@ -556,30 +548,31 @@ class Observable(Base):
             if not posited_point:
                 return False
 
-            locations = list()
             typology_checks = list()
             for shape in self.shapes:
-
                 loc = shape.place(posited_point, timestep=timestep)
                 typology_checks.append(
                     loc.geometry.within(results['restrict']))
 
             if False not in typology_checks:
-                # self.wkt = cascaded_union(placed_shapes).wkt
                 Simulator.save(self)
+                self.morph(Simulator, timestep)
                 return True
 
-        ax = plt.subplot(111)
-        ax.set_xlim([0, self.site.maxx])
-        ax.set_ylim([0, self.site.maxy])
+        # ax = plt.subplot(111)
+        # ax.set_xlim([0, self.site.maxx])
+        # ax.set_ylim([0, self.site.maxy])
 
-        ax.add_patch(PolygonPatch(results['restrict'], alpha=0.5))
-        ax.add_patch(PolygonPatch(
-            results['place'], facecolor='red', alpha=0.5))
+        # ax.add_patch(PolygonPatch(results['restrict'], alpha=0.5))
+        # ax.add_patch(PolygonPatch(
+        #     results['place'], facecolor='red', alpha=0.5))
 
-        print(results['place'])
+        # ax.add_patch(PolygonPatch(
+        #     loc.geometry, facecolor='green', alpha=0.5))
+
+        # print(results['place'])
         print(self.name, 'placement failed after {', attempts, '} attempts.')
-        sys.exit()
+        # sys.exit()
 
         return False
 
@@ -597,7 +590,9 @@ class Observable(Base):
         restrict = list()
         place = list()
 
-        for rule in self.rules:
+        rules = [rule for rule in self.rules if rule.kind != 'transform']
+
+        for rule in rules:
             result = rule.run(Simulator, timestep=timestep)
             if rule.kind == 'restrict':
                 restrict.append(result)
@@ -645,8 +640,6 @@ class Shape(Base):
     observable = relationship(Observable, back_populates='shapes')
 
     def add_loc(self, timestep=-1, wkt=None):
-
-        # looks for existing location
         loc = [loc for loc in self.locations if loc.timestep == timestep]
         if loc:
             if wkt:
@@ -661,7 +654,11 @@ class Shape(Base):
             return loc
 
         else:
-            loc = Location(timestep=timestep, wkt=self.wkt)
+            loc = [loc for loc in self.locations if loc.timestep == -1]
+            if loc:
+                loc = Location(timestep=timestep, wkt=loc[0].wkt)
+            else:
+                loc = Location(timestep=timestep, wkt=self.wkt)
             self.locations.append(loc)
             return loc
 
@@ -677,21 +674,22 @@ class Shape(Base):
         else:
             return rgb
 
-    def geometry(self, timestep=-1):
+    def geometry(self, timestep=-1, placement=False):
         """Returns a shapely geometry"""
 
-        if self.observable.visibility == 100:
-            loc = [loc for loc in self.locations if loc.timestep == -1]
-            if loc:
-                return loc[0].geometry
-            else:
-                return load_wkt(self.wkt)
+        if self.observable.visibility == 100 or placement:
+            if self.observable.consistent:
+                loc = [loc for loc in self.locations if loc.timestep == -1]
+                if loc:
+                    return loc[0].geometry
+                else:
+                    return load_wkt(self.wkt)
+
+        loc = [loc for loc in self.locations if loc.timestep == timestep]
+        if loc:
+            return loc[0].geometry
         else:
-            loc = [loc for loc in self.locations if loc.timestep == timestep]
-            if loc:
-                return loc[0].geometry
-            else:
-                return load_wkt(self.wkt)
+            return load_wkt(self.wkt)
 
     def materialize(self):
         materialize(self)
