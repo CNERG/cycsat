@@ -1,7 +1,7 @@
 from cycsat.archetypes import Site, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
-from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN  # , DISPURSE_PLUME
+from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
 import random
 
 # -----------------------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class CoolingTower(Observable):
         self.shapes = [Circle(radius=350, rgb='[88, 88, 88]', level=2),
                        Circle(radius=750, rgb='[96, 96, 96]', level=1)]
 
-        self.rules = [WITHIN(pattern='concrete', value=-300)]
+        self.rules = [WITHIN(pattern='concrete', value=0)]
 
 
 class Containment(Observable):
@@ -64,7 +64,7 @@ class Containment(Observable):
         self.name = name
         self.level = 1
         self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
-        self.rules = [WITHIN(pattern='concrete', value=-50)
+        self.rules = [WITHIN(pattern='concrete', value=0)
                       ]
 
         if name == '2 containment':
@@ -115,12 +115,12 @@ class Plume(Observable):
         self.level = 4
         self.visibility = 95
         self.shapes = [
-            Circle(650, level=4)
+            Circle(500, level=4)
         ]
         self.rules = [
             XALIGN(pattern='1 cooling tower'),
             YALIGN(pattern='1 cooling tower'),
-            # DISPURSE_PLUME()
+            DISPURSE_PLUME()
         ]
 
         self.conditions = [
@@ -140,8 +140,7 @@ class Truck(Observable):
             Rectangle(30, 15, rgb=rgb),
         ]
         self.rules = [
-            WITHIN(pattern='parking lot'),
-            ROTATE(value=90)
+            WITHIN(pattern='parking lot')
         ]
 
 

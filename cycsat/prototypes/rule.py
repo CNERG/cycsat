@@ -157,20 +157,25 @@ class ROTATE(Rule):
         self.observable.rotate(angle, params['timestep'])
 
 
-# class DISPURSE_PLUME(Rule):
-#     __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
+class DISPURSE_PLUME(Rule):
+    __mapper_args__ = {'polymorphic_identity': 'DISPURSE_PLUME'}
 
-#     def __init__(self, pattern=None):
-#         """Returns a Feature by "placing it."""
-#         self.kind = 'transform'
-#         self.pattern = pattern
-#         self.value = None
+    def __init__(self, pattern=None):
+        """Returns a Feature by "placing it."""
+        self.kind = 'transform'
+        self.pattern = pattern
+        self.value = None
 
-#     def run(self, Simulator, **params):
+    def run(self, Simulator, **params):
 
-#         wind_dir = random.randint(300, 1000)
-#         wind_speed = random.random()
+        wind_dir = random.randint(30, 80)
 
-#         for shape in self.observable.shapes:
-#             shape.placed_wkt = shape.geometry(
-#                 placed=True).buffer(wind_dir).wkt
+        for shape in self.observable.shapes:
+
+            geometry = shape.geometry(params['timestep'])
+            oval = scale(geometry, 1, 1.5)
+            oval = translate(oval, 0, -600)
+            roval = rotate(oval, wind_dir, origin=geometry.centroid)
+
+            shape.add_loc(params['timestep'],
+                          wkt=roval.wkt)
