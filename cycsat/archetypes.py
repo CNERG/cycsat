@@ -573,13 +573,14 @@ class Observable(Base):
         ax.set_xlim([0, self.site.maxx])
         ax.set_ylim([0, self.site.maxy])
 
-        ax.add_patch(PolygonPatch(results['restrict']))
-        ax.add_patch(PolygonPatch(results['place'], facecolor='red'))
+        ax.add_patch(PolygonPatch(results['restrict'], alpha=0.5))
+        ax.add_patch(PolygonPatch(
+            results['place'], facecolor='red', alpha=0.5))
 
         print(results['place'])
-
-        sys.exit()
         print(self.name, 'placement failed after {', attempts, '} attempts.')
+        sys.exit()
+
         return False
 
     def evaluate_rules(self, Simulator, timestep=-1, mask=None, overlaps=None):
@@ -644,6 +645,7 @@ class Shape(Base):
     observable = relationship(Observable, back_populates='shapes')
 
     def add_loc(self, timestep=-1, wkt=None):
+
         # looks for existing location
         loc = [loc for loc in self.locations if loc.timestep == timestep]
         if loc:
@@ -677,7 +679,19 @@ class Shape(Base):
 
     def geometry(self, timestep=-1):
         """Returns a shapely geometry"""
-        return self.add_loc(timestep).geometry
+
+        if self.observable.visibility == 100:
+            loc = [loc for loc in self.locations if loc.timestep == -1]
+            if loc:
+                return loc[0].geometry
+            else:
+                return load_wkt(self.wkt)
+        else:
+            loc = [loc for loc in self.locations if loc.timestep == timestep]
+            if loc:
+                return loc[0].geometry
+            else:
+                return load_wkt(self.wkt)
 
     def materialize(self):
         materialize(self)
