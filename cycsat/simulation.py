@@ -142,6 +142,7 @@ class Simulator(Database):
 
         for site in sites.iterrows():
             if site[1]['defined']:
+                print('simulating', site[1]['id'], site[1]['AgentId'])
                 for timestep in range(self.duration):
                     site[1]['obj'].simulate(self, simulation, timestep)
 
