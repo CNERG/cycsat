@@ -342,7 +342,6 @@ class Site(Base):
         Simulator -- a cycsat Simulator object
         timestep -- the timestep for simulation
         """
-        print('simulating', timestep)
         dynamic_observables = [
             observable for observable in self.observables if observable.visibility != 100]
 
