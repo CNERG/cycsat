@@ -3,6 +3,11 @@ terrain.py
 """
 import numpy as np
 import math
+import random
+
+import os
+from PIL import Image, ImageDraw
+import bisect
 
 from cycsat.archetypes import Shape, Rule, Base
 from cycsat.image import write_array
@@ -10,49 +15,91 @@ from cycsat.image import write_array
 from osgeo import ogr, gdal, osr
 from geopandas import gpd
 
+from shapely.geometry import Polygon, Point, LineString, box
+from shapely.ops import cascaded_union, unary_union
+from shapely.ops import polygonize
 
-def simple(width, length):
-    """Creates a simple land and water terrain returns terrain shapes"""
-    n = math.ceil(math.log(width, 2))
-    data = mpd(n)
-    terrain = data[0:width, 0:length]
+#------------------------------------------------------------------------------
+# TOOLS
+#------------------------------------------------------------------------------
 
-    mask = np.where(terrain < terrain.mean(), 1, 0)
 
-    # create temporary storage names
-    out_number = str(np.random.randint(low=100000, high=999999))
-    out_raster = 'temp/' + out_number
-    out_shp = 'temp/' + out_number + '.shp'
+def list_bearings(landscape):
+    """List the bearings of the feature (N, E, S, W) as points."""
 
-    # write out a raster file
-    write_array(mask, out_raster)
-    ds = gdal.Open(out_raster + '.tif')
-    band = ds.GetRasterBand(1)
+    minx, miny, maxx, maxy = landscape.bounds
+    halfx = (maxx - minx) / 2
+    halfy = (maxy - miny) / 2
 
-    drv = ogr.GetDriverByName('ESRI Shapefile')
-    out = drv.CreateDataSource(out_shp)
-    out_layer = out.CreateLayer('terrains', srs=None)
+    N = Point(minx + halfx, maxy)
+    E = Point(maxx, miny + halfy)
+    S = Point(minx + halfx, miny)
+    W = Point(minx, miny + halfy)
 
-    fd = ogr.FieldDefn('DN', ogr.OFTInteger)
-    out_layer.CreateField(fd)
+    return [N, E, S, W]
 
-    gdal.Polygonize(band, None, out_layer, 0, [], callback=None)
-    out = None
 
-    gdf = gpd.read_file(out_shp)
-    gdf['area'] = gdf.area
+#------------------------------------------------------------------------------
+# LANDSCAPE GENERATORS
+#------------------------------------------------------------------------------
 
-    land = Shape(stable_wkt=gdf.sort_values('area', ascending=False).iloc[0]['geometry'].wkt,
-                 level=0)
+def simple_land(maxx, maxxy, r=1.5):
+    """Takes the dimensions of a site and returns two shapes: water and land."""
+    site = box(0, 0, maxx, maxxy)
+    N, E, S, W = list_bearings(site)
+    Y = random.choice([N, S])
+    X = random.choice([E, W])
+    points = sorted([[X.x, X.y], [Y.x, Y.y]], key=lambda x: x[0])
 
-    water_shapes = list()
-    water_bodies = gdf.sort_values('area', ascending=False).iloc[
-        1:]['geometry'].tolist()
-    for body in water_bodies:
-        water_shape = Shape(stable_wkt=body.wkt, level=0)
-        water_shapes.append(water_shape)
+    coast_pts = midpoint_displacement(points[0], points[1], r)
+    coastline = LineString(coast_pts)
+    union = unary_union([LineString(list(site.exterior.coords)), coastline])
 
-    return gdf  # [land]+water_shapes
+    land = sorted([geom for geom in polygonize(union)], key=lambda x: x.area)
+    return Shape(wkt=land[-2].wkt, rgb='[0,0,255]')
+
+# def simple(width, length):
+#     """Creates a simple land and water terrain returns terrain shapes"""
+#     n = math.ceil(math.log(width, 2))
+#     data = mpd(n)
+#     terrain = data[0:width, 0:length]
+
+#     mask = np.where(terrain < terrain.mean(), 1, 0)
+
+#     # create temporary storage names
+#     out_number = str(np.random.randint(low=100000, high=999999))
+#     out_raster = 'temp/' + out_number
+#     out_shp = 'temp/' + out_number + '.shp'
+
+#     # write out a raster file
+#     write_array(mask, out_raster)
+#     ds = gdal.Open(out_raster + '.tif')
+#     band = ds.GetRasterBand(1)
+
+#     drv = ogr.GetDriverByName('ESRI Shapefile')
+#     out = drv.CreateDataSource(out_shp)
+#     out_layer = out.CreateLayer('terrains', srs=None)
+
+#     fd = ogr.FieldDefn('DN', ogr.OFTInteger)
+#     out_layer.CreateField(fd)
+
+#     gdal.Polygonize(band, None, out_layer, 0, [], callback=None)
+#     out = None
+
+#     gdf = gpd.read_file(out_shp)
+#     gdf['area'] = gdf.area
+
+#     land = Shape(stable_wkt=gdf.sort_values('area', ascending=False).iloc[0]['geometry'].wkt,
+#                  level=0)
+
+#     water_shapes = list()
+#     water_bodies = gdf.sort_values('area', ascending=False).iloc[
+#         1:]['geometry'].tolist()
+#     for body in water_bodies:
+#         water_shape = Shape(stable_wkt=body.wkt, level=0)
+#         water_shapes.append(water_shape)
+
+#     return gdf  # [land]+water_shapes
 
 
 # =============================================================================
@@ -144,6 +191,60 @@ def quarter_array(array):
         spread - 1:(spread * 2) - 1, spread - 1:(spread * 2) - 1]
 
     return views
+
+
+# Iterative midpoint vertical displacement
+def midpoint_displacement(start, end, roughness, vertical_displacement=None,
+                          num_of_iterations=8):
+    """
+    Given a straight line segment specified by a starting point and an endpoint
+    in the form of [starting_point_x, starting_point_y] and [endpoint_x, endpoint_y],
+    a roughness value > 0, an initial vertical displacement and a number of
+    iterations > 0 applies the  midpoint algorithm to the specified segment and
+    returns the obtained list of points in the form
+    points = [[x_0, y_0],[x_1, y_1],...,[x_n, y_n]]
+    """
+    # Final number of points = (2^iterations)+1
+    if vertical_displacement is None:
+        # if no initial displacement is specified set displacement to:
+        #  (y_start+y_end)/2
+        vertical_displacement = (start[1] + end[1]) / 2
+
+    # Data structure that stores the points is a list of lists where
+    # each sublist represents a point and holds its x and y coordinates:
+    # points=[[x_0, y_0],[x_1, y_1],...,[x_n, y_n]]
+    #              |          |              |
+    #           point 0    point 1        point n
+    # The points list is always kept sorted from smallest to biggest x-value
+    points = [start, end]
+    iteration = 1
+    while iteration <= num_of_iterations:
+        # Since the list of points will be dynamically updated with the new computed
+        # points after each midpoint displacement it is necessary to create a copy
+        # of the state at the beginning of the iteration so we can iterate over
+        # the original sequence.
+        # Tuple type is used for security reasons since they are immutable in
+        # Python.
+        points_tup = tuple(points)
+        for i in range(len(points_tup) - 1):
+            # Calculate x and y midpoint coordinates:
+            # [(x_i+x_(i+1))/2, (y_i+y_(i+1))/2]
+            midpoint = list(map(lambda x: (points_tup[i][x] + points_tup[i + 1][x]) / 2,
+                                [0, 1]))
+            # Displace midpoint y-coordinate
+            midpoint[1] += random.choice([-vertical_displacement,
+                                          vertical_displacement])
+            # Insert the displaced midpoint in the current list of points
+            bisect.insort(points, midpoint)
+            # bisect allows to insert an element in a list so that its order
+            # is preserved.
+            # By default the maintained order is from smallest to biggest list first
+            # element which is what we want.
+        # Reduce displacement range
+        vertical_displacement *= 2 ** (-roughness)
+        # update number of iterations
+        iteration += 1
+    return points
 
 
 # =============================================================================

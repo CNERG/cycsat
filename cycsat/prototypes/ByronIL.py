@@ -4,6 +4,8 @@ from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
 from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
 import random
 
+from cycsat.terrain import simple_land
+
 # -----------------------------------------------------------------------------------------------
 # Site and feature definitions
 # -----------------------------------------------------------------------------------------------
@@ -18,6 +20,7 @@ class ByronIL(Site):
         self.maxy = 700 * 10
 
         self.observables = [
+            Land(maxx=self.maxx, maxy=self.maxy),
             ConcretePad('concrete pad'),
             CoolingTower('1 cooling tower'),
             Containment('1 containment'),
@@ -35,6 +38,18 @@ class ByronIL(Site):
             self.observables.append(t)
 
 
+class Land(Observable):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Land'}
+
+    def __init__(self, maxx, maxy,  name='land'):
+        self.name = name
+        self.level = -1
+        self.shapes = [simple_land(maxx, maxy)]
+
+        self.rules = [
+        ]
+
+
 class ConcretePad(Observable):
     __mapper_args__ = {'polymorphic_identity': 'ByronIL.ConcretePad'}
 
@@ -42,7 +57,8 @@ class ConcretePad(Observable):
         self.name = name
         self.shapes = [Rectangle(4000, 4000, rgb='[209,209,209]')]
 
-        self.rules = []
+        self.rules = [
+        ]
 
 
 class CoolingTower(Observable):

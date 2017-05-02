@@ -377,7 +377,6 @@ class Site(Base):
         Simulator.save(self)
         Simulator.session.commit()
 
-# this needs to be fixed
     def timestep_shapes(self, timestep=0):
         """Returns the ordered shapes to draw at a site for a given timestep."""
         shapes = list()
@@ -500,13 +499,16 @@ class Observable(Base):
             center = self.site.bounds().centroid
         else:
             center = 'center'
-        self.rotation = degrees
-        for shape in self.shapes:
-            shape.rotate(degrees=degrees, timestep=timestep, center=center)
+        if self.name != 'land':
+            self.rotation = degrees
+            for shape in self.shapes:
+                shape.rotate(degrees=degrees, timestep=timestep, center=center)
 
     def shift(self, shift_x, shift_y, timestep=-1):
-        for shape in self.shapes:
-            shape.shift(shift_x, shift_y, timestep=timestep)
+        if self.name != 'land':
+
+            for shape in self.shapes:
+                shape.shift(shift_x, shift_y, timestep=timestep)
 
     def morph(self, Simulator, timestep=-1):
         """Runs a observable's transform rules that modify it's shape inplace."""
@@ -536,7 +538,10 @@ class Observable(Base):
         # the center for the site for a center point for rotation
         center = self.site.bounds().centroid
 
-        # evalute the rules of the observable to determine the mask
+        if self.name == 'land':
+            return True
+
+            # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             Simulator, timestep=timestep, overlaps=mask)
         if not results['place']:
