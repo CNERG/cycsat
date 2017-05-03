@@ -20,8 +20,7 @@ from cycsat.laboratory import USGSMaterial
 
 db = Simulator('reactor_test_sample.sqlite')
 
-temps = {'Reactor1': ByronIL,
-         'Reactor2': ByronIL}
+temps = {'Reactor1': ByronIL}
 
 db.build(temps)
 

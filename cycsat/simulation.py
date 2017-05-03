@@ -77,11 +77,15 @@ class Database:
             self.session.add(Objects)
         self.session.commit()
 
-    def bind_table(self, table):
+    def bind_table(self, table=None):
         """Binds a database table to a function for retriving a pandas dataframe view of the database"""
-        def get_table(table=table, interface=self, ):
+        def get_table(id=None, table=table, interface=self):
             sql = 'SELECT * FROM ' + table
-            return interface.query(sql)
+            data = interface.query(sql)
+            if id:
+                return data[data.id == id].ix[0].obj
+            else:
+                return data
 
         get_table.__name__ = table
         return get_table
@@ -92,7 +96,7 @@ class Simulator(Database):
     def __init__(self, path, base=archetypes):
         Database.__init__(self, path, base)
         for table in self.archetypes:
-            func = self.bind_table(table)
+            func = self.bind_table(table=table)
             table_name = table.replace('CycSat_', '')
             setattr(self, table_name, func)
 
