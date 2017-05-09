@@ -30,6 +30,10 @@ from shapely.wkt import loads as load_wkt
 from shapely.ops import cascaded_union
 from shapely.affinity import rotate, translate
 
+from skimage.draw import polygon
+
+import gdal
+
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Table, Boolean
@@ -121,8 +125,6 @@ class Instrument(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     mmu = Column(Integer, default=1)  # in 10ths of centimeters
-    width = Column(Integer)
-    length = Column(Integer)
     min_spectrum = Column(String)
     max_spectrum = Column(String)
     prototype = Column(String)
@@ -133,52 +135,74 @@ class Instrument(Base):
     satellite_id = Column(Integer, ForeignKey('CycSat_Satellite.id'))
     satellite = relationship(Satellite, back_populates='instruments')
 
-    def geometry(self):
-        self.geo = build_geometry(self)
-        return self.geo
+    def calibrate(self, Site):
+        """Prepares an instrument to create images of a site."""
 
-    def target(self, Site):
-        """Creates a sensor object and focuses it on a site"""
-        self.Sensor = Sensor(self)
         self.Site = Site
 
-        self.shapes = []
-        for observable in Site.observables:
-            for shape in observable.shapes:
-                self.shapes.append(materialize(shape))
+        # for static shapes
+        self.background = np.zeros((Site.maxx, Site.maxy), dtype=np.uint8)
+        self.foreground = self.background
 
-        self.Sensor.focus(Site)
-        self.Sensor.calibrate(Site)
+        statics = Site.timestep_shapes(static=True)
+        for shape in statics:
+            self.add_shape(shape)
 
-    def capture(self, timestep, path, Mission=None, World=None):
+    def add_shape(self, Shape, timestep=-1):
+
+        if Shape.observable.visibility == 100:
+            image = self.background
+        else:
+            image = self.foreground
+
+        geometry = Shape.geometry(timestep=timestep)
+        data = Shape.observe()
+        if len(data) > 0:
+            reflectance = data[(data.wavelength > self.min_spectrum) & (
+                data.wavelength < self.max_spectrum)].reflectance.max()
+            coords = np.array(list(geometry.exterior.coords))
+            rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+            image[rr, cc] = reflectance
+
+    def capture(self, timestep=-1):
         """Adds shapes at timestep to a image"""
+        self.foreground = self.background
 
-        self.Sensor.reset()
-
-        # gets all features from a timestep
-        features = [
-            Feature.shape_id for Feature in self.Site.features if Feature.timestep == timestep]
-        # get all shapes from a timestep (if there is an feature)
-        shapes = [Shape for Shape in self.shapes if Shape.id in features]
-
-        shape_stack = dict()
+        shapes = self.Site.timestep_shapes(timestep=timestep)
         for shape in shapes:
-            if shape.level in shape_stack:
-                shape_stack[shape.level].append(shape)
-            else:
-                shape_stack[shape.level] = [shape]
+            print(shape.observable.name)
+            self.add_shape(shape)
 
-        for level in sorted(shape_stack):
-            for shape in shape_stack[level]:
-                self.Sensor.capture_shape(shape)
+    # def write(self, path, img_format='GTiff'):
+    #     """Writes an image using GDAL
 
-        # create and save the scene object
-        scene = Scene(timestep=timestep)
-        self.scenes.append(scene)
-        self.Site.scenes.append(scene)
+    #     Keyword arguments:
+    #     path -- the path to write the image
+    #     img_format -- the GDAL format
+    #     """
+    #     origin = 0
 
-        path = path + str(scene.id)
-        self.Sensor.write(path)
+    #     rows = round(self.foreground.shape[-2] / self.mmu)
+    #     cols = round(self.foreground.shape[-1] / self.mmu)
+
+    #     driver = gdal.GetDriverByName(img_format)
+
+    #     outRaster = driver.Create(
+    #         path + extensions[img_format], cols, rows, 1, gdal.GDT_Byte)
+    #     outRaster.SetGeoTransform(
+    #         (origin, self.mmu, 0, origin, 0, self.mmu * -1))
+
+    #     outband = outRaster.GetRasterBand(1)
+    #     if (self.mmu > 1):
+    #         band_array = downscale_local_mean(
+    #             self.foreground, (self.mmu, self.mmu))
+    #         band_array = resize(band_array, (rows, cols), preserve_range=True)
+    #     else:
+    #         band_array = self.foreground
+
+    #     outband.WriteArray(band_array)
+    #     outband.FlushCache()
+
 
 Satellite.instruments = relationship(
     'Instrument', order_by=Instrument.id, back_populates='satellite')
@@ -376,22 +400,26 @@ class Site(Base):
         Simulator.save(self)
         Simulator.session.commit()
 
-    def timestep_shapes(self, timestep=0):
+    def timestep_shapes(self, timestep=-1):
         """Returns the ordered shapes to draw at a site for a given timestep."""
-        shapes = list()
+        statics = list()
+        dynamics = list()
 
         for observable in self.observables:
-            # add all if a static observable
             if observable.visibility == 100:
-                shapes += [(shape.level, shape) for shape in observable.shapes]
-            else:
-                features = [
-                    e for e in observable.features if e.timestep == timestep]
-                if len(features) > 0:
-                    shapes += [(shape.level, shape)
-                               for shape in observable.shapes]
+                statics += observable.shapes
 
-        return sorted(shapes, key=lambda x: x[0])
+        features = [
+            feat for feat in observable.features if feat.timestep == timestep]
+        if len(features) > 0:
+            dynamics += observable.shapes
+
+        if timestep == -1:
+            shapes = statics
+        else:
+            shapes = dynamics + statics
+
+        return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
     def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
         """plots a site and its static observables or a timestep."""
@@ -413,7 +441,6 @@ class Site(Base):
         observable_ids = set()
         shapes = self.timestep_shapes(timestep)
         for shape in shapes:
-            shape = shape[1]
             if shape.observable.visibility == 100:
                 geometry = shape.geometry()
             else:
@@ -459,6 +486,8 @@ class Site(Base):
         imageio.mimsave(name + '.gif', images, fps=fps)
         plt.ion()
 
+    def capture(self, Sensor):
+        """Captures a synthetic image of the satellite at a timestep."""
 
 Build.sites = relationship(
     'Site', order_by=Site.id, back_populates='build')
@@ -474,7 +503,7 @@ class Observable(Base):
     visibility = Column(Integer, default=100)
     consistent = Column(Boolean, default=True)
     prototype = Column(String)
-    level = Column(Integer)
+    level = Column(Integer, default=0)
     rotation = Column(Integer, default=0)
 
     __mapper_args__ = {'polymorphic_on': prototype}
@@ -630,8 +659,6 @@ class Shape(Base):
     id = Column(Integer, primary_key=True)
     level = Column(Integer, default=0)
     prototype = Column(String)
-    # placed_wkt = Column(String)
-    # stable_wkt = Column(String)
     wkt = Column(String)
     material_code = Column(Integer)
     rgb = Column(String)
@@ -737,6 +764,26 @@ class Shape(Base):
         loc = self.add_loc(timestep)
         loc.wkt = translate(loc.geometry, xoff=shift_x, yoff=shift_y).wkt
         return loc
+
+    def observe(self):
+        if self.materials:
+            return self.materials[0].observe()
+        else:
+            try:
+                rgb = self.get_rgb()
+            except:
+                rgb = [random.randint(0, 255) for i in range(3)]
+
+            wavelength = (np.arange(281) / 100) + 0.20
+            reflectance = np.zeros(281)
+            reflectance[(wavelength >= 0.64) & (wavelength <= 0.67)] = rgb[0]
+            reflectance[(wavelength >= 0.53) & (wavelength <= 0.59)] = rgb[1]
+            reflectance[(wavelength >= 0.45) & (wavelength <= 0.51)] = rgb[2]
+            std = np.zeros(281)
+
+            return pd.DataFrame({'wavelength': wavelength,
+                                 'reflectance': reflectance,
+                                 'std': std})
 
 
 Observable.shapes = relationship('Shape', order_by=Shape.id, back_populates='observable',
