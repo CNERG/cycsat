@@ -22,10 +22,10 @@ from cycsat.prototypes.instrument import Red
 db = Simulator('reactor_test_sample.sqlite')
 temps = {'Reactor1': ByronIL}
 db.build(temps)
-db.simulate()
+# db.simulate()
 
 m = USGSMaterial('whitebark-pine_ynp-wb-1.30869.asc')
 
-site = db.Site(1)
-red = Red()
-red.calibrate(site)
+# site = db.Site(1)
+# red = Red()
+# red.calibrate(site)

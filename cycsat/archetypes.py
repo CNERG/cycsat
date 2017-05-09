@@ -177,7 +177,7 @@ class Instrument(Base):
     #     """Writes an image using GDAL
 
     #     Parameters
-    ----------
+    #----------
     #     path: the path to write the image
     #     img_format: the GDAL format
     #     """
@@ -413,19 +413,23 @@ class Site(Base):
         complete : bool, default True
             If True returns both static and dynamic observables at timestep
         """
-
-        statics = [obs for obs in self.observables if self.visibility == 100]
+        statics = list()
         dynamics = list()
+
+        for obs in self.observables:
+            if obs.visibility == 100:
+                statics += obs.shapes
 
         if timestep:
             features = [
-                feat for feat in observable.features if feat.timestep == timestep]
-                if len(features) > 0:
-                    dynamics += observable.shapes
+                feat for feat in self.features if feat.timestep == timestep]
+            if len(features) > 0:
+                dynamics += features[0].observable.shapes
 
+        shapes = statics + dynamics
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
-    def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
+    def plot(self, ax=None, timestep=None, label=False, save=False, name='plot.png', virtual=None):
         """plots a site and its static observables or a timestep."""
         if ax:
             new_fig = False
@@ -514,6 +518,15 @@ class Observable(Base):
 
     site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
     site = relationship(Site, back_populates='observables')
+
+    def appears(self, timestep=-1):
+        """Gets the shapes of this observable at a supplied timestep.
+        """
+        features = [feat for feat in self.features if feat.timestep == timestep]
+        if features:
+            return True
+        else:
+            return False
 
     def sorted_features(self):
         """Returns a sorted list (by timestep) of features."""
@@ -684,7 +697,6 @@ class Shape(Base):
                 return loc[0]
 
         if wkt:
-            # otherwise return a new location
             loc = Location(timestep=timestep, wkt=wkt)
             self.locations.append(loc)
             return loc
