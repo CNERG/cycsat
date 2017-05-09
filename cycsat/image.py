@@ -26,7 +26,7 @@ class Sensor(object):
         """Initiate a sensor instance.
 
         Keyword arguments:
-        Instrument -- Instrument instance to draw the image
+        InstrumentList -- List of instruments instance to draw the image
         method -- 'normal' (random normal distribution around mean) or 'mean'
         """
         self.Instrument = Instrument
@@ -40,7 +40,6 @@ class Sensor(object):
         self.min_spectrum = float(Instrument.min_spectrum)
         self.max_spectrum = float(Instrument.max_spectrum)
 
-        self.background = np.zeros((width, length), dtype=np.uint8)
         self.foreground = self.background.copy()
 
         self.wavelength = (np.arange(281) / 100) + 0.20
@@ -50,24 +49,11 @@ class Sensor(object):
         """Resets the capture array to the background array"""
         self.foreground = self.background.copy()
 
-    # def focus(self, Facility):
-    #     """Shifts all the shapes of a facility to be aligned with
-    #     an instrument's center"""
-
-    #     self.Facility = Facility
-    #     self.shapes = []
-    #     for feature in Facility.features:
-    #         for shape in feature.shapes:
-    #             self.shapes.append(shape)
-
-    #     cross_hairs = self.ifov.centroid
-
-    #     for shape in self.shapes:
-    #         place(shape, cross_hairs, Facility)
-
-    def calibrate(self, Facility, method='normal'):
+    def calibrate(self, Site, method='normal'):
         """Generates a sensor with all the static shapes"""
-        shape_stack = dict()
+
+        # for static shapes
+        self.background = np.zeros((width, length), dtype=np.uint8)
 
         # add all the static (in level order) to the image
         for shape in self.shapes:
