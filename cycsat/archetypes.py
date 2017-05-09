@@ -176,9 +176,10 @@ class Instrument(Base):
     # def write(self, path, img_format='GTiff'):
     #     """Writes an image using GDAL
 
-    #     Keyword arguments:
-    #     path -- the path to write the image
-    #     img_format -- the GDAL format
+    #     Parameters
+    ----------
+    #     path: the path to write the image
+    #     img_format: the GDAL format
     #     """
     #     origin = 0
 
@@ -296,9 +297,10 @@ class Site(Base):
     def assemble(self, Simulator, timestep=-1, attempts=100):
         """Assembles all the Observables of a Site according to their Rules.
 
-        Keyword arguments:
-        timestep -- the timestep of the Site to draw
-        attempts -- the max # of attempts to place a observable
+        Parameters
+        ----------
+        timestep: the timestep of the Site to draw
+        attempts: the max # of attempts to place a observable
         """
         # determine which observables to draw (by timestep)
         if timestep > -1:
@@ -362,9 +364,10 @@ class Site(Base):
         generates features. All conditions must be True in order for the feature to be
         created.
 
-        Keyword arguments:
-        Simulator -- a cycsat Simulator object
-        timestep -- the timestep for simulation
+        Parameters
+        ----------
+        Simulator: a cycsat Simulator object
+        timestep: the timestep for simulation
         """
         dynamic_observables = [
             observable for observable in self.observables if observable.visibility != 100]
@@ -400,24 +403,25 @@ class Site(Base):
         Simulator.save(self)
         Simulator.session.commit()
 
-    def timestep_shapes(self, timestep=-1):
-        """Returns the ordered shapes to draw at a site for a given timestep."""
-        statics = list()
+    def timestep_shapes(self, timestep=None):
+        """Returns the observable shapes (in level order) at a given timestep.
+
+        Parameters:
+        -----------
+        timestep : integer, or None, default None
+            If None, returns only statics shapes
+        complete : bool, default True
+            If True returns both static and dynamic observables at timestep
+        """
+
+        statics = [obs for obs in self.observables if self.visibility == 100]
         dynamics = list()
 
-        for observable in self.observables:
-            if observable.visibility == 100:
-                statics += observable.shapes
-
-        features = [
-            feat for feat in observable.features if feat.timestep == timestep]
-        if len(features) > 0:
-            dynamics += observable.shapes
-
-        if timestep == -1:
-            shapes = statics
-        else:
-            shapes = dynamics + statics
+        if timestep:
+            features = [
+                feat for feat in observable.features if feat.timestep == timestep]
+                if len(features) > 0:
+                    dynamics += observable.shapes
 
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
@@ -555,13 +559,13 @@ class Observable(Base):
     def place(self, Simulator, mask=None, timestep=-1, rand=True, location=False, attempts=100):
         """Places a observable within a geometry and checks typology of shapes
 
-        Keyword arguments:
-        self -- observable to place
-        bounds -- containing bounds
-        random -- if 'True', placement is random, else Point feaure is required
-        location -- centroid location to place self
-        attempts -- the maximum number attempts to be made
-        build -- draws from the shapes stable_wkt
+        Parameters
+        ----------
+        bounds: containing bounds
+        random: if 'True', placement is random, else Point feaure is required
+        location: centroid location to place self
+        attempts: the maximum number attempts to be made
+        build: draws from the shapes stable_wkt
         """
         # the center for the site for a center point for rotation
         center = self.site.bounds().centroid
@@ -613,9 +617,10 @@ class Observable(Base):
         """Evaluates a a observable's rules and returns instructions
         for drawing that observable.
 
-        Keyword arguments:
-        types -- the types of rules to evaluate
-        mask -- the mask of possible areas
+        Parameters
+        ----------
+        types: the types of rules to evaluate
+        mask: the mask of possible areas
         """
         if not mask:
             mask = self.site.bounds()
@@ -728,8 +733,9 @@ class Shape(Base):
     def place(self, placement, timestep=-1):  # , rotation=0):
         """Places a self to a coordinate position.
 
-        Keyword arguments:
-        build -- draws from the shapes the stable_wkt rather than placed
+        Parameters
+        ----------
+        build: draws from the shapes the stable_wkt rather than placed
         """
         loc = self.add_loc(timestep)
 
