@@ -294,7 +294,7 @@ class Site(Base):
         # Return the list of batches
         return batches
 
-    def assemble(self, Simulator, timestep=-1, attempts=100):
+    def assemble(self, Simulator, simulation=None, timestep=-1, attempts=100):
         """Assembles all the Observables of a Site according to their Rules.
 
         Parameters
@@ -343,7 +343,6 @@ class Site(Base):
             self.rotate()
             self.center()
 
-        # assemble is successful
         return True
 
     def place_observables(self, Simulator, timestep=-1, attempts=100):
@@ -390,7 +389,6 @@ class Site(Base):
                 continue
             else:
                 if random.randint(1, 100) < observable.visibility:
-                    # print(observable.name, timestep, 'True')
                     feature = Feature(timestep=timestep)
                     observable.features.append(feature)
                     self.features.append(feature)
@@ -424,7 +422,8 @@ class Site(Base):
             features = [
                 feat for feat in self.features if feat.timestep == timestep]
             if len(features) > 0:
-                dynamics += features[0].observable.shapes
+                for feature in features:
+                    dynamics += feature.observable.shapes
 
         shapes = statics + dynamics
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
@@ -589,6 +588,7 @@ class Observable(Base):
             # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             Simulator, timestep=timestep, overlaps=mask)
+
         if not results['place']:
             print('no place')
             return False
