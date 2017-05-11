@@ -206,3 +206,32 @@ class Simulator(Database):
             images.append(image)
         imageio.mimsave(name + '.gif', images, fps=fps)
         plt.ion()
+
+
+class Database2:
+    """Interface for connecting to sqlite database."""
+
+    def __init__(self, path, base):
+        Session = sessionmaker()
+
+        self.path = path
+        self.Base = getattr(base, 'Base')
+
+        self.engine = create_engine(
+            'sqlite+pysqlite:///' + self.path, module=sqlite3.dbapi2, echo=False)
+
+        Session.configure(bind=self.engine)
+        self.session = Session()
+        self.Base.metadata.create_all(self.engine)
+
+        self.connection = sqlite3.connect(self.path)
+
+
+class Simulator2(Database):
+
+    def __init__(self, path):
+        Database.__init__(self, path)
+
+        # get information about the simulation
+        self.duration = self.query(
+            'SELECT Duration FROM Info')['Duration'][0]
