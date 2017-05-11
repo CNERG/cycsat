@@ -6,7 +6,7 @@ import pandas as pd
 import geopandas as gpd
 
 from .archetypes import Site, Instrument, Observable, Shape, Rule
-from .archetypes import Base, Satellite, Simulation, Build, Process
+from .archetypes import Base, Satellite, Simulation, Build
 
 import cycsat.archetypes as archetypes
 
@@ -27,18 +27,19 @@ from sqlalchemy.orm.session import make_transient
 class Database:
     """Interface for connecting to sqlite database."""
 
-    def __init__(self, path, base):
-        Session = sessionmaker()
+    def __init__(self, path):
+        global Base
+        global archetypes
 
+        Session = sessionmaker()
         self.path = path
-        self.Base = getattr(base, 'Base')
 
         self.engine = create_engine(
             'sqlite+pysqlite:///' + self.path, module=sqlite3.dbapi2, echo=False)
 
         Session.configure(bind=self.engine)
         self.session = Session()
-        self.Base.metadata.create_all(self.engine)
+        Base.metadata.create_all(self.engine)
 
         self.connection = sqlite3.connect(self.path)
 
@@ -208,30 +209,59 @@ class Simulator(Database):
         plt.ion()
 
 
-class Database2:
-    """Interface for connecting to sqlite database."""
-
-    def __init__(self, path, base):
-        Session = sessionmaker()
-
-        self.path = path
-        self.Base = getattr(base, 'Base')
-
-        self.engine = create_engine(
-            'sqlite+pysqlite:///' + self.path, module=sqlite3.dbapi2, echo=False)
-
-        Session.configure(bind=self.engine)
-        self.session = Session()
-        self.Base.metadata.create_all(self.engine)
-
-        self.connection = sqlite3.connect(self.path)
-
-
 class Simulator2(Database):
+
+    # def __init__(self, path):
+    #     Database.__init__(self, path)
+    #     self.builds = self.session.query(Build).all()
 
     def __init__(self, path):
         Database.__init__(self, path)
+        for table in self.archetypes:
+            func = self.bind_table(table=table)
+            table_name = table.replace('CycSat_', '')
+            setattr(self, table_name, func)
 
-        # get information about the simulation
         self.duration = self.query(
             'SELECT Duration FROM Info')['Duration'][0]
+
+    def save(self, build=None):
+        """Saves a build to the database."""
+        if build:
+            self.session.add(build)
+        self.session.commit()
+
+    def load_build(self, build_id):
+        """Loads a build by id number."""
+        build = self.session.query(Build).filter(Build.id == build_id).one()
+        build.database = self
+        return build
+
+    def create_build(self, templates, name='untitled', attempts=100):
+        """Creates site for a new build.
+
+        Keyword arguments:
+        attempts -- (optional) max number of of attempts
+        sites -- (optional) a list of sites to build, default all
+        name -- (optional) name for the build 'Build'
+        """
+        build = Build(name=name)
+        build.database = self
+
+        # get Agents to build
+        AgentEntry = self.query('select * from AgentEntry')
+
+        for agent in AgentEntry.iterrows():
+            prototype = agent[1]['Prototype']
+
+            # this will need to be changed with other kinds are used
+            if agent[1]['Kind'] == 'Facility':
+                if prototype in templates:
+                    site = templates[prototype]()
+                    site.AgentId = agent[1]['AgentId']
+                    site.prototype = prototype
+                    build.sites.append(site)
+
+        self.save(build)
+        build.assemble(attempts=attempts)
+        self.save(build)
