@@ -144,7 +144,7 @@ class Instrument(Base):
         self.background = np.zeros((Site.maxx, Site.maxy), dtype=np.uint8)
         self.foreground = self.background
 
-        statics = Site.timestep_shapes(static=True)
+        statics = Site.timestep_shapes()
         for shape in statics:
             self.add_shape(shape)
 
@@ -158,26 +158,53 @@ class Instrument(Base):
         geometry = Shape.geometry(timestep=timestep)
         data = Shape.observe()
         if len(data) > 0:
+
             reflectance = data[(data.wavelength > self.min_spectrum) & (
                 data.wavelength < self.max_spectrum)].reflectance.max()
+
             coords = np.array(list(geometry.exterior.coords))
             rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
             image[rr, cc] = reflectance
 
+    def plot(self, ax=None, timestep=-1):
+        """Plots the the captured image at a given timestep."""
+
+        self.capture(timestep)
+
+        if ax:
+            new_fig = False
+        else:
+            new_fig = True
+            fig, ax = plt.subplots(1, 1, sharex=True, sharey=True)
+
+        # set up the plot
+        ax.set_xlim([0, self.Site.maxx])
+        ax.set_ylim([0, self.Site.maxy])
+        ax.set_title('Agent: ' + str(self.Site.AgentId) +
+                     '\ntimestep:' + str(timestep))
+        ax.set_aspect('equal')
+
+        ax.imshow(self.foreground)
+
+        return ax
+
     def capture(self, timestep=-1):
         """Adds shapes at timestep to a image"""
+
+        # clear the memory
         self.foreground = self.background
 
+        # add shapes from timestep
         shapes = self.Site.timestep_shapes(timestep=timestep)
         for shape in shapes:
-            print(shape.observable.name)
-            self.add_shape(shape)
+            if shape.observable.visibility < 100:
+                self.add_shape(shape, timestep=timestep)
 
     # def write(self, path, img_format='GTiff'):
     #     """Writes an image using GDAL
 
     #     Parameters
-    #----------
+    #     ----------
     #     path: the path to write the image
     #     img_format: the GDAL format
     #     """
@@ -401,7 +428,7 @@ class Site(Base):
         Simulator.save(self)
         Simulator.session.commit()
 
-    def timestep_shapes(self, timestep=None):
+    def timestep_shapes(self, timestep=-1):
         """Returns the observable shapes (in level order) at a given timestep.
 
         Parameters:
@@ -418,7 +445,7 @@ class Site(Base):
             if obs.visibility == 100:
                 statics += obs.shapes
 
-        if timestep:
+        if timestep > -1:
             features = [
                 feat for feat in self.features if feat.timestep == timestep]
             if len(features) > 0:
@@ -784,6 +811,7 @@ class Shape(Base):
         return loc
 
     def observe(self):
+        """Returns a dataframe of wavelength and reflectance values."""
         if self.materials:
             return self.materials[0].observe()
         else:

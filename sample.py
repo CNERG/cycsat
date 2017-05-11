@@ -27,6 +27,6 @@ db.build(temps)
 
 m = USGSMaterial('whitebark-pine_ynp-wb-1.30869.asc')
 
-# site = db.Site(1)
-# red = Red()
-# red.calibrate(site)
+site = db.Site(1)
+red = Red()
+red.calibrate(site)
