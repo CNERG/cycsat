@@ -20,6 +20,7 @@ from cycsat.prototypes.instrument import Red
 #------------------------------------------------------------------------
 
 db = Simulator('reactor_test_sample.sqlite')
+
 temps = {'Reactor1': ByronIL}
 db.build(temps)
 # db.simulate()

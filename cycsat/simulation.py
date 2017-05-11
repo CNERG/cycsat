@@ -136,9 +136,6 @@ class Simulator(Database):
         """Generates features for all site"""
         simulation = Simulation(name=name)
 
-        self.duration = self.query(
-            'SELECT Duration FROM Info')['Duration'][0]
-
         if sql:
             sites = self.Site().query(sql)
         else:
