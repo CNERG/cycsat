@@ -23,7 +23,7 @@ class OUTSIDE(Rule):
         self.pattern = None
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         return self.observable.site.bounds().buffer(int(self.value))
 
 
@@ -36,13 +36,13 @@ class NEAR(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         # get targets
-        targets = self.depends_on(Simulator)['obj'].tolist()
+        targets = self.depends_on(obj=True)
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(timestep=params['timestep']) for target in targets])
+            [target.footprint(timestep=timestep) for target in targets])
 
         inner_buffer = mask.buffer(int(self.value))
         mask = self.observable.footprint().bounds
@@ -65,13 +65,13 @@ class WITHIN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         # get targets
-        targets = self.depends_on(Simulator)['obj'].tolist()
+        targets = self.depends_on(obj=True)
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(timestep=params['timestep']) for target in targets])
+            [target.footprint(timestep=timestep) for target in targets])
 
         return mask.buffer(int(self.value))
 
@@ -85,19 +85,19 @@ class XALIGN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         # get targets
         maxy = self.observable.site.maxy
         if self.value:
             line = LineString([[int(self.value), 0], [int(self.value), maxy]])
 
         else:
-            targets = self.depends_on(Simulator)['obj'].tolist()
+            targets = self.depends_on(obj=True)
             if not targets:
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(timestep=params['timestep']) for target in targets])
+                [target.footprint(timestep=timestep) for target in targets])
 
             value = mask.centroid.x
             line = LineString([[value, 0], [value, maxy]])
@@ -114,19 +114,19 @@ class YALIGN(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         # get targets
         maxx = self.observable.site.maxx
         if self.value:
             line = LineString([[0, int(self.value)], [maxx, int(self.value)]])
 
         else:
-            targets = self.depends_on(Simulator)['obj'].tolist()
+            targets = self.depends_on(obj=True)
             if not targets:
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(timestep=params['timestep']) for target in targets])
+                [target.footprint(timestep=timestep) for target in targets])
 
             value = mask.centroid.y
             line = LineString([[0, value], [maxx, value]])
@@ -143,18 +143,18 @@ class ROTATE(Rule):
         self.pattern = pattern
         self.value = value
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
         # if there are any targets get the first angle
         angle = self.rotation = random.randint(-180, 180)
         try:
             angle = int(self.value)
         except:
             if self.pattern:
-                targets = self.depends_on(Simulator)['obj'].tolist()
+                targets = self.depends_on(obj=True)
                 if targets:
                     angle = targets[0].rotation
 
-        self.observable.rotate(angle, params['timestep'])
+        self.observable.rotate(angle, timestep)
 
 
 class DISPURSE_PLUME(Rule):
@@ -166,16 +166,16 @@ class DISPURSE_PLUME(Rule):
         self.pattern = pattern
         self.value = None
 
-    def run(self, Simulator, **params):
+    def run(self, simulation, timestep):
 
         wind_dir = random.randint(30, 80)
 
         for shape in self.observable.shapes:
 
-            geometry = shape.geometry(params['timestep'])
+            geometry = shape.geometry(timestep)
             oval = scale(geometry, 1, 1.5)
             oval = translate(oval, 0, -600)
             roval = rotate(oval, wind_dir, origin=geometry.centroid)
 
-            shape.add_loc(params['timestep'],
+            shape.add_loc(timestep,
                           wkt=roval.wkt)

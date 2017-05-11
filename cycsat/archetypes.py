@@ -58,14 +58,6 @@ operations = {
 }
 
 
-class Event(Base):
-    """A possible realization of all sites and Observables in a simulation."""
-
-    __tablename__ = 'CycSat_Event'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-
-
 class Build(Base):
     """A possible realization of all sites and Observables in a simulation."""
 
@@ -73,28 +65,56 @@ class Build(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
-    def assemble(self, Simulator, attempts=100):
+    def assemble(self, attempts=100):
         """Assembles the build, i.e. places all the observables of all the sites."""
         for site in self.sites:
             site.place_observables(
-                Simulator, timestep=-1, attempts=attempts)
+                self.database, timestep=-1, attempts=attempts)
 
+    def simulate(self, name='untiled', start=0, end=None):
+        if not end:
+            end = self.database.duration
 
-class Process(Base):
-    """A proccess run by cycsat under a particluar user-initiated 'Build'.
-    """
-    __tablename__ = 'CycSat_Procces'
+        simulation = Simulation(name=name, start=start, end=end)
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String)  # description of the the feature/error
-    result = Column(Integer, default=0)
-    message = Column(String)
+        for site in self.sites:
+            if site.defined:
+                print('simulating', site.AgentId)
+                site.simulate(simulation, start, end)
 
-    build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
-    build = relationship(Build, back_populates='processes')
+        self.simulations.append(simulation)
+        self.database.session.commit()
 
-Build.processes = relationship('Process', order_by=Process.id, back_populates='build',
-                               cascade='all, delete, delete-orphan')
+    def plot(self, timestep=-1, **params):
+        """Plots site that meet a sql query at a given timestep
+
+        Keyword arguments:
+        timestep -- timestep to plot
+        virtual -- create a virtual, internal plot (for backend use)
+        """
+        if len(self.sites) == 1:
+            fig, axes = self.sites[0].plot(timestep=timestep)
+        else:
+            factors = set()
+            for i in range(1, len(self.sites) + 1):
+                if len(self.sites) % i == 0:
+                    factors.add(i)
+
+            # figure out the dimensions for the plot
+            factors = list(factors)
+            cols = factors[round(len(factors) / 2) - 1]
+            rows = int(len(self.sites) / cols)
+
+            fig, axes = plt.subplots(cols, rows)
+
+            for ax, site in zip(axes.flatten(), self.sites):
+                site.plot(ax=ax, timestep=timestep)
+
+        if 'virtual' in params:
+            plt.savefig(params['virtual'], format='png')
+            return virtual
+
+        return fig, axes
 
 
 class Simulation(Base):
@@ -102,6 +122,22 @@ class Simulation(Base):
 
     __tablename__ = 'CycSat_Simulation'
 
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    start = Column(String)
+    end = Column(String)
+
+    build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
+    build = relationship(Build, back_populates='simulations')
+
+Build.simulations = relationship(
+    'Simulation', order_by=Simulation.id, back_populates='build')
+
+
+class Event(Base):
+    """A possible realization of all sites and Observables in a simulation."""
+
+    __tablename__ = 'CycSat_Event'
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
@@ -294,9 +330,9 @@ class Site(Base):
         site_axis = rotate(site_axis, self.ax_angle, center=footprint.centroid)
         return site_axis
 
-    def dep_graph(self, Simulator):
+    def dep_graph(self):
         """Returns groups of observables based on their dependencies."""
-        graph = dict((f.name, f.depends_on(Simulator))
+        graph = dict((f.name, f.depends_on())
                      for f in self.observables)
         name_to_instance = dict((f.name, f) for f in self.observables)
 
@@ -321,7 +357,7 @@ class Site(Base):
         # Return the list of batches
         return batches
 
-    def assemble(self, Simulator, simulation=None, timestep=-1, attempts=100):
+    def assemble(self, simulation=None, timestep=-1, attempts=100):
         """Assembles all the Observables of a Site according to their Rules.
 
         Parameters
@@ -329,24 +365,31 @@ class Site(Base):
         timestep: the timestep of the Site to draw
         attempts: the max # of attempts to place a observable
         """
-        # determine which observables to draw (by timestep)
-        if timestep > -1:
+        # if timestep = -1 initialize all observables
+        if timestep == -1:
+            observable_ids = [
+                obs.id for obs in self.observables if obs.visibility == 100]
+
+        else:
+            if not simulation:
+                print('no simulation provided')
+                return False
+
+            sim_feats = [
+                feat for feat in self.features if feat.simulation_id == simulation.id]
+
             observable_ids = set()
             features = [
-                feature for feature in self.features if feature.timestep == timestep]
+                feature for feature in sim_features if feature.timestep == timestep]
             for feature in features:
                 observable_ids.add(feature.observable.id)
             if not observable_ids:
                 return True
-        else:
-            observable_ids = [
-                observable.id for observable in self.observables if observable.visibility == 100]
 
         # create dependency groups
-        dep_grps = self.dep_graph(Simulator)
+        dep_grps = self.dep_graph()
 
         placed_observables = list()
-
         for group in dep_grps:
             for observable in group:
                 if observable.id not in observable_ids:
@@ -358,7 +401,7 @@ class Site(Base):
                                            for feat in placed_observables if feat.level == observable.level])
 
                 placed = observable.place(
-                    Simulator, mask=overlaps, attempts=100, timestep=timestep)
+                    simulation, mask=overlaps, attempts=100, timestep=timestep)
 
                 if not placed:
                     return False
@@ -372,12 +415,12 @@ class Site(Base):
 
         return True
 
-    def place_observables(self, Simulator, timestep=-1, attempts=100):
+    def place_observables(self, simulation=None, timestep=-1, attempts=100):
         """Places all the observables of a site according to their rules
         and features at the provided timestep."""
         for x in range(attempts):
             result = self.assemble(
-                Simulator, timestep=timestep, attempts=attempts)
+                simulation, timestep=timestep, attempts=attempts)
             if result:
                 self.defined = True
                 return True
@@ -385,48 +428,51 @@ class Site(Base):
                 self.defined = False
                 continue
 
-    def simulate(self, Simulator, sim, timestep):
+    def simulate(self, simulation, start=0, end=None):
         """Evaluates the conditions for dynamic shapes at a given timestep and
         generates features. All conditions must be True in order for the feature to be
         created.
 
         Parameters
         ----------
-        Simulator: a cycsat Simulator object
-        timestep: the timestep for simulation
+        simulation: the simulation to add to
         """
+        if not end:
+            end = self.build.database.duration
+
         dynamic_observables = [
             observable for observable in self.observables if observable.visibility != 100]
 
-        features = list()
-        for observable in dynamic_observables:
-            evaluations = []
-            for condition in observable.conditions:
-                qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (
-                    condition.table, self.AgentId, timestep)
-                df = Simulator.query(qry)
-                value = df['Value'][0]
+        for timestep in range(start, end):
 
-                if operations[condition.oper](value, condition.value):
-                    evaluations.append(True)
-                else:
-                    evaluations.append(False)
+            features = list()
+            for observable in dynamic_observables:
+                evaluations = []
+                for condition in observable.conditions:
+                    qry = "SELECT Value FROM %s WHERE AgentId=%s AND Time=%s;" % (
+                        condition.table, self.AgentId, timestep)
+                    df = self.build.database.query(qry)
+                    value = df['Value'][0]
 
-            if False in evaluations:
-                continue
-            else:
-                if random.randint(1, 100) < observable.visibility:
-                    feature = Feature(timestep=timestep)
-                    observable.features.append(feature)
-                    self.features.append(feature)
-                    sim.features.append(feature)
-                    Simulator.save(observable)
-                else:
+                    if operations[condition.oper](value, condition.value):
+                        evaluations.append(True)
+                    else:
+                        evaluations.append(False)
+
+                if False in evaluations:
                     continue
+                else:
+                    if random.randint(1, 100) < observable.visibility:
+                        feature = Feature(timestep=timestep)
+                        observable.features.append(feature)
+                        self.features.append(feature)
+                        simulation.features.append(feature)
+                        self.build.database.save(observable)
+                    else:
+                        continue
 
-        self.place_observables(Simulator, timestep=timestep)
-        Simulator.save(self)
-        Simulator.session.commit()
+        self.place_observables(simulation, timestep=timestep)
+        self.build.database.session.commit()
 
     def timestep_shapes(self, timestep=-1):
         """Returns the observable shapes (in level order) at a given timestep.
@@ -455,7 +501,7 @@ class Site(Base):
         shapes = statics + dynamics
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
-    def plot(self, ax=None, timestep=None, label=False, save=False, name='plot.png', virtual=None):
+    def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
         """plots a site and its static observables or a timestep."""
         if ax:
             new_fig = False
@@ -587,15 +633,15 @@ class Observable(Base):
                 for rule in self.rules if rule.kind == 'transform']
         return True
 
-    def depends_on(self, Simulator):
+    def depends_on(self):
         all_deps = set()
         for rule in self.rules:
-            deps = rule.depends_on(Simulator)
+            deps = rule.depends_on()
             for d in deps['name'].tolist():
                 all_deps.add(d)
         return all_deps
 
-    def place(self, Simulator, mask=None, timestep=-1, rand=True, location=False, attempts=100):
+    def place(self, simulation, mask=None, timestep=-1, rand=True, location=False, attempts=100):
         """Places a observable within a geometry and checks typology of shapes
 
         Parameters
@@ -614,7 +660,7 @@ class Observable(Base):
 
             # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
-            Simulator, timestep=timestep, overlaps=mask)
+            simulation, timestep=timestep, overlaps=mask)
 
         if not results['place']:
             print('no place')
@@ -632,8 +678,8 @@ class Observable(Base):
                     loc.geometry.within(results['restrict']))
 
             if False not in typology_checks:
-                Simulator.save(self)
-                self.morph(Simulator, timestep)
+                self.site.build.database.session.commit()
+                # self.morph(simulation, timestep)
                 return True
 
         # ax = plt.subplot(111)
@@ -653,7 +699,7 @@ class Observable(Base):
 
         return False
 
-    def evaluate_rules(self, Simulator, timestep=-1, mask=None, overlaps=None):
+    def evaluate_rules(self, simulation, timestep=-1, mask=None, overlaps=None):
         """Evaluates a a observable's rules and returns instructions
         for drawing that observable.
 
@@ -671,7 +717,7 @@ class Observable(Base):
         rules = [rule for rule in self.rules if rule.kind != 'transform']
 
         for rule in rules:
-            result = rule.run(Simulator, timestep=timestep)
+            result = rule.run(simulation, timestep=timestep)
             if rule.kind == 'restrict':
                 restrict.append(result)
                 place.append(result)
@@ -948,14 +994,19 @@ class Rule(Base):
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='rules')
 
-    def depends_on(self, Simulator):
+    def depends_on(self, obj=False):
         """Finds any observables at the same Site that match the
         pattern of the rule"""
-        # should use REGEX
-        df = Simulator.Observable()
+        df = self.observable.site.build.database.Observable()
         df = df[(df.name.str.startswith(self.pattern)) & (
             df.site_id == self.observable.site_id)]
+        if obj:
+            return df['obj'].tolist()
         return df
+
+    @property
+    def database(self):
+        return self.observable.site.build.database
 
 Observable.rules = relationship('Rule', order_by=Rule.id, back_populates='observable',
                                 cascade='all, delete, delete-orphan')
