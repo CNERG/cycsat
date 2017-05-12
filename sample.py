@@ -10,7 +10,7 @@ copyfile(src, dst)
 # =============================================================================
 # TESTING CYCSAT STARTS HERE
 # =============================================================================
-from cycsat.simulation import Simulator2
+from cycsat.simulation import Simulator
 from cycsat.prototypes.ByronIL import ByronIL
 from cycsat.laboratory import USGSMaterial
 from cycsat.prototypes.instrument import Red
@@ -19,17 +19,13 @@ from cycsat.prototypes.instrument import Red
 # Define a Reactor
 #------------------------------------------------------------------------
 
-db = Simulator2('reactor_test_sample.sqlite')
+db = Simulator('reactor_test_sample.sqlite')
 
 temps = {'Reactor1': ByronIL}
 db.create_build(temps)
 build = db.load_build(1)
 s = build.simulate()
 
-
-# # db.simulate()
-# m = USGSMaterial('whitebark-pine_ynp-wb-1.30869.asc')
-
-site = db.Site(1)
-red = Red()
-red.calibrate(site)
+# site = db.Site(1)
+# red = Red()
+# red.calibrate(site)
