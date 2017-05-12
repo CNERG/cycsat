@@ -34,9 +34,9 @@ class ByronIL(Site):
             Plume('plume 1')
         ]
 
-        # for x in range(5):
-        #     t = Truck('truck ' + str(x + 1))
-        #     self.observables.append(t)
+        for x in range(5):
+            t = Truck('truck ' + str(x + 1))
+            self.observables.append(t)
 
 
 class Land(Observable):
