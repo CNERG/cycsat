@@ -71,7 +71,7 @@ class Build(Base):
             site.place_observables(
                 simulation=None, timestep=-1, attempts=attempts)
 
-    def simulate(self, name='untiled', start=0, end=None):
+    def simulate(self, name='untitled', start=0, end=None):
         if not end:
             end = self.database.duration
 
@@ -181,18 +181,18 @@ class Instrument(Base):
         self.background = np.zeros((Site.maxx, Site.maxy), dtype=np.uint8)
         self.foreground = self.background
 
-        statics = Site.timestep_shapes()
+        statics = Site.timestep_shapes(statics=True)
         for shape in statics:
             self.add_shape(shape)
 
-    def add_shape(self, Shape, timestep=-1):
+    def add_shape(self, Shape, simulation=None, timestep=-1):
 
         if Shape.observable.visibility == 100:
             image = self.background
         else:
             image = self.foreground
 
-        geometry = Shape.geometry(timestep=timestep)
+        geometry = Shape.geometry(simulation, timestep)
         data = Shape.observe()
         if len(data) > 0:
 
@@ -203,10 +203,10 @@ class Instrument(Base):
             rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
             image[rr, cc] = reflectance
 
-    def plot(self, ax=None, timestep=-1):
+    def plot(self, ax=None, simulation=None, timestep=-1):
         """Plots the the captured image at a given timestep."""
 
-        self.capture(timestep)
+        self.capture(simulation, timestep)
 
         if ax:
             new_fig = False
@@ -221,21 +221,21 @@ class Instrument(Base):
                      '\ntimestep:' + str(timestep))
         ax.set_aspect('equal')
 
-        ax.imshow(self.foreground)
+        ax.imshow(self.foreground, cmap='gray')
 
         return ax
 
-    def capture(self, timestep=-1):
+    def capture(self, simulation, timestep=-1):
         """Adds shapes at timestep to a image"""
 
         # clear the memory
         self.foreground = self.background
 
         # add shapes from timestep
-        shapes = self.Site.timestep_shapes(timestep=timestep)
+        shapes = self.Site.timestep_shapes(simulation, timestep)
         for shape in shapes:
             if shape.observable.visibility < 100:
-                self.add_shape(shape, timestep=timestep)
+                self.add_shape(shape, simulation, timestep)
 
     # def write(self, path, img_format='GTiff'):
     #     """Writes an image using GDAL
@@ -302,8 +302,10 @@ class Site(Base):
         return [obs for obs in self.observables if obs.visibility == 100]
 
     def dynamics(self, simulation, timestep):
-        dynamics = list()
+        if timestep == -1:
+            return []
 
+        dynamics = list()
         sim_feats = [
             feat for feat in self.features if feat.simulation_id == simulation.id]
         features = [
@@ -311,7 +313,13 @@ class Site(Base):
 
         for feature in features:
             dynamics.append(feature.observable)
+        print(len(dynamics))
         return dynamics
+
+    def reset_observables(self):
+        """Initializes the observations by copying their wkt to their init_wkt."""
+        for obs in self.observables:
+            obs.reset_shapes()
 
     def bounds(self):
         geometry = build_geometry(self)
@@ -384,6 +392,7 @@ class Site(Base):
         """
         # if timestep = -1 initialize all observables
         if timestep == -1:
+            self.reset_observables()
             observable_ids = [
                 obs.id for obs in self.observables if obs.visibility == 100]
 
@@ -403,6 +412,8 @@ class Site(Base):
             if not observable_ids:
                 return True
 
+        print('assemble', len(observable_ids), timestep)
+
         # create dependency groups
         dep_grps = self.dep_graph()
 
@@ -414,7 +425,7 @@ class Site(Base):
                     continue
 
                 footprint = self.bounds()
-                overlaps = cascaded_union([feat.footprint(timestep)
+                overlaps = cascaded_union([feat.footprint(simulation, timestep)
                                            for feat in placed_observables if feat.level == observable.level])
 
                 placed = observable.place(
@@ -486,10 +497,12 @@ class Site(Base):
                         observable.features.append(feature)
                         self.features.append(feature)
                         simulation.features.append(feature)
+                        self.build.database.session.commit()
                     else:
                         continue
 
-        # self.place_observables(simulation, timestep=timestep)
+        for timestep in range(start, end):
+            self.place_observables(simulation, timestep)
         self.build.database.session.commit()
 
     def timestep_shapes(self, simulation=None, timestep=-1, statics=False):
@@ -589,14 +602,9 @@ class Observable(Base):
     site_id = Column(Integer, ForeignKey('CycSat_Site.id'))
     site = relationship(Site, back_populates='observables')
 
-    def appears(self, timestep=-1):
-        """Gets the shapes of this observable at a supplied timestep.
-        """
-        features = [feat for feat in self.features if feat.timestep == timestep]
-        if features:
-            return True
-        else:
-            return False
+    def reset_shapes(self):
+        for shape in self.shapes:
+            shape.init_wkt = shape.wkt
 
     def sorted_features(self):
         """Returns a sorted list (by timestep) of features."""
@@ -660,7 +668,9 @@ class Observable(Base):
                 shape.init_wkt = shape.wkt
             return True
 
-            # evalute the rules of the observable to determine the mask
+        print('placing', self.name)
+
+        # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             simulation, timestep=timestep, overlaps=mask)
 
@@ -680,7 +690,7 @@ class Observable(Base):
                     loc.geometry.within(results['restrict']))
 
             if False not in typology_checks:
-                self.site.build.database.session.commit()
+                self.site.build.database.save(self)
                 # self.morph(simulation, timestep)
                 return True
 
@@ -766,18 +776,16 @@ class Shape(Base):
 
     def get_loc(self, simulation, timestep):
         if timestep == -1:
-            if self.init_wkt:
-                return Location(timestep=-1, wkt=self.init_wkt)
-            loc = Location(timestep=-1, wkt=self.wkt)
-            return loc
+            return Location(timestep=-1, wkt=self.init_wkt)
         else:
             query = 'simulation_id==' + \
                 str(simulation.id) + ' & timestep==' + str(timestep)
             df = self.observable.site.build.database.Location().query(query)
             if len(df) > 0:
-                return df.iloc[0].obj
+                loc = df.iloc[0].obj
             else:
-                return None
+                loc = Location(timestep=timestep, wkt=self.init_wkt)
+        return loc
 
     def get_rgb(self, plotting=False):
         """Returns the RGB be value as a list [RGB] which is stored as text"""
@@ -793,16 +801,19 @@ class Shape(Base):
 
     def geometry(self, simulation, timestep):
         """Returns a shapely geometry"""
-        return self.get_loc(simulation, timestep).geometry
+        if self.observable.visibility == 100:
+            return load_wkt(self.init_wkt)
+        loc = self.get_loc(simulation, timestep)
+        return loc.geometry
 
     def place(self, placement, simulation, timestep):
         if timestep == -1:
-            loc = Location(wkt=self.wkt)
+            loc = Location(timestep=-1, wkt=self.wkt)
             loc.place(placement)
             self.init_wkt = loc.wkt
             return loc
         else:
-            loc = Location(wkt=placed.wkt)
+            loc = Location(timestep=timestep, wkt=self.init_wkt)
             loc.place(placement)
             self.locations.append(loc)
             simulation.locations.append(loc)
@@ -839,7 +850,7 @@ class Location(Base):
     __tablename__ = 'CycSat_Location'
 
     id = Column(Integer, primary_key=True)
-    timestep = Column(Integer, default=0)
+    timestep = Column(Integer, default=-1)
     wkt = Column(String)
 
     shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
