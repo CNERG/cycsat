@@ -225,29 +225,38 @@ class Instrument(Base):
 
         # for static shapes
         self.background = np.zeros((Site.maxx, Site.maxy), dtype=np.uint8)
-        self.foreground = self.background
+        self.foreground = self.background.copy()
 
         statics = Site.timestep_shapes(statics=True)
         for shape in statics:
             self.add_shape(shape)
 
-    def add_shape(self, Shape, simulation=None, timestep=-1):
+    def add_shape(self, shape, simulation=None, timestep=-1):
 
-        if Shape.observable.visibility == 100:
+        if shape.observable.visability == 100:
             image = self.background
         else:
             image = self.foreground
 
-        geometry = Shape.geometry(simulation, timestep)
-        data = Shape.observe()
+        geometry = shape.geometry(simulation, timestep)
+        data = shape.observe()
         if len(data) > 0:
-
             reflectance = data[(data.wavelength > self.min_spectrum) & (
                 data.wavelength < self.max_spectrum)].reflectance.max()
 
             coords = np.array(list(geometry.exterior.coords))
             rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
             image[rr, cc] = reflectance
+
+    def capture(self, simulation, timestep):
+        """Adds shapes at timestep to a image"""
+        # clear the memory
+        self.foreground = self.background.copy()
+
+        # add shapes from timestep
+        shapes = self.Site.timestep_shapes(simulation, timestep)
+        for shape in shapes:
+            self.add_shape(shape, simulation, timestep)
 
     def plot(self, ax=None, simulation=None, timestep=-1):
         """Plots the the captured image at a given timestep."""
@@ -276,18 +285,6 @@ class Instrument(Base):
         else:
             ax.imshow(self.foreground, cmap='gray')
         return ax
-
-    def capture(self, simulation, timestep=-1):
-        """Adds shapes at timestep to a image"""
-
-        # clear the memory
-        self.foreground = self.background
-
-        # add shapes from timestep
-        shapes = self.Site.timestep_shapes(simulation, timestep)
-        for shape in shapes:
-            if shape.observable.visibility < 100:
-                self.add_shape(shape, simulation, timestep)
 
     # def write(self, path, img_format='GTiff'):
     #     """Writes an image using GDAL
@@ -365,7 +362,6 @@ class Site(Base):
 
         for feature in features:
             dynamics.append(feature.observable)
-        print(len(dynamics))
         return dynamics
 
     def reset_observables(self):
@@ -534,8 +530,6 @@ class Site(Base):
                     df = self.build.database.query(qry)
                     value = df['Value'][0]
 
-                    print(timestep, value, condition.value)
-
                     if operations[condition.oper](value, condition.value):
                         evaluations.append(True)
                     else:
@@ -679,7 +673,7 @@ class Observable(Base):
                     loc = shape.get_loc(simulation, timestep)
                     loc.shift(shift_x, shift_y)
 
-    def morph(self, Simulator, timestep=-1):
+    def morph(self, simulation, timestep):
         """Runs a observable's transform rules that modify it's shape inplace."""
         mods = [rule.run(simulation, timestep)
                 for rule in self.rules if rule.kind == 'transform']
@@ -804,12 +798,13 @@ class Shape(Base):
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='shapes')
 
-    def get_loc(self, simulation, timestep):
+    def get_loc(self, simulation, timestep, plot=False):
         if timestep == -1:
             return Location(timestep=-1, wkt=self.init_wkt)
         else:
             query = 'simulation_id==' + \
-                str(simulation.id) + ' & timestep==' + str(timestep)
+                str(simulation.id) + ' & timestep==' + \
+                str(timestep) + ' & shape_id==' + str(self.id)
             df = self.observable.site.build.database.Location().query(query)
             if len(df) > 0:
                 loc = df.iloc[0].obj
@@ -1051,7 +1046,6 @@ class Feature(Base):
 
     id = Column(Integer, primary_key=True)
     timestep = Column(Integer)
-    wkt = Column(String)
 
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='features')

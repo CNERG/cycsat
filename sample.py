@@ -24,11 +24,12 @@ db = Simulator2('reactor_test_sample.sqlite')
 temps = {'Reactor1': ByronIL}
 db.create_build(temps)
 build = db.load_build(1)
+s = build.simulate()
 
 
 # # db.simulate()
 # m = USGSMaterial('whitebark-pine_ynp-wb-1.30869.asc')
 
-# # site = db.Site(1)
-# red = Red()
-# red.calibrate(site)
+site = db.Site(1)
+red = Red()
+red.calibrate(site)

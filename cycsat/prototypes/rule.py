@@ -177,6 +177,9 @@ class DISPURSE_PLUME(Rule):
             oval = translate(oval, 0, -600)
             roval = rotate(oval, wind_dir, origin=geometry.centroid)
 
-            loc = Location(timestep=timestep, wkt=roval.wkt)
-            simulation.locations.append(loc)
-            self.locations.append(loc)
+            loc = shape.get_loc(simulation, timestep)
+
+            loc.timestep = timestep
+            loc.wkt = roval.wkt
+            # simulation.locations.append(loc)
+            # shape.locations.append(loc)

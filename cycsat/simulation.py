@@ -62,8 +62,8 @@ class Database:
             df = pd.DataFrame([[getattr(i, j) for j in cols] + [i]
                                for i in data], columns=cols + ['obj'])
 
-            if 'geometry' in df.columns.tolist():
-                df = df.assign(geometry=df.geometry.apply(load_wkt))
+            if 'wkt' in df.columns.tolist():
+                df = df.assign(geometry=df.wkt.apply(load_wkt))
                 df = gpd.GeoDataFrame(df, geometry='geometry')
             return df
 
