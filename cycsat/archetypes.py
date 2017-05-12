@@ -69,7 +69,7 @@ class Build(Base):
         """Assembles the build, i.e. places all the observables of all the sites."""
         for site in self.sites:
             site.place_observables(
-                self.database, timestep=-1, attempts=attempts)
+                simulation=None, timestep=-1, attempts=attempts)
 
     def simulate(self, name='untiled', start=0, end=None):
         if not end:
@@ -85,7 +85,7 @@ class Build(Base):
         self.simulations.append(simulation)
         self.database.session.commit()
 
-    def plot(self, timestep=-1, **params):
+    def plot(self, simulation=None, timestep=-1, **params):
         """Plots site that meet a sql query at a given timestep
 
         Keyword arguments:
@@ -93,7 +93,8 @@ class Build(Base):
         virtual -- create a virtual, internal plot (for backend use)
         """
         if len(self.sites) == 1:
-            fig, axes = self.sites[0].plot(timestep=timestep)
+            fig, axes = self.sites[0].plot(
+                simulation=simulation, timestep=timestep)
         else:
             factors = set()
             for i in range(1, len(self.sites) + 1):
@@ -108,7 +109,7 @@ class Build(Base):
             fig, axes = plt.subplots(cols, rows)
 
             for ax, site in zip(axes.flatten(), self.sites):
-                site.plot(ax=ax, timestep=timestep)
+                site.plot(ax=ax, simulation=simulation, timestep=timestep)
 
         if 'virtual' in params:
             plt.savefig(params['virtual'], format='png')
@@ -296,6 +297,10 @@ class Site(Base):
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='sites')
 
+    @property
+    def statics(self):
+        return [obs for obs in self.observables if obs.visibility == 100]
+
     def bounds(self):
         geometry = build_geometry(self)
         return geometry
@@ -380,7 +385,7 @@ class Site(Base):
 
             observable_ids = set()
             features = [
-                feature for feature in sim_features if feature.timestep == timestep]
+                feature for feature in sim_feats if feature.timestep == timestep]
             for feature in features:
                 observable_ids.add(feature.observable.id)
             if not observable_ids:
@@ -408,10 +413,10 @@ class Site(Base):
 
                 placed_observables.append(observable)
 
-        # rotate and center
-        if timestep == -1:
-            self.rotate()
-            self.center()
+        # # rotate and center
+        # if timestep == -1:
+        #     # self.rotate()
+        #     # self.center()
 
         return True
 
@@ -487,21 +492,25 @@ class Site(Base):
         statics = list()
         dynamics = list()
 
-        for obs in self.observables:
-            if obs.visibility == 100:
+        if timestep == -1:
+            for obs in self.statics:
                 statics += obs.shapes
 
-        if timestep > -1:
-            features = [
-                feat for feat in self.features if feat.timestep == timestep]
-            if len(features) > 0:
-                for feature in features:
-                    dynamics += feature.observable.shapes
+        # for obs in self.observables:
+        #     if obs.visibility == 100:
+        #         statics += obs.shapes
+
+        # if timestep > -1:
+        #     features = [
+        #         feat for feat in self.features if feat.timestep == timestep]
+        #     if len(features) > 0:
+        #         for feature in features:
+        #             dynamics += feature.observable.shapes
 
         shapes = statics + dynamics
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
-    def plot(self, ax=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
+    def plot(self, ax=None, simulation=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
         """plots a site and its static observables or a timestep."""
         if ax:
             new_fig = False
@@ -522,9 +531,9 @@ class Site(Base):
         shapes = self.timestep_shapes(timestep)
         for shape in shapes:
             if shape.observable.visibility == 100:
-                geometry = shape.geometry()
+                geometry = shape.geometry(simulation, timestep)
             else:
-                geometry = shape.geometry(timestep=timestep)
+                geometry = shape.geometry(simualtion, timestep)
 
             rgb = shape.get_rgb(plotting=True)
             patch = PolygonPatch(geometry, facecolor=rgb)
@@ -606,20 +615,22 @@ class Observable(Base):
                         for feature in self.features)
         return features
 
-    def footprint(self, timestep=-1):
+    def footprint(self, simulation=None, timestep=-1):
         """Returns a shapely geometry of the static shapes"""
-        footprint = build_footprint(self, timestep)
-        return footprint
+        shapes = [shape.geometry(simulation, timestep)
+                  for shape in self.shapes]
+        return cascaded_union(shapes)
 
-    def rotate(self, degrees, timestep=-1, by='itself'):
-        if by == 'facility':
-            center = self.site.bounds().centroid
-        else:
-            center = 'center'
-        if self.name != 'land':
-            self.rotation = degrees
-            for shape in self.shapes:
-                shape.rotate(degrees=degrees, timestep=timestep, center=center)
+    # def rotate(self, degrees, simulation=None, timestep=-1, by='itself'):
+    #     if by == 'facility':
+    #         center = self.site.bounds().centroid
+    #     else:
+    #         center = 'center'
+    #     if self.name != 'land':
+    #         self.rotation = degrees
+    #         for shape in self.shapes:
+    #             for loc in shape.locations:
+    #                 loc.rotate()
 
     def shift(self, shift_x, shift_y, timestep=-1):
         if self.name != 'land':
@@ -656,6 +667,8 @@ class Observable(Base):
         center = self.site.bounds().centroid
 
         if self.name == 'land':
+            for shape in self.shapes:
+                shape.init_wkt = shape.wkt
             return True
 
             # evalute the rules of the observable to determine the mask
@@ -673,7 +686,7 @@ class Observable(Base):
 
             typology_checks = list()
             for shape in self.shapes:
-                loc = shape.place(posited_point, timestep=timestep)
+                loc = shape.place(posited_point, simulation, timestep=timestep)
                 typology_checks.append(
                     loc.geometry.within(results['restrict']))
 
@@ -750,6 +763,7 @@ class Shape(Base):
     id = Column(Integer, primary_key=True)
     level = Column(Integer, default=0)
     prototype = Column(String)
+    init_wkt = Column(String)
     wkt = Column(String)
     material_code = Column(Integer)
     rgb = Column(String)
@@ -761,27 +775,22 @@ class Shape(Base):
     observable_id = Column(Integer, ForeignKey('CycSat_Observable.id'))
     observable = relationship(Observable, back_populates='shapes')
 
-    def add_loc(self, timestep=-1, wkt=None):
-        loc = [loc for loc in self.locations if loc.timestep == timestep]
-        if loc:
-            if wkt:
-                loc[0].wkt = wkt
+    def get_loc(self, simulation, timestep):
+        if timestep == -1:
+            if self.observable.site.defined:
+                wkt = self.init_wkt
             else:
-                return loc[0]
-
-        if wkt:
-            loc = Location(timestep=timestep, wkt=wkt)
-            self.locations.append(loc)
+                wkt = self.wkt
+            loc = Location(timestep=-1, wkt=wkt)
             return loc
-
         else:
-            loc = [loc for loc in self.locations if loc.timestep == -1]
-            if loc:
-                loc = Location(timestep=timestep, wkt=loc[0].wkt)
+            query = 'simulation_id==' + \
+                str(simulation.id) + ' & timestep==' + str(timestep)
+            df = self.observable.site.build.database.Location().query(query)
+            if len(df) > 0:
+                return df.iloc[0].obj
             else:
-                loc = Location(timestep=timestep, wkt=self.wkt)
-            self.locations.append(loc)
-            return loc
+                return None
 
     def get_rgb(self, plotting=False):
         """Returns the RGB be value as a list [RGB] which is stored as text"""
@@ -795,66 +804,22 @@ class Shape(Base):
         else:
             return rgb
 
-    def geometry(self, timestep=-1, placement=False):
+    def geometry(self, simulation, timestep):
         """Returns a shapely geometry"""
+        return self.get_loc(simulation, timestep).geometry
 
-        if self.observable.visibility == 100 or placement:
-            if self.observable.consistent:
-                loc = [loc for loc in self.locations if loc.timestep == -1]
-                if loc:
-                    return loc[0].geometry
-                else:
-                    return load_wkt(self.wkt)
-
-        loc = [loc for loc in self.locations if loc.timestep == timestep]
-        if loc:
-            return loc[0].geometry
+    def place(self, placement, simulation, timestep):
+        if timestep == -1:
+            loc = Location(wkt=self.wkt)
+            loc.place(placement)
+            self.init_wkt = loc.wkt
+            return loc
         else:
-            return load_wkt(self.wkt)
-
-    def materialize(self):
-        materialize(self)
-
-    def place(self, placement, timestep=-1):  # , rotation=0):
-        """Places a self to a coordinate position.
-
-        Parameters
-        ----------
-        build: draws from the shapes the stable_wkt rather than placed
-        """
-        loc = self.add_loc(timestep)
-
-        placed_x = placement.coords.xy[0][0]
-        placed_y = placement.coords.xy[1][0]
-
-        geometry = loc.geometry
-
-        shape_x = geometry.centroid.coords.xy[0][0]
-        shape_y = geometry.centroid.coords.xy[1][0]
-
-        try:
-            xoff = self.xoff
-            yoff = self.yoff
-        except:
-            xoff = 0
-            yoff = 0
-
-        shift_x = placed_x - shape_x + xoff
-        shift_y = placed_y - shape_y + yoff
-
-        loc.wkt = translate(geometry, xoff=shift_x, yoff=shift_y).wkt
-        return loc
-
-    def rotate(self, degrees, center='center', timestep=-1):
-        loc = self.add_loc(timestep)
-        loc.wkt = rotate(
-            loc.geometry, degrees, origin=center, use_radians=False).wkt
-        return loc
-
-    def shift(self, shift_x, shift_y, timestep=-1):
-        loc = self.add_loc(timestep)
-        loc.wkt = translate(loc.geometry, xoff=shift_x, yoff=shift_y).wkt
-        return loc
+            loc = Location(wkt=placed.wkt)
+            loc.place(placement)
+            self.locations.append(loc)
+            simulation.locations.append(loc)
+            return loc
 
     def observe(self):
         """Returns a dataframe of wavelength and reflectance values."""
@@ -899,6 +864,43 @@ class Location(Base):
     @property
     def geometry(self):
         return load_wkt(self.wkt)
+
+    def place(self, placement):
+        """Places a location to a coordinate position.
+
+        Parameters
+        ----------
+        build: draws from the shapes the stable_wkt rather than placed
+        """
+        placed_x = placement.coords.xy[0][0]
+        placed_y = placement.coords.xy[1][0]
+
+        geometry = self.geometry
+
+        shape_x = geometry.centroid.coords.xy[0][0]
+        shape_y = geometry.centroid.coords.xy[1][0]
+
+        try:
+            xoff = self.xoff
+            yoff = self.yoff
+        except:
+            xoff = 0
+            yoff = 0
+
+        shift_x = placed_x - shape_x + xoff
+        shift_y = placed_y - shape_y + yoff
+
+        self.wkt = translate(geometry, xoff=shift_x, yoff=shift_y).wkt
+        return True
+
+    def rotate(self, degrees, center='center'):
+        self.wkt = rotate(
+            self.geometry, degrees, origin=center, use_radians=False).wkt
+        return True
+
+    def shift(self, shift_x, shift_y):
+        self.wkt = translate(self.geometry, xoff=shift_x, yoff=shift_y).wkt
+        return True
 
 
 Shape.locations = relationship('Location', order_by=Location.id, back_populates='shape',
