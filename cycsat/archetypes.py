@@ -33,6 +33,7 @@ from shapely.affinity import rotate, translate
 from skimage.draw import polygon
 
 import gdal
+from skimage.transform import resize, downscale_local_mean
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.declarative import declarative_base
@@ -260,14 +261,20 @@ class Instrument(Base):
             fig, ax = plt.subplots(1, 1, sharex=True, sharey=True)
 
         # set up the plot
-        ax.set_xlim([0, self.Site.maxx])
-        ax.set_ylim([0, self.Site.maxy])
         ax.set_title('Agent: ' + str(self.Site.AgentId) +
-                     '\ntimestep:' + str(timestep))
+                     '\ntimestep:' + str(timestep) + '\nInstrument:' + self.name)
         ax.set_aspect('equal')
+        plt.tight_layout()
 
-        ax.imshow(self.foreground, cmap='gray')
-
+        if self.mmu > 1:
+            rows = round(self.foreground.shape[-2] / self.mmu)
+            cols = round(self.foreground.shape[-1] / self.mmu)
+            band_array = downscale_local_mean(
+                self.foreground, (self.mmu, self.mmu))
+            band_array = resize(band_array, (rows, cols), preserve_range=True)
+            ax.imshow(band_array, cmap='gray')
+        else:
+            ax.imshow(self.foreground, cmap='gray')
         return ax
 
     def capture(self, simulation, timestep=-1):
@@ -955,11 +962,12 @@ class Material(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     mass = Column(Integer, default=0)
+    kind = Column(String)
 
     shape_id = Column(Integer, ForeignKey('CycSat_Shape.id'))
     shape = relationship(Shape, back_populates='materials')
 
-    __mapper_args__ = {'polymorphic_on': name}
+    __mapper_args__ = {'polymorphic_on': kind}
 
     def plot(self):
         sample = self.measure()

@@ -2,6 +2,7 @@ from cycsat.archetypes import Site, Observable, Shape, Rule, Condition
 from cycsat.prototypes.shape import Circle, Rectangle
 from cycsat.prototypes.rule import WITHIN, ROTATE, NEAR
 from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
+from cycsat.laboratory import USGSMaterial
 import random
 
 from cycsat.terrain import simple_land
@@ -117,9 +118,11 @@ class ParkingLot(Observable):
     def __init__(self, name):
         self.name = name
         self.level = 1
-        self.shapes = [
-            Rectangle(1000, 800, rgb='[150,150,150]'),
-        ]
+
+        parking_lot = Rectangle(1000, 800, rgb='[150,150,150]')
+        parking_lot.materials.append(USGSMaterial('concrete_gds375.27862.asc'))
+
+        self.shapes = [parking_lot]
         self.rules = [WITHIN(pattern='concrete pad')]
 
 

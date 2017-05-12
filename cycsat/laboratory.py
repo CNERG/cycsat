@@ -24,6 +24,7 @@ Library = pd.DataFrame(samples,
 
 
 class USGSMaterial(Material):
+    __mapper_args__ = {'polymorphic_identity': 'USGSMaterial'}
 
     def __init__(self, name, mass=1):
         self.name = name
