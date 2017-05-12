@@ -211,10 +211,6 @@ class Simulator(Database):
 
 class Simulator2(Database):
 
-    # def __init__(self, path):
-    #     Database.__init__(self, path)
-    #     self.builds = self.session.query(Build).all()
-
     def __init__(self, path):
         Database.__init__(self, path)
         for table in self.archetypes:

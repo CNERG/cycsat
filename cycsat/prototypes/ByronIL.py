@@ -21,21 +21,21 @@ class ByronIL(Site):
 
         self.observables = [
             Land(maxx=self.maxx, maxy=self.maxy),
-            ConcretePad('concrete pad'),
-            CoolingTower('1 cooling tower'),
-            Containment('1 containment'),
-            Containment('2 containment'),
-            ContainmentSupport('support containment 1',
-                               '1 containment', 500, 500),
-            ContainmentSupport('support containment 2',
-                               '2 containment', 500, 700),
-            ParkingLot('parking lot'),
-            Plume('plume 1')
-        ]
+            ConcretePad('concrete pad'), ]
+        #     CoolingTower('1 cooling tower'),
+        #     Containment('1 containment'),
+        #     Containment('2 containment'),
+        #     ContainmentSupport('support containment 1',
+        #                        '1 containment', 500, 500),
+        #     ContainmentSupport('support containment 2',
+        #                        '2 containment', 500, 700),
+        #     ParkingLot('parking lot'),
+        #     Plume('plume 1')
+        # ]
 
-        for x in range(5):
-            t = Truck('truck ' + str(x + 1))
-            self.observables.append(t)
+        # for x in range(5):
+        #     t = Truck('truck ' + str(x + 1))
+        #     self.observables.append(t)
 
 
 class Land(Observable):

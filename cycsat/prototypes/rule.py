@@ -42,10 +42,10 @@ class NEAR(Rule):
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(timestep=timestep) for target in targets])
+            [target.footprint(simulation, timestep) for target in targets])
 
         inner_buffer = mask.buffer(int(self.value))
-        mask = self.observable.footprint().bounds
+        mask = self.observable.footprint(simulation, timestep).bounds
 
         diagaonal_dist = Point(mask[0:2]).distance(Point(mask[2:]))
 
@@ -71,7 +71,7 @@ class WITHIN(Rule):
         if not targets:
             return self.observable.site.bounds()
         mask = cascaded_union(
-            [target.footprint(timestep=timestep) for target in targets])
+            [target.footprint(simulation, timestep) for target in targets])
 
         return mask.buffer(int(self.value))
 
@@ -97,7 +97,7 @@ class XALIGN(Rule):
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(timestep=timestep) for target in targets])
+                [target.footprint(simulation, timestep) for target in targets])
 
             value = mask.centroid.x
             line = LineString([[value, 0], [value, maxy]])
@@ -126,7 +126,7 @@ class YALIGN(Rule):
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(timestep=timestep) for target in targets])
+                [target.footprint(simulatuion, timestep) for target in targets])
 
             value = mask.centroid.y
             line = LineString([[0, value], [maxx, value]])
@@ -172,10 +172,11 @@ class DISPURSE_PLUME(Rule):
 
         for shape in self.observable.shapes:
 
-            geometry = shape.geometry(timestep)
+            geometry = shape.geometry(simulation, timestep)
             oval = scale(geometry, 1, 1.5)
             oval = translate(oval, 0, -600)
             roval = rotate(oval, wind_dir, origin=geometry.centroid)
 
-            shape.add_loc(timestep,
-                          wkt=roval.wkt)
+            loc = Location(timestep=timestep, wkt=roval.wkt)
+            simulation.locations.append(loc)
+            self.locations.append(loc)
