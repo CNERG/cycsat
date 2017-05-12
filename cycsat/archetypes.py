@@ -301,6 +301,18 @@ class Site(Base):
     def statics(self):
         return [obs for obs in self.observables if obs.visibility == 100]
 
+    def dynamics(self, simulation, timestep):
+        dynamics = list()
+
+        sim_feats = [
+            feat for feat in self.features if feat.simulation_id == simulation.id]
+        features = [
+            feature for feature in sim_feats if feature.timestep == timestep]
+
+        for feature in features:
+            dynamics.append(feature.observable)
+        return dynamics
+
     def bounds(self):
         geometry = build_geometry(self)
         return geometry
@@ -479,35 +491,15 @@ class Site(Base):
         self.place_observables(simulation, timestep=timestep)
         self.build.database.session.commit()
 
-    def timestep_shapes(self, timestep=-1):
+    def timestep_shapes(self, simulation=None, timestep=-1, statics=False):
         """Returns the observable shapes (in level order) at a given timestep.
-
-        Parameters:
-        -----------
-        timestep : integer, or None, default None
-            If None, returns only statics shapes
-        complete : bool, default True
-            If True returns both static and dynamic observables at timestep
         """
-        statics = list()
-        dynamics = list()
-
-        if timestep == -1:
-            for obs in self.statics:
-                statics += obs.shapes
-
-        # for obs in self.observables:
-        #     if obs.visibility == 100:
-        #         statics += obs.shapes
-
-        # if timestep > -1:
-        #     features = [
-        #         feat for feat in self.features if feat.timestep == timestep]
-        #     if len(features) > 0:
-        #         for feature in features:
-        #             dynamics += feature.observable.shapes
-
-        shapes = statics + dynamics
+        dynamics = self.dynamics(simulation, timestep)
+        if statics:
+            dynamics += self.statics
+        shapes = list()
+        for obs in dynamics:
+            shapes += obs.shapes
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
     def plot(self, ax=None, simulation=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
@@ -528,13 +520,9 @@ class Site(Base):
         ax.set_aspect('equal')
 
         observable_ids = set()
-        shapes = self.timestep_shapes(timestep)
+        shapes = self.timestep_shapes(simulation, timestep, statics=True)
         for shape in shapes:
-            if shape.observable.visibility == 100:
-                geometry = shape.geometry(simulation, timestep)
-            else:
-                geometry = shape.geometry(simualtion, timestep)
-
+            geometry = shape.geometry(simulation, timestep)
             rgb = shape.get_rgb(plotting=True)
             patch = PolygonPatch(geometry, facecolor=rgb)
             ax.add_patch(patch)
