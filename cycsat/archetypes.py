@@ -129,7 +129,6 @@ class Simulation(Base):
     build = relationship(Build, back_populates='simulations')
 
     def plot(self, timestep=-1, **params):
-
         if len(self.build.sites) == 1:
             fig, axes = self.build.sites[0].plot(
                 simulation=self, timestep=timestep)
@@ -151,9 +150,31 @@ class Simulation(Base):
 
         if 'virtual' in params:
             plt.savefig(params['virtual'], format='png')
-            return virtual
+            return params['virtual']
 
         return fig, axes
+
+    def gif(self, start=0, end=None, fps=1):
+        if not end:
+            end = self.build.database.duration
+
+        plt.ioff()
+        plots = list()
+        for step in range(start, end):
+            f = io.BytesIO()
+            b = self.plot(timestep=step, virtual=f)
+            plots.append(b)
+            plt.close()
+
+        images = list()
+        for plot in plots:
+            plot.seek(0)
+            image = imageio.imread(plot)
+            images.append(image)
+        imageio.mimsave(self.name + str(start) + '-' +
+                        str(end) + '.gif', images, fps=fps)
+        plt.ion()
+
 
 Build.simulations = relationship(
     'Simulation', order_by=Simulation.id, back_populates='build')
@@ -352,7 +373,7 @@ class Site(Base):
     def footprint(self):
         return build_footprint(self)
 
-    def rotate(self, degrees=None):
+    def rotate(self, degrees=None, simulation=None, timestep=-1):
         """Rotates all the observables of a site."""
         if not degrees:
             degrees = random.randint(-180, 180) + 0.01
@@ -360,9 +381,9 @@ class Site(Base):
         self.ax_angle = degrees
 
         for observable in self.observables:
-            observable.rotate(degrees, by='facility')
+            observable.rotate(degrees, simulation, timestep, by='facility')
 
-    def center(self):
+    def center(self, simulation, timestep):
         fcenter = self.footprint().centroid
         bcenter = self.bounds().centroid
 
@@ -370,7 +391,7 @@ class Site(Base):
         shift_y = bcenter.y - fcenter.y
 
         for observable in self.observables:
-            observable.shift(shift_x, shift_y)
+            observable.shift(shift_x, shift_y, simulation, timestep)
 
     def axis(self):
         footprint = self.bounds()
@@ -460,10 +481,10 @@ class Site(Base):
 
                 placed_observables.append(observable)
 
-        # # rotate and center
-        # if timestep == -1:
-        #     # self.rotate()
-        #     # self.center()
+        # rotate and center
+        if timestep == -1:
+            self.rotate(simulation, timestep)
+            self.center(simulation, timestep)
 
         return True
 
@@ -584,23 +605,6 @@ class Site(Base):
         if new_fig:
             return fig, ax
 
-    def gif(self, timesteps, name, fps=1):
-        """plots a site and its static observables or a timestep."""
-        plt.ioff()
-        plots = list()
-        for step in timesteps:
-            f = io.BytesIO()
-            f = self.plot(timestep=step, virtual=f)
-            plots.append(f)
-            plt.close()
-
-        images = list()
-        for plot in plots:
-            plot.seek(0)
-            images.append(imageio.imread(plot))
-        imageio.mimsave(name + '.gif', images, fps=fps)
-        plt.ion()
-
     def capture(self, Sensor):
         """Captures a synthetic image of the satellite at a timestep."""
 
@@ -642,26 +646,35 @@ class Observable(Base):
                   for shape in self.shapes]
         return cascaded_union(shapes)
 
-    # def rotate(self, degrees, simulation=None, timestep=-1, by='itself'):
-    #     if by == 'facility':
-    #         center = self.site.bounds().centroid
-    #     else:
-    #         center = 'center'
-    #     if self.name != 'land':
-    #         self.rotation = degrees
-    #         for shape in self.shapes:
-    #             for loc in shape.locations:
-    #                 loc.rotate()
-
-    def shift(self, shift_x, shift_y, timestep=-1):
+    def rotate(self, degrees, simulation, timestep, by='itself'):
+        if by == 'facility':
+            center = self.site.bounds().centroid
+        else:
+            center = 'center'
         if self.name != 'land':
-
+            self.rotation = degrees
             for shape in self.shapes:
-                shape.shift(shift_x, shift_y, timestep=timestep)
+                if timestep == -1:
+                    loc = shape.get_loc(simulation, timestep)
+                    loc.rotate(degrees, center)
+                    shape.init_wkt = loc.wkt
+                else:
+                    loc.rotate(degrees, center)
+
+    def shift(self, shift_x, shift_y, simulation, timestep):
+        if self.name != 'land':
+            for shape in self.shapes:
+                if timestep == -1:
+                    loc = shape.get_loc(simulation, timestep)
+                    loc.shift(shift_x, shift_y)
+                    shape.init_wkt = loc.wkt
+                else:
+                    loc = shape.get_loc(simulation, timestep)
+                    loc.shift(shift_x, shift_y)
 
     def morph(self, Simulator, timestep=-1):
         """Runs a observable's transform rules that modify it's shape inplace."""
-        mods = [rule.run(Simulator, timestep=timestep)
+        mods = [rule.run(simulation, timestep)
                 for rule in self.rules if rule.kind == 'transform']
         return True
 
@@ -715,24 +728,10 @@ class Observable(Base):
 
             if False not in typology_checks:
                 self.site.build.database.save(self)
-                # self.morph(simulation, timestep)
+                self.morph(simulation, timestep)
                 return True
 
-        # ax = plt.subplot(111)
-        # ax.set_xlim([0, self.site.maxx])
-        # ax.set_ylim([0, self.site.maxy])
-
-        # ax.add_patch(PolygonPatch(results['restrict'], alpha=0.5))
-        # ax.add_patch(PolygonPatch(
-        #     results['place'], facecolor='red', alpha=0.5))
-
-        # ax.add_patch(PolygonPatch(
-        #     loc.geometry, facecolor='green', alpha=0.5))
-
-        # print(results['place'])
         print(self.name, 'placement failed after {', attempts, '} attempts.')
-        # sys.exit()
-
         return False
 
     def evaluate_rules(self, simulation, timestep=-1, mask=None, overlaps=None):
