@@ -154,7 +154,7 @@ class ROTATE(Rule):
                 if targets:
                     angle = targets[0].rotation
 
-        self.observable.rotate(angle, timestep)
+        self.observable.rotate(angle, simulation, timestep)
 
 
 class DISPURSE_PLUME(Rule):
