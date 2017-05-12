@@ -80,11 +80,15 @@ class Database:
 
     def bind_table(self, table=None):
         """Binds a database table to a function for retriving a pandas dataframe view of the database"""
-        def get_table(id=None, table=table, interface=self):
+        def get_table(id=None, table=table, **params):
             sql = 'SELECT * FROM ' + table
-            data = interface.query(sql)
+            data = self.query(sql)
+
+            for param in params:
+                data = data[getattr(data, param) == params[param]]
+
             if id:
-                return data[data.id == id].ix[0].obj
+                return data.ix[0].obj
             else:
                 return data
 
@@ -93,123 +97,6 @@ class Database:
 
 
 class Simulator(Database):
-
-    def __init__(self, path, base=archetypes):
-        Database.__init__(self, path, base)
-        for table in self.archetypes:
-            func = self.bind_table(table=table)
-            table_name = table.replace('CycSat_', '')
-            setattr(self, table_name, func)
-
-            # get information about the simulation
-        self.duration = self.query(
-            'SELECT Duration FROM Info')['Duration'][0]
-
-    def build(self, templates, name='untitled', attempts=100):
-        """Builds sites.
-
-        Keyword arguments:
-        attempts -- (optional) max number of of attempts
-        sites -- (optional) a list of sites to build, default all
-        name -- (optional) name for the build 'Build'
-        """
-        build = Build(name=name)
-
-        # get Agents to build
-        AgentEntry = self.query('select * from AgentEntry')
-
-        for agent in AgentEntry.iterrows():
-            prototype = agent[1]['Prototype']
-
-            # this will need to be changed with other kinds are used
-            if agent[1]['Kind'] == 'Facility':
-                if prototype in templates:
-                    site = templates[prototype]()
-                    site.AgentId = agent[1]['AgentId']
-                    site.prototype = prototype
-                    build.sites.append(site)
-
-        self.save(build)
-        build.assemble(self, attempts=attempts)
-        self.save(build)
-
-    def simulate(self, sql=None, name='None'):
-        """Generates features for all site"""
-        simulation = Simulation(name=name)
-
-        if sql:
-            sites = self.Site().query(sql)
-        else:
-            sites = self.Site()
-
-        for site in sites.iterrows():
-            if site[1]['defined']:
-                print('simulating', site[1]['id'], site[1]['AgentId'])
-                for timestep in range(self.duration):
-                    site[1]['obj'].simulate(self, simulation, timestep)
-
-        self.session.add(simulation)
-        self.session.commit()
-
-    def plot(self, sql=None, timestep=-1, virtual=None, label=False):
-        """Plots site that meet a sql query at a given timestep
-
-        Keyword arguments:
-        sql -- sql to select Facilities, default all
-        timestep -- timestep to plot
-        virtual -- create a virtual, internal plot
-        """
-        if not sql:
-            sql = 'AgentId == AgentId'
-
-        sites = self.Site().query(sql)
-
-        if len(sites) == 1:
-            fig, axes = sites.iloc[0].obj.plot(timestep=timestep)
-        else:
-            # find the factors
-            factors = set()
-            for i in range(1, len(sites) + 1):
-                if len(sites) % i == 0:
-                    factors.add(i)
-
-            # figure out the dimensions for the plot
-            factors = list(factors)
-            cols = factors[round(len(factors) / 2) - 1]
-            rows = int(len(sites) / cols)
-
-            fig, axes = plt.subplots(cols, rows)  # len(sites))
-
-            for ax, site in zip(axes.flatten(), sites.iterrows()):
-                site[1].obj.plot(ax=ax, timestep=timestep, label=label)
-
-        if virtual:
-            plt.savefig(virtual, format='png')
-            return virtual
-
-        return fig, axes
-
-    def gif(self, sql, timesteps, name, fps=1):
-        """Creates a GIF"""
-
-        plt.ioff()
-        plots = list()
-        for step in timesteps:
-            f = io.BytesIO()
-            b = self.plot(sql=sql, timestep=step, virtual=f)
-            plots.append(b)
-            plt.close()
-
-        images = list()
-        for plot in plots:
-            plot.seek(0)
-            image = imageio.imread(plot)
-            images.append(image)
-        imageio.mimsave(name + '.gif', images, fps=fps)
-        plt.ion()
-
-
-class Simulator2(Database):
 
     def __init__(self, path):
         Database.__init__(self, path)

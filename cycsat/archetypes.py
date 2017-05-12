@@ -233,7 +233,7 @@ class Instrument(Base):
 
     def add_shape(self, shape, simulation=None, timestep=-1):
 
-        if shape.observable.visability == 100:
+        if shape.observable.visibility == 100:
             image = self.background
         else:
             image = self.foreground
