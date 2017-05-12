@@ -84,8 +84,9 @@ class Build(Base):
 
         self.simulations.append(simulation)
         self.database.session.commit()
+        return simulation
 
-    def plot(self, simulation=None, timestep=-1, **params):
+    def plot(self):
         """Plots site that meet a sql query at a given timestep
 
         Keyword arguments:
@@ -94,7 +95,7 @@ class Build(Base):
         """
         if len(self.sites) == 1:
             fig, axes = self.sites[0].plot(
-                simulation=simulation, timestep=timestep)
+                simulation=None, timestep=-1)
         else:
             factors = set()
             for i in range(1, len(self.sites) + 1):
@@ -109,11 +110,7 @@ class Build(Base):
             fig, axes = plt.subplots(cols, rows)
 
             for ax, site in zip(axes.flatten(), self.sites):
-                site.plot(ax=ax, simulation=simulation, timestep=timestep)
-
-        if 'virtual' in params:
-            plt.savefig(params['virtual'], format='png')
-            return virtual
+                site.plot(ax=ax, simulation=None, timestep=-1)
 
         return fig, axes
 
@@ -130,6 +127,33 @@ class Simulation(Base):
 
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='simulations')
+
+    def plot(self, timestep=-1, **params):
+
+        if len(self.build.sites) == 1:
+            fig, axes = self.build.sites[0].plot(
+                simulation=self, timestep=timestep)
+        else:
+            factors = set()
+            for i in range(1, len(self.build.sites) + 1):
+                if len(self.build.sites) % i == 0:
+                    factors.add(i)
+
+            # figure out the dimensions for the plot
+            factors = list(factors)
+            cols = factors[round(len(factors) / 2) - 1]
+            rows = int(len(self.build.sites) / cols)
+
+            fig, axes = plt.subplots(cols, rows)
+
+            for ax, site in zip(axes.flatten(), self.build.sites):
+                site.plot(ax=ax, simulation=self, timestep=timestep)
+
+        if 'virtual' in params:
+            plt.savefig(params['virtual'], format='png')
+            return virtual
+
+        return fig, axes
 
 Build.simulations = relationship(
     'Simulation', order_by=Simulation.id, back_populates='build')
