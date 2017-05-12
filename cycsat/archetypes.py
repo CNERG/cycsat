@@ -471,6 +471,8 @@ class Site(Base):
                     df = self.build.database.query(qry)
                     value = df['Value'][0]
 
+                    print(timestep, value, condition.value)
+
                     if operations[condition.oper](value, condition.value):
                         evaluations.append(True)
                     else:
@@ -484,11 +486,10 @@ class Site(Base):
                         observable.features.append(feature)
                         self.features.append(feature)
                         simulation.features.append(feature)
-                        self.build.database.save(observable)
                     else:
                         continue
 
-        self.place_observables(simulation, timestep=timestep)
+        # self.place_observables(simulation, timestep=timestep)
         self.build.database.session.commit()
 
     def timestep_shapes(self, simulation=None, timestep=-1, statics=False):
@@ -674,7 +675,7 @@ class Observable(Base):
 
             typology_checks = list()
             for shape in self.shapes:
-                loc = shape.place(posited_point, simulation, timestep=timestep)
+                loc = shape.place(posited_point, simulation, timestep)
                 typology_checks.append(
                     loc.geometry.within(results['restrict']))
 
@@ -765,11 +766,9 @@ class Shape(Base):
 
     def get_loc(self, simulation, timestep):
         if timestep == -1:
-            if self.observable.site.defined:
-                wkt = self.init_wkt
-            else:
-                wkt = self.wkt
-            loc = Location(timestep=-1, wkt=wkt)
+            if self.init_wkt:
+                return Location(timestep=-1, wkt=self.init_wkt)
+            loc = Location(timestep=-1, wkt=self.wkt)
             return loc
         else:
             query = 'simulation_id==' + \

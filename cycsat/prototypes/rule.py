@@ -126,7 +126,7 @@ class YALIGN(Rule):
                 return self.observable.site.bounds()
 
             mask = cascaded_union(
-                [target.footprint(simulatuion, timestep) for target in targets])
+                [target.footprint(simulation, timestep) for target in targets])
 
             value = mask.centroid.y
             line = LineString([[0, value], [maxx, value]])
