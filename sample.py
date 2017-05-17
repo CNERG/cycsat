@@ -3,9 +3,9 @@ from shutil import copyfile
 import random
 
 # copying the test database (this is just for repeated testing)
-src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.sqlite'
-dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
-copyfile(src, dst)
+# src = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/simulations/four_reactors.sqlite'
+# dst = 'C:/Users/Owen/Documents/Academic/CNERG/cycsat/reactor_test_sample.sqlite'
+# copyfile(src, dst)
 
 # =============================================================================
 # TESTING CYCSAT STARTS HERE
@@ -13,7 +13,7 @@ copyfile(src, dst)
 from cycsat.simulation import Simulator
 from cycsat.prototypes.ByronIL import ByronIL
 from cycsat.laboratory import USGSMaterial
-from cycsat.prototypes.instrument import Red
+from cycsat.prototypes.instrument import Blue
 
 #------------------------------------------------------------------------
 # Define a Reactor
@@ -21,11 +21,10 @@ from cycsat.prototypes.instrument import Red
 
 db = Simulator('reactor_test_sample.sqlite')
 
-temps = {'Reactor1': ByronIL}
-db.create_build(temps)
-build = db.load_build(1)
-s = build.simulate()
+# temps = {'Reactor1': ByronIL}
+# build = db.create_build(temps)
+# s = build.simulate()
 
 site = db.Site(1)
-red = Red()
-red.calibrate(site)
+blue = Blue()
+blue.calibrate(site)

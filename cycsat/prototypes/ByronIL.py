@@ -5,7 +5,7 @@ from cycsat.prototypes.rule import OUTSIDE, XALIGN, YALIGN, DISPURSE_PLUME
 from cycsat.laboratory import USGSMaterial
 import random
 
-from cycsat.terrain import simple_land
+from cycsat.terrain import simple
 
 # -----------------------------------------------------------------------------------------------
 # Site and feature definitions
@@ -21,7 +21,7 @@ class ByronIL(Site):
         self.maxy = 700 * 10
 
         self.observables = [
-            Land(maxx=self.maxx, maxy=self.maxy),
+            Water(maxx=self.maxx, maxy=self.maxy),
             ConcretePad('concrete pad'),
             CoolingTower('1 cooling tower'),
             Containment('1 containment'),
@@ -39,13 +39,13 @@ class ByronIL(Site):
             self.observables.append(t)
 
 
-class Land(Observable):
-    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Land'}
+class Water(Observable):
+    __mapper_args__ = {'polymorphic_identity': 'ByronIL.Water'}
 
-    def __init__(self, maxx, maxy,  name='land'):
+    def __init__(self, maxx, maxy,  name='terrain'):
         self.name = name
         self.level = -1
-        self.shapes = [simple_land(maxx, maxy)]
+        self.shapes = [simple(maxx, maxy)]
 
         self.rules = [
         ]

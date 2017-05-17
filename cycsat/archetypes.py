@@ -31,6 +31,7 @@ from shapely.ops import cascaded_union
 from shapely.affinity import rotate, translate
 
 from skimage.draw import polygon
+from skimage.transform import rotate as rotate_image
 
 import gdal
 from skimage.transform import resize, downscale_local_mean
@@ -129,7 +130,7 @@ class Simulation(Base):
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='simulations')
 
-    def plot(self, timestep=-1, **params):
+    def plot(self, timestep=-1, ax=None, **params):
         if len(self.build.sites) == 1:
             fig, axes = self.build.sites[0].plot(
                 simulation=self, timestep=timestep)
@@ -271,7 +272,10 @@ class Instrument(Base):
 
         # set up the plot
         ax.set_title('Agent: ' + str(self.Site.AgentId) +
-                     '\ntimestep:' + str(timestep) + '\nInstrument:' + self.name)
+                     '\ntimestep:' + str(timestep) +
+                     '\nInstrument:' + self.name +
+                     '\nResolution:' +
+                     str(round(self.mmu / 10)) + ' m')
         ax.set_aspect('equal')
         plt.tight_layout()
 
@@ -281,9 +285,11 @@ class Instrument(Base):
             band_array = downscale_local_mean(
                 self.foreground, (self.mmu, self.mmu))
             band_array = resize(band_array, (rows, cols), preserve_range=True)
-            ax.imshow(band_array, cmap='gray')
         else:
-            ax.imshow(self.foreground, cmap='gray')
+            band_array = self.foreground
+
+        band_array = rotate_image(band_array, 90)
+        ax.imshow(band_array, cmap='gray')
         return ax
 
     # def write(self, path, img_format='GTiff'):
@@ -652,7 +658,7 @@ class Observable(Base):
             center = self.site.bounds().centroid
         else:
             center = 'center'
-        if self.name != 'land':
+        if self.name != 'terrain':
             self.rotation = degrees
             for shape in self.shapes:
                 if timestep == -1:
@@ -663,7 +669,7 @@ class Observable(Base):
                     loc.rotate(degrees, center)
 
     def shift(self, shift_x, shift_y, simulation, timestep):
-        if self.name != 'land':
+        if self.name != 'terrain':
             for shape in self.shapes:
                 if timestep == -1:
                     loc = shape.get_loc(simulation, timestep)
@@ -701,7 +707,7 @@ class Observable(Base):
         # the center for the site for a center point for rotation
         center = self.site.bounds().centroid
 
-        if self.name == 'land':
+        if self.name == 'terrain':
             for shape in self.shapes:
                 shape.init_wkt = shape.wkt
             return True

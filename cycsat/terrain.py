@@ -43,7 +43,7 @@ def list_bearings(landscape):
 # LANDSCAPE GENERATORS
 #------------------------------------------------------------------------------
 
-def simple_land(maxx, maxxy, r=1.5):
+def simple(maxx, maxxy, r=1.5):
     """Takes the dimensions of a site and returns two shapes: water and land."""
     site = box(0, 0, maxx, maxxy)
     N, E, S, W = list_bearings(site)
