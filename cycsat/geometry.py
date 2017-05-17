@@ -76,7 +76,7 @@ def build_footprint(Entity, simulation=None, timestep=-1):
     archetype = Entity.__class__.__bases__[0].__name__
     if archetype == 'Site':
         shapes = [observable.footprint(simulation, timestep)
-                  for observable in Entity.observables if (observable.visibility == 100) and observable.name != 'land']
+                  for observable in Entity.observables if (observable.visibility == 100) and observable.name != 'terrain']
     else:
         shapes = [shape.geometry(simulation, timestep)
                   for shape in Entity.shapes]

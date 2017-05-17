@@ -148,3 +148,4 @@ class Simulator(Database):
         self.save(build)
         build.assemble(attempts=attempts)
         self.save(build)
+        return build
