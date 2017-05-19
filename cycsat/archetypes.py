@@ -17,8 +17,6 @@ from .image import Sensor
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import posit_point, rules, posit_point2, intersect
 
-# from .laboratory import materialize
-
 import pandas as pd
 import numpy as np
 
@@ -130,10 +128,10 @@ class Simulation(Base):
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='simulations')
 
-    def plot(self, timestep=-1, ax=None, **params):
+    def plot(self, timestep=-1, axes=None, **params):
         if len(self.build.sites) == 1:
-            fig, axes = self.build.sites[0].plot(
-                simulation=self, timestep=timestep)
+            return self.build.sites[0].plot(ax=axes,
+                                            simulation=self, timestep=timestep)
         else:
             factors = set()
             for i in range(1, len(self.build.sites) + 1):
@@ -145,7 +143,8 @@ class Simulation(Base):
             cols = factors[round(len(factors) / 2) - 1]
             rows = int(len(self.build.sites) / cols)
 
-            fig, axes = plt.subplots(cols, rows)
+            if not axes:
+                fig, axes = plt.subplots(cols, rows)
 
             for ax, site in zip(axes.flatten(), self.build.sites):
                 site.plot(ax=ax, simulation=self, timestep=timestep)
@@ -154,7 +153,7 @@ class Simulation(Base):
             plt.savefig(params['virtual'], format='png')
             return params['virtual']
 
-        return fig, axes
+        return axes
 
     def gif(self, start=0, end=None, fps=1):
         if not end:
