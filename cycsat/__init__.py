@@ -9,7 +9,8 @@ modules = [
     'shapely',
     'sqlalchemy',
     'skimage',
-    'gdal'
+    'gdal',
+    'geopandas'
 ]
 
 for module in modules:

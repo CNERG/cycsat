@@ -15,11 +15,20 @@ from cycsat.prototypes.ByronIL import ByronIL
 from cycsat.laboratory import USGSMaterial
 from cycsat.prototypes.instrument import Blue
 
+from matplotlib import pyplot as plt
+
 #------------------------------------------------------------------------
 # Define a Reactor
 #------------------------------------------------------------------------
 
 db = Simulator('reactor_test_sample.sqlite')
+b = db.load_build(1)
+s = b.simulations[0]
+
+# matplotlib.rcParams.update({'font.size': 18})
+# fig, axes = plt.subplots(1, 3)
+# for ax, ts in zip(axes, [1, 2, 3]):
+#     s.plot(axes=ax, timestep=ts)
 
 # temps = {'Reactor1': ByronIL}
 # build = db.create_build(temps)
@@ -28,3 +37,10 @@ db = Simulator('reactor_test_sample.sqlite')
 site = db.Site(1)
 blue = Blue()
 blue.calibrate(site)
+
+fig, axes = plt.subplots(1, 2)
+
+blue.mmu = 150
+blue.plot(ax=axes[1], simulation=s, timestep=5)
+
+axes[0].imshow(plt.imread('byronIL.PNG'))
