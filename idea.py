@@ -33,16 +33,20 @@ class Simulation:
         self.agents = pd.Series(agents, name='agents')
         self.timesteps = pd.Series(timesteps, name='timesteps')
 
-        geometry = np.empty((self.timesteps.size, self.agents.size))
+        # geometry = np.empty((self.timesteps.size, self.agents.size))
 
-        self.data = xr.Dataset(
-            {'geometry': (('timestep', 'agent'), geometry)},
-            {'timestep': timesteps,
-             'agent': self.agents.index}
-        )
+        # self.data = xr.Dataset(
+        #     {'geometry': (('timestep', 'agent'), geometry)},
+        #     {'timestep': timesteps,
+        #      'agent': self.agents.index}
+        # )
 
     def run(self):
-        pass
+        # initalize
+        self.agents.apply(lambda x: x.init(self))
+
+        for t in self.timesteps[1:]:
+            self.agents.apply(lambda x: x.run(self))
 
 #     def plot(self,timestep=0):
 #         fig = plt.figure()
@@ -74,44 +78,26 @@ class Agent:
         # stores time relevant data for variables (columns)
         self.data = gpd.GeoDataFrame()
 
-    def place(self, simulation):
+    def init(self, simulation):
         # example place randomly on Map
         minx, miny, maxx, maxy = simulation.landscape.vector.bounds
         x = random.randint(minx, maxx)
         y = random.randint(miny, maxy)
         self.data = self.data.append(
-            {'geometry': Point(x, y)}, ignore_index=True)
+            {'geometry': Point(x, y).buffer(1)}, ignore_index=True)
 
+    def run(self, simulation):
 
-class Variable:
-    pass
+        # randomly decide the direction
+        xoff = random.choice([-1, 1]) * 1
+        yoff = random.choice([-1, 1]) * 1
 
+        # simulate a timestep
+        new = {'geometry': translate(self.data.geometry.iloc[-1], xoff, yoff),
+               'value': random.randint(0, 100)}
 
-#     def run(self, timestep):
-#         """This function defines what the agent does at a timestep"""
+        self.data = self.data.append(new, ignore_index=True)
 
-#         # randomly decide the direction
-#         xoff = random.choice([-1,1])*1
-#         yoff = random.choice([-1,1])*1
-
-#         # create the record of the action (dictionary)
-#         data = {
-#             'geometry': translate(self.location(), xoff ,yoff)
-#         }
-
-#         # track location
-#         self.track.append(data,ignore_index=True)
-
-# ps = list()
-# for agent in s.agents:
-#     for t in agent.track:
-#         ps.append({'geometry':t.buffer(1),'agent':agent.name})
-
-# gdf = geopandas.GeoDataFrame(ps)
-
-# fig = plt.figure(figsize=(7, 5))
-# ax = fig.add_subplot(111)
-# gdf.plot(ax=ax,column='agent',categorical=True,legend=True)
 
 # ------------------------------------------------------------------
 # testing
