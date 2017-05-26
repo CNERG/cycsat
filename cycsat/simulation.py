@@ -116,9 +116,13 @@ class Simulator(Database):
 
     def load_build(self, build_id):
         """Loads a build by id number."""
-        build = self.session.query(Build).filter(Build.id == build_id).one()
-        build.database = self
-        return build
+        try:
+            build = self.session.query(Build).filter(
+                Build.id == build_id).one()
+            build.database = self
+            return build
+        except:
+            print('no build with id', build_id, 'found')
 
     def create_build(self, templates, name='untitled', attempts=100):
         """Creates site for a new build.

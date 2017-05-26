@@ -70,10 +70,11 @@ class Build(Base):
     def assemble(self, attempts=100):
         """Assembles the build, i.e. places all the observables of all the sites."""
         for site in self.sites:
+            print('assemble', site.id, -1)
             site.assemble(
                 simulation=None, timestep=-1, attempts=attempts)
 
-    def simulate(self, name='untitled', start=0, end=None):
+    def simulate(self, name='untitled', start=0, end=None, verbose=False):
         if not end:
             end = self.database.duration
 
@@ -81,8 +82,9 @@ class Build(Base):
 
         for site in self.sites:
             if site.defined:
-                print('simulating', site.AgentId)
-                site.simulate(simulation, start, end)
+                if verbose:
+                    print('simulating', site.id)
+                site.simulate(simulation, start, end, verbose=verbose)
 
         self.simulations.append(simulation)
         self.database.session.commit()
@@ -128,10 +130,15 @@ class Simulation(Base):
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='simulations')
 
-    def plot(self, timestep=-1, axes=None, **params):
+    def plot(self, timestep=-1, axes=None, virtual=None):
         if len(self.build.sites) == 1:
-            return self.build.sites[0].plot(ax=axes,
-                                            simulation=self, timestep=timestep)
+            ax = self.build.sites[0].plot(ax=axes,
+                                          simulation=self, timestep=timestep)
+            if virtual:
+                plt.savefig(virtual, format='png')
+                return virtual
+
+            return ax
         else:
             factors = set()
             for i in range(1, len(self.build.sites) + 1):
@@ -149,13 +156,13 @@ class Simulation(Base):
             for ax, site in zip(axes.flatten(), self.build.sites):
                 site.plot(ax=ax, simulation=self, timestep=timestep)
 
-        if 'virtual' in params:
-            plt.savefig(params['virtual'], format='png')
-            return params['virtual']
+        if virtual:
+            plt.savefig(virtual, format='png')
+            return virtual
 
         return axes
 
-    def gif(self, start=0, end=None, fps=1):
+    def gif(self, name=None, start=0, end=None, fps=1):
         if not end:
             end = self.build.database.duration
 
@@ -172,8 +179,13 @@ class Simulation(Base):
             plot.seek(0)
             image = imageio.imread(plot)
             images.append(image)
-        imageio.mimsave(self.name + str(start) + '-' +
-                        str(end) + '.gif', images, fps=fps)
+
+        if not name:
+            name = self.name + str(start) + '-' + str(end) + '.gif'
+        if name[-4:] != '.gif':
+            name = name + '.gif'
+
+        imageio.mimsave(name, images, fps=fps)
         plt.ion()
 
 
@@ -461,8 +473,6 @@ class Site(Base):
             if not observable_ids:
                 return True
 
-        print('assemble', len(observable_ids), timestep)
-
         dep_grps = self.dep_graph()
 
         placed_observables = list()
@@ -504,7 +514,7 @@ class Site(Base):
                 self.defined = False
                 continue
 
-    def simulate(self, simulation, start=0, end=None):
+    def simulate(self, simulation, start=0, end=None, verbose=False):
         """Evaluates the conditions for dynamic shapes at a given timestep and
         generates features. All conditions must be True in order for the feature to be
         created.
@@ -520,7 +530,6 @@ class Site(Base):
             observable for observable in self.observables if observable.visibility != 100]
 
         for timestep in range(start, end):
-
             features = list()
             for observable in dynamic_observables:
                 evaluations = []
@@ -548,6 +557,8 @@ class Site(Base):
                         continue
 
         for timestep in range(start, end):
+            if verbose:
+                print('placing features', self.id, timestep)
             self.assemble(simulation, timestep)
         self.build.database.session.commit()
 
@@ -706,14 +717,11 @@ class Observable(Base):
                 shape.init_wkt = shape.wkt
             return True
 
-        print('placing', self.name)
-
         # evalute the rules of the observable to determine the mask
         results = self.evaluate_rules(
             simulation, timestep=timestep, overlaps=mask)
 
         if not results['place']:
-            print('no place')
             return False
 
         for i in range(attempts):
