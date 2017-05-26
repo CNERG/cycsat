@@ -18,7 +18,6 @@ output/
 swu_capacitated.xml
 simulations/
 plots/
-materials/
 *.pdf
 materials/ASCII/
 *dbf
