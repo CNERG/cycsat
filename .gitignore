@@ -3,9 +3,7 @@
 cycsat/config.ini
 __pycache__/*
 
-# Sublime files
-cycsat-sublime.sublime-project
-cycsat-sublime.sublime-workspace
+.ipynb_checkpoints/
 
 # Other
 testing.py

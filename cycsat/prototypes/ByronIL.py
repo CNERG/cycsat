@@ -56,7 +56,10 @@ class ConcretePad(Observable):
 
     def __init__(self, name):
         self.name = name
-        self.shapes = [Rectangle(4000, 4000, rgb='[209,209,209]')]
+
+        building = Rectangle(4000, 4000, rgb='[209,209,209]')
+        building.materials.append(USGSMaterial('concrete_wtc01-37a.27883.asc'))
+        self.shapes = [building]
 
         self.rules = [
         ]
@@ -68,8 +71,10 @@ class CoolingTower(Observable):
     def __init__(self, name):
         self.name = name
         self.level = 1
-        self.shapes = [Circle(radius=350, rgb='[88, 88, 88]', level=2),
-                       Circle(radius=750, rgb='[96, 96, 96]', level=1)]
+
+        building = Circle(radius=750, rgb='[96, 96, 96]', level=1)
+        building.materials.append(USGSMaterial('concrete_gds375.27862.asc'))
+        self.shapes = [building]
 
         self.rules = [WITHIN(pattern='concrete', value=0)]
 
@@ -80,7 +85,12 @@ class Containment(Observable):
     def __init__(self, name):
         self.name = name
         self.level = 1
-        self.shapes = [Circle(radius=280, rgb='[90, 90, 90]')]
+
+        building = Circle(radius=280, rgb='[90, 90, 90]')
+        building.materials.append(USGSMaterial('concrete_gds375.27862.asc'))
+        self.shapes = [building]
+
+        self.shapes = [building]
         self.rules = [WITHIN(pattern='concrete', value=0)
                       ]
 
@@ -97,7 +107,11 @@ class ContainmentSupport(Observable):
     def __init__(self, name, support, w, l):
         self.name = name
         self.level = 1
-        self.shapes = [Rectangle(w, l, rgb='[85,85,85]')]
+
+        building = Rectangle(w, l, rgb='[85,85,85]')
+        building.materials.append(USGSMaterial('concrete_gds375.27862.asc'))
+        self.shapes = [building]
+
         self.rules = [
             WITHIN(pattern='concrete')
         ]

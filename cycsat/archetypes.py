@@ -43,7 +43,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import make_transient
 
 
-# multiple inheritance for a template library
 Base = declarative_base()
 
 
@@ -58,9 +57,12 @@ operations = {
 }
 
 
-class Build(Base):
-    """A possible realization of all sites and Observables in a simulation."""
+extensions = {
+    'GTiff': '.tif'
+}
 
+
+class Build(Base):
     __tablename__ = 'CycSat_Build'
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -68,7 +70,7 @@ class Build(Base):
     def assemble(self, attempts=100):
         """Assembles the build, i.e. places all the observables of all the sites."""
         for site in self.sites:
-            site.place_observables(
+            site.assemble(
                 simulation=None, timestep=-1, attempts=attempts)
 
     def simulate(self, name='untitled', start=0, end=None):
@@ -86,8 +88,8 @@ class Build(Base):
         self.database.session.commit()
         return simulation
 
-    def plot(self):
-        """Plots site that meet a sql query at a given timestep
+    def plot(self, timestep=-1, virtual=None):
+        """Plots all sites of build.
 
         Keyword arguments:
         timestep -- timestep to plot
@@ -116,8 +118,6 @@ class Build(Base):
 
 
 class Simulation(Base):
-    """A collection of instruments."""
-
     __tablename__ = 'CycSat_Simulation'
 
     id = Column(Integer, primary_key=True)
@@ -182,8 +182,6 @@ Build.simulations = relationship(
 
 
 class Event(Base):
-    """A possible realization of all sites and Observables in a simulation."""
-
     __tablename__ = 'CycSat_Event'
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -246,7 +244,7 @@ class Instrument(Base):
 
             coords = np.array(list(geometry.exterior.coords))
             rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-            image[rr, cc] = reflectance
+            image[rr, cc] = reflectance * 255
 
     def capture(self, simulation, timestep):
         """Adds shapes at timestep to a image"""
@@ -291,36 +289,36 @@ class Instrument(Base):
         ax.imshow(band_array, cmap='gray')
         return ax
 
-    # def write(self, path, img_format='GTiff'):
-    #     """Writes an image using GDAL
+    def write(self, path, img_format='GTiff'):
+        """Writes an image using GDAL
 
-    #     Parameters
-    #     ----------
-    #     path: the path to write the image
-    #     img_format: the GDAL format
-    #     """
-    #     origin = 0
+        Parameters
+        ----------
+        path: the path to write the image
+        img_format: the GDAL format
+        """
+        origin = 0
 
-    #     rows = round(self.foreground.shape[-2] / self.mmu)
-    #     cols = round(self.foreground.shape[-1] / self.mmu)
+        rows = round(self.foreground.shape[-2] / self.mmu)
+        cols = round(self.foreground.shape[-1] / self.mmu)
 
-    #     driver = gdal.GetDriverByName(img_format)
+        driver = gdal.GetDriverByName(img_format)
 
-    #     outRaster = driver.Create(
-    #         path + extensions[img_format], cols, rows, 1, gdal.GDT_Byte)
-    #     outRaster.SetGeoTransform(
-    #         (origin, self.mmu, 0, origin, 0, self.mmu * -1))
+        outRaster = driver.Create(
+            path + extensions[img_format], cols, rows, 1, gdal.GDT_Byte)
+        outRaster.SetGeoTransform(
+            (origin, self.mmu, 0, origin, 0, self.mmu * -1))
 
-    #     outband = outRaster.GetRasterBand(1)
-    #     if (self.mmu > 1):
-    #         band_array = downscale_local_mean(
-    #             self.foreground, (self.mmu, self.mmu))
-    #         band_array = resize(band_array, (rows, cols), preserve_range=True)
-    #     else:
-    #         band_array = self.foreground
+        outband = outRaster.GetRasterBand(1)
+        if (self.mmu > 1):
+            band_array = downscale_local_mean(
+                self.foreground, (self.mmu, self.mmu))
+            band_array = resize(band_array, (rows, cols), preserve_range=True)
+        else:
+            band_array = self.foreground
 
-    #     outband.WriteArray(band_array)
-    #     outband.FlushCache()
+        outband.WriteArray(band_array)
+        outband.FlushCache()
 
 
 Satellite.instruments = relationship(
@@ -332,7 +330,6 @@ Satellite.instruments = relationship(
 #------------------------------------------------------------------------------
 
 class Site(Base):
-    """A collection of observables on a collection of terrains."""
     __tablename__ = 'CycSat_Site'
 
     id = Column(Integer, primary_key=True)
@@ -347,7 +344,6 @@ class Site(Base):
 
     __mapper_args__ = {'polymorphic_on': template}
 
-    # __mapper_args__ = {'polymorphic_on': prototype}
     build_id = Column(Integer, ForeignKey('CycSat_Build.id'))
     build = relationship(Build, back_populates='sites')
 
@@ -435,7 +431,7 @@ class Site(Base):
         # Return the list of batches
         return batches
 
-    def assemble(self, simulation=None, timestep=-1, attempts=100):
+    def place_observables(self, simulation=None, timestep=-1, attempts=100):
         """Assembles all the Observables of a Site according to their Rules.
 
         Parameters
@@ -467,7 +463,6 @@ class Site(Base):
 
         print('assemble', len(observable_ids), timestep)
 
-        # create dependency groups
         dep_grps = self.dep_graph()
 
         placed_observables = list()
@@ -496,11 +491,11 @@ class Site(Base):
 
         return True
 
-    def place_observables(self, simulation=None, timestep=-1, attempts=100):
+    def assemble(self, simulation=None, timestep=-1, attempts=100):
         """Places all the observables of a site according to their rules
         and features at the provided timestep."""
         for x in range(attempts):
-            result = self.assemble(
+            result = self.place_observables(
                 simulation, timestep=timestep, attempts=attempts)
             if result:
                 self.defined = True
@@ -553,7 +548,7 @@ class Site(Base):
                         continue
 
         for timestep in range(start, end):
-            self.place_observables(simulation, timestep)
+            self.assemble(simulation, timestep)
         self.build.database.session.commit()
 
     def timestep_shapes(self, simulation=None, timestep=-1, statics=False):
@@ -568,7 +563,7 @@ class Site(Base):
         return sorted(shapes, key=lambda x: (x.observable.level, x.level))
 
     def plot(self, ax=None, simulation=None, timestep=-1, label=False, save=False, name='plot.png', virtual=None):
-        """plots a site and its static observables or a timestep."""
+        """Plots a site and its static observables or a timestep."""
         if ax:
             new_fig = False
             ax.set_aspect('equal')
@@ -579,7 +574,7 @@ class Site(Base):
         # set up the plot
         ax.set_xlim([0, self.maxx])
         ax.set_ylim([0, self.maxy])
-        ax.set_axis_bgcolor('green')
+        ax.set_facecolor('green')
         ax.set_title('Agent: ' + str(self.AgentId) +
                      '\ntimestep:' + str(timestep))
         ax.set_aspect('equal')
@@ -855,9 +850,9 @@ class Shape(Base):
             return self.materials[0].observe()
         else:
             try:
-                rgb = self.get_rgb()
+                rgb = self.get_rgb(plotting=True)
             except:
-                rgb = [random.randint(0, 255) for i in range(3)]
+                rgb = [random.random() for i in range(3)]
 
             wavelength = (np.arange(281) / 100) + 0.20
             reflectance = np.zeros(281)
