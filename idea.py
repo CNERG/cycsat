@@ -48,19 +48,8 @@ class Simulation:
         for t in self.timesteps[1:]:
             self.agents.apply(lambda x: x.run(self))
 
-#     def plot(self,timestep=0):
-#         fig = plt.figure()
-#         ax = fig.add_subplot(111)
-#         ax.set_xlim([0,self.Map.maxx])
-#         ax.set_ylim([0,self.Map.maxy])
-#         ax.add_patch(PolygonPatch(self.Map.vector))
-#         ax.set_aspect('equal')
-
-#         for agent in self.agents:
-#             for point in agent.track:
-#                 ax.add_patch(PolygonPatch(point.buffer(1),facecolor='red'))
-
-#         return fig, ax
+    def clear(self):
+        self.agents.apply(lambda x: x.__init__())
 
 
 class Landscape:
@@ -84,7 +73,8 @@ class Agent:
         x = random.randint(minx, maxx)
         y = random.randint(miny, maxy)
         self.data = self.data.append(
-            {'geometry': Point(x, y).buffer(1)}, ignore_index=True)
+            {'geometry': Point(x, y).buffer(1),
+             'value': 0}, ignore_index=True)
 
     def run(self, simulation):
 
@@ -94,7 +84,7 @@ class Agent:
 
         # simulate a timestep
         new = {'geometry': translate(self.data.geometry.iloc[-1], xoff, yoff),
-               'value': random.randint(0, 100)}
+               'value': self.data.value.iloc[-1]}
 
         self.data = self.data.append(new, ignore_index=True)
 
