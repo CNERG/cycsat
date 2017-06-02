@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 
-from shapely.geometry import Point, box
+from shapely.geometry import Point, box, shape
 from shapely.affinity import translate
 
 from descartes import PolygonPatch
@@ -39,36 +39,48 @@ class Simulation:
         # )
 
     def run(self):
-        # initalize
-        self.agents.apply(lambda x: x.init(self))
+        """Initializes all agents and initializes the simulation."""
 
+        self.agents.apply(lambda x: x.init(self))
         for t in self.timesteps[1:]:
             self.agents.apply(lambda x: x.run(self))
 
-    def clear(self):
+    def clear_agents(self):
+        """Clears the data log for all agents."""
         self.agents.apply(lambda x: x.__init__())
 
 
-class Landscape:
+class Layer:
 
-    def __init__(self, maxx, maxy):
-        self.maxx = maxx
-        self.maxy = maxy
-        self.vector = box(0, 0, maxx, maxy)
-        self.raster = np.zeros((maxx, maxy))
+    def __init__(self, envelope):
+        self.envelope = geometry
+        minx, miny, maxx, maxxy = geometry.bounds
+        self.raster = geometry = np.empty(())
+
+    def raster(self):
+        geometry.bounds
+
+        # self.data = xr.Dataset(
+        #     {'geometry': (('timestep', 'agent'), geometry)},
+        #     {'timestep': timesteps,
+        #      'agent': self.agents.index}
+        # )
 
 
 class Agent:
 
-    def __init__(self):
+    def __init__(self, geometry=None):
+
         # stores time relevant data for variables (columns)
         self.data = gpd.GeoDataFrame()
+        self.geometry = geometry
 
     def init(self, simulation):
         # example place randomly on Map
         minx, miny, maxx, maxy = simulation.landscape.vector.bounds
         x = random.randint(minx, maxx)
         y = random.randint(miny, maxy)
+
         self.data = self.data.append(
             {'geometry': Point(x, y).buffer(1),
              'value': 0}, ignore_index=True)
@@ -83,6 +95,16 @@ class Agent:
                'value': self.data.value.iloc[-1] + np.random.normal(0)}
 
         self.data = self.data.append(new, ignore_index=True)
+
+
+class SpatialObject:
+
+    def __init__(self, geometry=None, array=None):
+
+        self.set_geometry(geometry)
+
+    def set_geometry(self, geometry):
+        self.geometry = geometry
 
 
 # ------------------------------------------------------------------
