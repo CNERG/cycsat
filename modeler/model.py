@@ -22,20 +22,19 @@ class Simulation:
 
         Parameters
         ----------
-        surface : a Landscape object
+        surfaces : numpy array
         agents : a list of agent instances
         timesteps : series of timesteps
 
         """
-
-        self.surfaces = pd.Series(surfaces, name='surfaces')
-        self.agents = pd.Series(agents, name='agents')
-        self.timesteps = pd.Series(timesteps, name='timesteps')
+        self.surfaces = pd.Series(surfaces)
+        self.agents = pd.Series(agents)
+        self.timesteps = pd.Series(timesteps)
 
         # geometry = np.empty((self.timesteps.size, self.agents.size))
 
         # self.data = xr.Dataset(
-        #     {'geometry': (('timestep', 'agent'), geometry)},
+        #     {'attr': (('timestep', 'agent'), attr)},
         #     {'timestep': timesteps,
         #      'agent': self.agents.index}
         # )
@@ -47,7 +46,10 @@ class Simulation:
             fig, ax = plt.subplots(1)
             ax.set_aspect('equal')
 
-        self.surfaces.apply(lambda x: x.plot(ax=ax))
+        if surfaces:
+            self.surfaces.apply(lambda x: x.plot(ax=ax))
+        else:
+            self.surfaces.apply(lambda x: x.plot(ax=ax, box=True))
         self.agents.apply(lambda x: x.plot(ax=ax))
 
     def run(self):
@@ -64,19 +66,19 @@ class Simulation:
 
 class Surface:
 
-    def __init__(self, array):
-        self.data = array
-        self.box = box(0, 0, *array.shape)
+    def __init__(self, data):
+        self.data = data
+        self.box = box(0, 0, *data.shape)
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, box=False):
         if ax:
             ax = ax
         else:
             fig, ax = plt.subplots(1)
             ax.set_aspect('equal')
+        if box:
+            return ax.add_patch(PolygonPatch(self.box))
         return ax.imshow(self.data)
-
-        # class Population:
 
 
 class Agent:
