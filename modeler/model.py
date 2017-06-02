@@ -100,7 +100,8 @@ class Agent:
 class SpatialObject:
 
     def __init__(self, geometry=None, array=None):
-
+        if geometry and array:
+            print('both parameters geometry')
         self.set_geometry(geometry)
 
     def set_geometry(self, geometry):
