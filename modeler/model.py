@@ -27,19 +27,19 @@ class Simulation:
         timesteps : series of timesteps
 
         """
+        self.timesteps = pd.Series(timesteps)
         self.surfaces = pd.Series(surfaces)
         self.agents = pd.Series(agents)
-        self.timesteps = pd.Series(timesteps)
 
-        # geometry = np.empty((self.timesteps.size, self.agents.size))
+    def data(self):
+        """Combine the agent logs."""
+        agent_logs = list()
+        for i, agent in enumerate(self.agents):
+            agent_log = agent.log
+            agent_logs.append(agent_log.assign(agent=i))
+        return pd.concat(agent_logs)
 
-        # self.data = xr.Dataset(
-        #     {'attr': (('timestep', 'agent'), attr)},
-        #     {'timestep': timesteps,
-        #      'agent': self.agents.index}
-        # )
-
-    def plot(self, ax=None, surfaces=False):
+    def plot(self, ax=None, surfaces=False, column=None):
         if ax:
             ax = ax
         else:
@@ -50,13 +50,14 @@ class Simulation:
             self.surfaces.apply(lambda x: x.plot(ax=ax))
         else:
             self.surfaces.apply(lambda x: x.plot(ax=ax, box=True))
-        self.agents.apply(lambda x: x.plot(ax=ax))
+        self.agents.apply(lambda x: x.plot(ax=ax, column=column))
 
     def run(self):
         """Initializes all agents and initializes the simulation."""
 
+        self.clear_agents()
         self.agents.apply(lambda x: x.init(self))
-        for t in self.timesteps[1:]:
+        for timestep in self.timesteps[1:]:
             self.agents.apply(lambda x: x.run(self))
 
     def clear_agents(self):
@@ -83,16 +84,20 @@ class Surface:
 
 class Agent:
 
-    def __init__(self, **attrs):
-        self.log = gpd.GeoDataFrame(attrs)
+    def __init__(self):
+        # log of updates
+        self.log = gpd.GeoDataFrame()
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, column=None):
         if ax:
             ax = ax
         else:
             fig, ax = plt.subplots(1)
             ax.set_aspect('equal')
-        return self.log.plot(ax=ax)
+        return self.log.plot(ax=ax, column=column)
+
+    def record(self, data):
+        self.log = self.log.append(data, ignore_index=True)
 
     def init(self, simulation):
         # example place randomly on Map
@@ -110,7 +115,5 @@ class Agent:
         yoff = random.choice([-1, 1]) * 1
 
         # simulate a timestep
-        new = {'geometry': translate(self.log.geometry.iloc[-1], xoff, yoff),
-               'value': self.log.value.iloc[-1] + np.random.normal(0)}
-
-        self.log = self.log.append(new, ignore_index=True)
+        self.record({'geometry': translate(self.log.geometry.iloc[-1], xoff, yoff),
+                     'value': np.random.normal(0)})
