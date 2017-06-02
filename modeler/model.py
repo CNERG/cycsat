@@ -7,7 +7,6 @@ from shapely.affinity import translate
 
 from descartes import PolygonPatch
 import random
-# import seaborn as sns
 from collections import defaultdict
 import inspect
 
