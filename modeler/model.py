@@ -7,26 +7,28 @@ from shapely.affinity import translate
 
 from descartes import PolygonPatch
 import random
-import seaborn as sns
+# import seaborn as sns
 from collections import defaultdict
 import inspect
 
 import xarray as xr
+from matplotlib import pyplot as plt
 
 
 class Simulation:
 
-    def __init__(self, landscape=None, agents=None, timesteps=None):
+    def __init__(self, surfaces=None, agents=None, timesteps=None):
         """Sets up the xarray dataset and basic spatial simulation structure.
 
         Parameters
         ----------
-        landscape : a Landscape object
+        surface : a Landscape object
         agents : a list of agent instances
         timesteps : series of timesteps
 
         """
-        self.landscape = landscape
+
+        self.surfaces = pd.Series(surfaces, name='surfaces')
         self.agents = pd.Series(agents, name='agents')
         self.timesteps = pd.Series(timesteps, name='timesteps')
 
@@ -37,6 +39,16 @@ class Simulation:
         #     {'timestep': timesteps,
         #      'agent': self.agents.index}
         # )
+
+    def plot(self, ax=None, surfaces=False):
+        if ax:
+            ax = ax
+        else:
+            fig, ax = plt.subplots(1)
+            ax.set_aspect('equal')
+
+        self.surfaces.apply(lambda x: x.plot(ax=ax))
+        self.agents.apply(lambda x: x.plot(ax=ax))
 
     def run(self):
         """Initializes all agents and initializes the simulation."""
@@ -50,38 +62,43 @@ class Simulation:
         self.agents.apply(lambda x: x.__init__())
 
 
-class Layer:
+class Surface:
 
-    def __init__(self, envelope):
-        self.envelope = geometry
-        minx, miny, maxx, maxxy = geometry.bounds
-        self.raster = geometry = np.empty(())
+    def __init__(self, array):
+        self.data = array
+        self.box = box(0, 0, *array.shape)
 
-    def raster(self):
-        geometry.bounds
+    def plot(self, ax=None):
+        if ax:
+            ax = ax
+        else:
+            fig, ax = plt.subplots(1)
+            ax.set_aspect('equal')
+        return ax.imshow(self.data)
 
-        # self.data = xr.Dataset(
-        #     {'geometry': (('timestep', 'agent'), geometry)},
-        #     {'timestep': timesteps,
-        #      'agent': self.agents.index}
-        # )
+        # class Population:
 
 
 class Agent:
 
-    def __init__(self, geometry=None):
+    def __init__(self, **attrs):
+        self.log = gpd.GeoDataFrame(attrs)
 
-        # stores time relevant data for variables (columns)
-        self.data = gpd.GeoDataFrame()
-        self.geometry = geometry
+    def plot(self, ax=None):
+        if ax:
+            ax = ax
+        else:
+            fig, ax = plt.subplots(1)
+            ax.set_aspect('equal')
+        return self.log.plot(ax=ax)
 
     def init(self, simulation):
         # example place randomly on Map
-        minx, miny, maxx, maxy = simulation.landscape.vector.bounds
+        minx, miny, maxx, maxy = simulation.surfaces[0].box.bounds
         x = random.randint(minx, maxx)
         y = random.randint(miny, maxy)
 
-        self.data = self.data.append(
+        self.log = self.log.append(
             {'geometry': Point(x, y).buffer(1),
              'value': 0}, ignore_index=True)
 
@@ -91,27 +108,7 @@ class Agent:
         yoff = random.choice([-1, 1]) * 1
 
         # simulate a timestep
-        new = {'geometry': translate(self.data.geometry.iloc[-1], xoff, yoff),
-               'value': self.data.value.iloc[-1] + np.random.normal(0)}
+        new = {'geometry': translate(self.log.geometry.iloc[-1], xoff, yoff),
+               'value': self.log.value.iloc[-1] + np.random.normal(0)}
 
-        self.data = self.data.append(new, ignore_index=True)
-
-
-class SpatialObject:
-
-    def __init__(self, geometry=None, array=None):
-        if geometry and array:
-            print('both parameters geometry')
-        self.set_geometry(geometry)
-
-    def set_geometry(self, geometry):
-        self.geometry = geometry
-
-
-# ------------------------------------------------------------------
-# testing
-# ------------------------------------------------------------------
-
-s = Simulation(Landscape(100, 100),
-               [Agent() for x in range(3)],
-               timesteps=pd.date_range('1/1/2015', '12/31/2015'))
+        self.log = self.log.append(new, ignore_index=True)
