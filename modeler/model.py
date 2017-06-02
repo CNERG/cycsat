@@ -1,13 +1,10 @@
-
-# coding: utf-8
-
-# ### spatial decision modeling
-
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+
 from shapely.geometry import Point, box
 from shapely.affinity import translate
+
 from descartes import PolygonPatch
 import random
 import seaborn as sns
@@ -77,14 +74,13 @@ class Agent:
              'value': 0}, ignore_index=True)
 
     def run(self, simulation):
-
         # randomly decide the direction
         xoff = random.choice([-1, 1]) * 1
         yoff = random.choice([-1, 1]) * 1
 
         # simulate a timestep
         new = {'geometry': translate(self.data.geometry.iloc[-1], xoff, yoff),
-               'value': self.data.value.iloc[-1]}
+               'value': self.data.value.iloc[-1] + np.random.normal(0)}
 
         self.data = self.data.append(new, ignore_index=True)
 
@@ -93,7 +89,6 @@ class Agent:
 # testing
 # ------------------------------------------------------------------
 
-    # creating the simulation
 s = Simulation(Landscape(100, 100),
                [Agent() for x in range(3)],
                timesteps=pd.date_range('1/1/2015', '12/31/2015'))
