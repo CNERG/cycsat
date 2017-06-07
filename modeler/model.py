@@ -16,6 +16,14 @@ from matplotlib import pyplot as plt
 from geopandas import GeoSeries
 from pandas import pandas
 
+from skimage.draw import polygon
+
+
+def collect(x, image):
+    coords = np.array(list(x.exterior.coords))
+    rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+    image[rr, cc] = 15
+
 
 class Simulation:
 
@@ -34,8 +42,21 @@ class Simulation:
         self.surfaces = pd.Series(surfaces)
         self.agents = pd.Series(agents)
 
+    @property
     def data(self):
-        """Combine the agent logs."""
+        """Combine the agent logs into a pandas dataframe."""
+        agent_data = list()
+        for i, agent in enumerate(self.agents):
+            agent_data.append(agent.data.assign(agent=i))
+        agent_data = pd.concat(agent_data).reset_index()
+        agent_data.rename(str, columns={'index': 'timestep'}, inplace=True)
+        return agent_data
+
+    def last(self):
+        return gpd.GeoDataFrame(self.data.groupby('agent').agg('last'))
+
+    def current(self):
+        """Gets the most recent data for every agent."""
         agent_data = list()
         for i, agent in enumerate(self.agents):
             agent_data.append(agent.data.assign(agent=i))
@@ -66,7 +87,7 @@ class Simulation:
 
         # run simulations for remaining timesteps
         for i, timestep in self.timesteps[1:].iterrows():
-            self.agents.apply(lambda x: x.master_run(self, i))
+            self.agents.apply(lambda x: x.run(self))
             self.timesteps.set_value(i, 'run', True)
 
     def clear_agents(self):
@@ -91,20 +112,10 @@ class Surface:
         return ax.imshow(self.data)
 
 
-# class AgentGroup:
-
-
 class Agent:
 
     def __init__(self):
-        # log of updates
-        self.metadata = pd.DataFrame()
         self.data = gpd.GeoDataFrame()
-
-    def master_run(self, simulation, timestep):
-        """Returns a dictionary the defines the agent's attributes at a single point in time."""
-        data, metadata = self.run(simulation)
-        self.record(data)
 
     def plot(self, ax=None, column=None):
         if ax:
@@ -116,10 +127,9 @@ class Agent:
 
     def record(self, data=None):
         """Records attributes."""
-        self.metadata = self.metadata.append({}, ignore_index=True)
         if data:
-            data = gpd.GeoDataFrame(index=[len(self.metadata)], data=data)
-            self.data = self.data.append(data)
+            self.data = self.data.append(gpd.GeoDataFrame(
+                index=[0], data=data), ignore_index=True)
         else:
             pass
 
@@ -142,10 +152,11 @@ class Agent:
         xoff = random.choice([-1, 1]) * 1
         yoff = random.choice([-1, 1]) * 1
 
-        if random.choice([True, False]):
-            return {}, {}
+        #near = simulation.last()
+
+        geo = translate(self.data.geometry.iloc[-1], xoff, yoff)
 
         # simulate a timestep
-        return {'geometry': translate(self.data.geometry.iloc[-1], xoff, yoff),
-                'value': self.data.value.iloc[-1] + np.random.normal(0),
-                'max': self.data.value.iloc[-1] * self.data.value.max()}, {}
+        self.record({'geometry': geo,
+                     'value': self.data.value.iloc[-1] + np.random.normal(0),
+                     'max': self.data.value.iloc[-1] * self.data.value.max()})
