@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import io
+import imageio
 
 from shapely.geometry import Point, box, shape
 from shapely.affinity import translate
@@ -81,8 +82,11 @@ class Simulation:
         plots = list()
         for step in range(start, end):
             f = io.BytesIO()
-            b = self.plot(timestep=step, virtual=f)
-            plots.append(b)
+            ax = self.snapshot(index=step).plot()
+            ax.set_xlim([0, 100])
+            ax.set_ylim([0, 100])
+            plt.savefig(f, format='png')
+            plots.append(f)
             plt.close()
 
         images = list()
