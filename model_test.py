@@ -4,10 +4,10 @@ from modeler.model import Simulation, Surface, Agent, collect
 surfaces = [Surface(np.ones((100, 100), dtype='int8'))]
 
 # a list of Agent objects
-agents = [Agent() for x in range(500)]
+agents = [Agent() for x in range(100)]
 
 # times steps
-timesteps = pd.Series([0, 1, 2, 3, 4, 5, 6])
+timesteps = pd.Series(np.arange(100))
 
 s = Simulation(surfaces, agents, timesteps)
 s.run()
