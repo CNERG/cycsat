@@ -20,9 +20,9 @@ from skimage.draw import polygon
 
 
 def collect(x, image):
-    coords = np.array(list(x.exterior.coords))
+    coords = np.array(list(x[1].exterior.coords))
     rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-    image[rr, cc] = 15
+    image[rr, cc] = x['value']
 
 
 class Simulation:
@@ -51,9 +51,6 @@ class Simulation:
         agent_data = pd.concat(agent_data).reset_index()
         agent_data.rename(str, columns={'index': 'timestep'}, inplace=True)
         return agent_data
-
-    def last(self):
-        return gpd.GeoDataFrame(self.data.groupby('agent').agg('last'))
 
     def current(self):
         """Gets the most recent data for every agent."""

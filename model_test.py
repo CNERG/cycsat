@@ -7,7 +7,7 @@ surfaces = [Surface(np.ones((100, 100), dtype='int8'))]
 agents = [Agent() for x in range(500)]
 
 # times steps
-timesteps = pd.Series([0, 1, 2])
+timesteps = pd.Series([0, 1, 2, 3, 4, 5, 6])
 
 s = Simulation(surfaces, agents, timesteps)
 s.run()
