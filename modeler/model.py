@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+import io
 
 from shapely.geometry import Point, box, shape
 from shapely.affinity import translate
@@ -52,12 +53,13 @@ class Simulation:
         agent_data.rename(str, columns={'index': 'timestep'}, inplace=True)
         return agent_data
 
-    def current(self):
+    def snapshot(self, index=0):
         """Gets the most recent data for every agent."""
-        agent_data = list()
+        agent_data = gpd.GeoDataFrame()
+
         for i, agent in enumerate(self.agents):
-            agent_data.append(agent.data.assign(agent=i))
-        agent_data = pd.concat(agent_data).reset_index()
+            agent_data = agent_data.append(agent.data.iloc[index])
+        agent_data = agent_data.reset_index()
         agent_data.rename(str, columns={'index': 'timestep'}, inplace=True)
         return agent_data
 
@@ -73,6 +75,29 @@ class Simulation:
         else:
             self.surfaces.apply(lambda x: x.plot(ax=ax, box=True))
         self.agents.apply(lambda x: x.plot(ax=ax, column=column))
+
+    def gif(self, name=None, start=0, end=None, fps=1):
+        plt.ioff()
+        plots = list()
+        for step in range(start, end):
+            f = io.BytesIO()
+            b = self.plot(timestep=step, virtual=f)
+            plots.append(b)
+            plt.close()
+
+        images = list()
+        for plot in plots:
+            plot.seek(0)
+            image = imageio.imread(plot)
+            images.append(image)
+
+        if not name:
+            name = self.name + str(start) + '-' + str(end) + '.gif'
+        if name[-4:] != '.gif':
+            name = name + '.gif'
+
+        imageio.mimsave(name, images, fps=fps)
+        plt.ion()
 
     def run(self):
         """Initializes all agents and initializes the simulation."""
