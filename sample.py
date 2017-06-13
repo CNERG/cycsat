@@ -1,41 +1,56 @@
-from cycsat.simulation import Simulator
-from cycsat.prototypes.ByronIL import ByronIL
-from cycsat.laboratory import USGSMaterial
-from cycsat.prototypes.instrument import Blue, Red, Green
+from cycsat.agent import Agent
+from cycsat.laboratory import Material, USGSMaterial
 
-from matplotlib import pyplot as plt
+from shapely.geometry import Polygon, box, Point
+import random
 
-#------------------------------------------------------------------------
-# Define a Reactor
-#------------------------------------------------------------------------
 
-db = Simulator('reactor_test_sample.sqlite')
+class CoolingTowerBlock(Agent):
 
-temps = {'Reactor1': ByronIL}
-b = db.create_build(temps)
-s = b.simulate(end=6)
-site = b.sites[0]
+    def __init__(self, **variables):
+        Agent.__init__(self, **variables)
 
-s.plot(5)
 
-# # b = db.load_build(1)
-# # s = b.simulations[0]
-# # site = b.sites[0]
+class CoolingTower(Agent):
 
-# fig, axes = plt.subplots(1, 5)
-# axes = axes.flatten()
+    def __init__(self, **variables):
+        Agent.__init__(self, **variables)
 
-# for i in range(5):
-#     site.assemble()
-#     site.plot(ax=axes[i])
+    def __run__(self):
+        if random.choice([True, False]):
+            self.on = 1
+            self.value += 1
+            print('on')
+        else:
+            print('off')
+            self.on = 0
+        return True
 
-# fig, axes = plt.subplots(1, 3)
-# for i, inst in enumerate([Blue, Green, Red]):
-#     print('plotting', inst)
-#     sensor = inst()
-#     sensor.calibrate(site)
-#     sensor.mmu = 150
-#     sensor.plot(ax=axes[i], simulation=s, timestep=5)
-#     sensor.write(str(i))
 
-# axes[0].imshow(plt.imread('byronIL.PNG'))
+class Plume(Agent):
+
+    def __init__(self, **variables):
+        Agent.__init__(self, **variables)
+
+    def __run__(self):
+
+        if self.parent.on == 1:
+            self.place_in(self.parent.relative_geo.buffer(100))
+            return True
+        else:
+            return False
+
+
+site = Agent(geometry=box(0, 0, 1000, 1000), value=100)
+cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
+ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
+ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
+ctower3 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
+ctower4 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
+plume = Plume(geometry=Point(0, 0).buffer(75), value=100)
+
+cblock.add_agents([ctower1, ctower2, ctower3, ctower4])
+ctower1.add_agents(plume)
+site.add_agents(cblock)
+
+site.place()
