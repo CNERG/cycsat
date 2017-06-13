@@ -9,6 +9,9 @@ class Agent:
         self.data = GeoDataFrame()
         self.log(**args)
 
+        # spatial rules
+        self.rules = []
+
     def log(self, **args):
         # set and log initial attributes
         for arg in args:
@@ -23,3 +26,6 @@ class Agent:
 
         # record attributes
         self.log(value=value)
+
+    def compile_rules(self):
+        """Evaluates the rules of all subagents."""
