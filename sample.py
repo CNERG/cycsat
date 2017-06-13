@@ -4,4 +4,7 @@ import random
 
 from cycsat.archetypes import Agent
 
-a = Agent(name='test')
+agents = pd.Series([Agent(name=i) for i in range(10)])
+
+for agent in agents:
+    agent.run(name=random.randint(0, 10))
