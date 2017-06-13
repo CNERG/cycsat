@@ -6,13 +6,6 @@ import random
 import io
 from collections import defaultdict
 import sys
-
-import imageio
-import tempfile
-
-from descartes import PolygonPatch
-from matplotlib import pyplot as plt
-
 from .image import Sensor
 from .geometry import build_geometry, build_footprint, near_rule, line_func
 from .geometry import posit_point, rules, posit_point2, intersect
@@ -1070,3 +1063,8 @@ Site.features = relationship(
     'Feature', order_by=Feature.id, back_populates='site')
 Simulation.features = relationship('Feature', order_by=Feature.id, back_populates='simulation',
                                    cascade='all, delete, delete-orphan')
+=======
+        def run(self, **attrs):
+            print('running')
+
+c = Agent()
