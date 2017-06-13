@@ -1,4 +1,5 @@
 from geopandas import GeoDataFrame
+import random
 
 
 class Agent:
@@ -9,7 +10,7 @@ class Agent:
         self.log(**args)
 
     def log(self, **args):
-        # set current attributes
+        # set and log initial attributes
         for arg in args:
             setattr(self, arg, args[arg])
 
@@ -17,4 +18,8 @@ class Agent:
         self.data = self.data.append(args, ignore_index=True)
 
     def run(self, **args):
-        self.log(**args)
+        # update attributes
+        value = self.value + random.randint(-5., 5)
+
+        # record attributes
+        self.log(value=value)

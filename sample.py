@@ -1,10 +1,12 @@
 import os
 from shutil import copyfile
 import random
+import pandas as pd
 
 from cycsat.archetypes import Agent
 
-agents = pd.Series([Agent(name=i) for i in range(10)])
+agents = pd.Series([Agent(value=i) for i in range(10)])
 
 for agent in agents:
-    agent.run(name=random.randint(0, 10))
+    for i in range(100):
+        agent.run(value=i)
