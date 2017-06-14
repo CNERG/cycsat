@@ -14,12 +14,12 @@ class Agent:
 
         # spatial rules
         self.rules = list()
-        self.sub_agents = list()
+        self.agents = list()
 
     @property
     def subs(self):
         log = self.data.tail(1)
-        for sa in self.sub_agents:
+        for sa in self.agents:
             log = log.append(sa.data.tail(1), ignore_index=True)
         return log
 
@@ -27,10 +27,9 @@ class Agent:
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
-                x = placement.coords.xy[0][0]
-                y = placement.coords.xy[1][0]
-                _x = self.geometry.centroid.coords.xy[0][0]
-                _y = self.geometry.centroid.coords.xy[1][0]
+                x, y = [placement.coords.xy[0][0], placement.coords.xy[1][0]]
+                _x, _y = [self.geometry.centroid.coords.xy[0][
+                    0], self.geometry.centroid.coords.xy[1][0]]
                 shift_x = x - _x
                 shift_y = y - _y
 
