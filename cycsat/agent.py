@@ -1,5 +1,9 @@
 from geopandas import GeoDataFrame
+import numpy as np
 import random
+import rasterio
+
+from skimage.draw import polygon
 
 from shapely.geometry import Point
 from shapely.affinity import rotate, translate
@@ -23,6 +27,26 @@ class Agent:
             log = log.append(sa.data.tail(1), ignore_index=True)
         return log
 
+    def collect(self, value_field, res=1):
+
+        minx, miny, maxx, maxy = [round(coord)
+                                  for coord in self.geometry.bounds]
+
+        image = np.zeros((maxx - minx, maxy - miny))
+
+        if agents:
+            for agent in self.agents:
+
+                agent.collect(value_field)
+
+                set_geo = translate(agent.geometry, xoff=-
+                                    1 * minx, yoff=-1 * miny)
+                coords = np.array(list(set_geo.exterior.coords))
+                rr, cc = polygon(coords[:, 0], coords[:, 1], (maxx, maxy))
+                image[rr, cc] = agent[value_field]
+
+        return image
+
     def place(self, region, attempts=100):
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
@@ -37,7 +61,6 @@ class Agent:
                 if geometry.within(region):
                     self.log(geometry=translate(
                         self.geometry, xoff=shift_x, yoff=shift_y))
-                    print(True)
                     return True
         return False
 
