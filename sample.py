@@ -1,8 +1,6 @@
 from cycsat.archetypes import Agent
+from shapely.geometry import Polygon, box, Point
 
 # initalize agents with random values
-agents = pd.Series([Agent(value=i) for i in range(100)])
-
-# generate 100 steps of test data
-for i in range(100):
-    i = agents.apply(lambda x: x.run())
+site = Agent(geometry=box(0, 0, 100, 100))
+site.sub_agents = [Agent(geometry=Point(0, 0).buffer(10))]
