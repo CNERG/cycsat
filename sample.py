@@ -1,4 +1,4 @@
-from cycsat.archetypes import Agent
+from cycsat.agent import Agent
 from shapely.geometry import Polygon, box, Point
 
 # initalize agents with random values
