@@ -1,6 +1,9 @@
 from geopandas import GeoDataFrame
 import random
 
+from shapely.geometry import Point
+from shapely.affinity import rotate, translate
+
 
 class Agent:
 
@@ -15,33 +18,29 @@ class Agent:
 
     @property
     def subs(self):
-        log = GeoDataFrame()
+        log = self.data.tail(1)
         for sa in self.sub_agents:
             log = log.append(sa.data.tail(1), ignore_index=True)
         return log
 
     def place(self, region, attempts=100):
-
         for i in range(attempts):
-            posit_point(mask)
+            placement = posit_point(region, attempts=attempts)
+            if placement:
+                x = placement.coords.xy[0][0]
+                y = placement.coords.xy[1][0]
+                _x = self.geometry.centroid.coords.xy[0][0]
+                _y = self.geometry.centroid.coords.xy[1][0]
+                shift_x = x - _x
+                shift_y = y - _y
 
-            typology_checks = list()
-
-            loc = shape.place(posited_point, simulation, timestep)
-
-            typology_checks.append(loc.geometry.within(results['restrict']))
-
-            if False not in typology_checks:
-                self.site.build.database.save(self)
-                self.morph(simulation, timestep)
-                return True
-
-            print(
-                self.name, 'placement failed after {', attempts, '} attempts.')
-            return False
-
-    print('point placement failed after {', attempts, '} attempts.')
-    return False
+                geometry = translate(self.geometry, xoff=shift_x, yoff=shift_y)
+                if geometry.within(region):
+                    self.log(geometry=translate(
+                        self.geometry, xoff=shift_x, yoff=shift_y))
+                    print(True)
+                    return True
+        return False
 
     def log(self, **args):
         # set and log initial attributes
