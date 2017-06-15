@@ -22,9 +22,10 @@ class Agent:
 
     @property
     def subdata(self):
+        """Collects the current attributes of all agents by cascading."""
         log = self.data.tail(1)
-        for sa in self.agents:
-            log = log.append(sa.data.tail(1), ignore_index=True)
+        for agent in self.agents:
+            log = log.append(agent.subdata, ignore_index=True)
         return log
 
     def surface(self, value_field, image=[], res=1):
@@ -50,6 +51,8 @@ class Agent:
         return image
 
     def place(self, region, attempts=100):
+        """Places the agent randomly into a region."""
+
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
@@ -67,6 +70,8 @@ class Agent:
         return False
 
     def log(self, **args):
+        """Record information about the agent."""
+
         # set and log initial attributes
         for arg in args:
             setattr(self, arg, args[arg])
