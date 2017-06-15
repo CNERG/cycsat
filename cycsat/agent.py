@@ -21,29 +21,31 @@ class Agent:
         self.agents = list()
 
     @property
-    def subs(self):
+    def subdata(self):
         log = self.data.tail(1)
         for sa in self.agents:
             log = log.append(sa.data.tail(1), ignore_index=True)
         return log
 
-    def collect(self, value_field, res=1):
+    def surface(self, value_field, image=[], res=1):
 
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
 
-        image = np.zeros((maxx - minx, maxy - miny))
+        # if no image is provided create a blank
+        if len(image) == 0:
+            image = np.zeros((maxx - minx, maxy - miny)) + \
+                getattr(self, value_field)
+        # else add the agent to the image
+        else:
+            coords = np.array(list(self.geometry.exterior.coords))
+            rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+            image[rr, cc] = getattr(self, value_field)
 
-        if agents:
+        # if there are agents add their surfaces too
+        if self.agents:
             for agent in self.agents:
-
-                agent.collect(value_field)
-
-                set_geo = translate(agent.geometry, xoff=-
-                                    1 * minx, yoff=-1 * miny)
-                coords = np.array(list(set_geo.exterior.coords))
-                rr, cc = polygon(coords[:, 0], coords[:, 1], (maxx, maxy))
-                image[rr, cc] = agent[value_field]
+                image = agent.surface(value_field, image=image)
 
         return image
 

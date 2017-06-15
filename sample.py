@@ -3,10 +3,10 @@ from shapely.geometry import Polygon, box, Point
 import random
 
 # initalize agents with random values
-site = Agent(geometry=box(0, 0, 500, 500))
+site = Agent(geometry=box(0, 0, 500, 500), value=1)
 
-parking_lot1 = Agent(geometry=Point(0, 0).buffer(100), value=1)
-parking_lot2 = Agent(geometry=box(0, 0, 100, 100), value=1)
+parking_lot1 = Agent(geometry=Point(0, 0).buffer(100), value=10)
+parking_lot2 = Agent(geometry=box(0, 0, 100, 100), value=10)
 
 site.agents = [parking_lot1, parking_lot2]
 
