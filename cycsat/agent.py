@@ -52,7 +52,6 @@ class Agent:
 
     def place(self, region, attempts=100):
         """Places the agent randomly into a region."""
-
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
