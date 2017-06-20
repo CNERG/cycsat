@@ -4,9 +4,9 @@ from cycsat.laboratory import Material
 from shapely.geometry import Polygon, box, Point
 import random
 
-site = Agent(geometry=box(0, 0, 500, 500), value=1)
+site = Agent(geometry=box(0, 0, 500, 500), value=100)
 
-circle = Agent(geometry=Point(0, 0).buffer(50), value=2)
+circle = Agent(geometry=Point(0, 0).buffer(50), value=50)
 circle.agents = [Agent(geometry=Point(0, 0).buffer(5), value=0)
                  for i in range(50)]
 
