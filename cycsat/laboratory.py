@@ -39,67 +39,42 @@ class USGSMaterial(Material):
         return df
 
 
-class Material2(object):
-    """Material object"""
+class Material:
 
-    def __init__(self, material_code=None, rgb=None):
-        global Library
-        self.code = material_code
+    def __init__(self, wavelengths=None, relectance=None, std=None):
+        pass
 
-        if rgb:
-            self.name = 'rgb'
+    def plot(self):
+        sample = self.measure()
+
+        std = sample.describe().reflectance.loc['std']
+        top = sample.describe().reflectance.loc['75%']
+        bottom = sample.describe().reflectance.loc['25%']
+
+        df = sample[(sample.reflectance > bottom) & (sample.reflectance < top)]
+        if len(df) == 0:
+            df = sample
+        ax = df.plot(x='wavelength', y='reflectance')
+        ax.set_title(self.name)
+        return ax
+
+    def measure(self):
+        try:
+            return self.observe()
+
+        except:
+            try:
+                rgb = self.shape.get_rgb()
+            except:
+                rgb = [random.randint(0, 255) for i in range(3)]
+
             wavelength = (np.arange(281) / 100) + 0.20
             reflectance = np.zeros(281)
             reflectance[(wavelength >= 0.64) & (wavelength <= 0.67)] = rgb[0]
             reflectance[(wavelength >= 0.53) & (wavelength <= 0.59)] = rgb[1]
             reflectance[(wavelength >= 0.45) & (wavelength <= 0.51)] = rgb[2]
             std = np.zeros(281)
-            self.df = pd.DataFrame({'wavelength': wavelength,
-                                    'reflectance': reflectance,
-                                    'std': std})
-        else:
-            self.name = Library.ix[int(self.code)]['path']
-            self.df = pd.read_table(self.name, sep='\s+', skiprows=16, header=None,
-                                    names=['wavelength', 'reflectance', 'std'])
 
-    # def measure(self, wl_min=None, wl_max=None, wavelength=None, window=1, estimate=True):
-    #     """Looks up the nearest reflectance by wavelength
-
-    #     Keyword arguments:
-    #     wl_min -- minimum wavelength
-    #     wl_max -- maximum wavelength
-    #     wavelength -- specific wavelength to estimate
-    #     window -- number of records around the specific wavelength
-    #     estimate -- will use model error using the material std
-    #     """
-    #     df = self.df
-    #     if wavelength:
-    #         nearest = df.ix[
-    #             (df.wavelength - wavelength).abs().argsort()[:window]]
-    #     else:
-    #         nearest = df[(df.wavelength >= wl_min) & (df.wavelength <= wl_max)]
-
-    #     mean = nearest.reflectance.mean()
-    #     std = nearest['std'].mean() + 0.000001
-
-    #     if self.name == 'rgb':
-    #         return round(mean)
-
-    #     if estimate:
-    #         value = np.random.normal(loc=mean, scale=std)
-    #     else:
-    #         value = mean
-
-    #     ubyte = round(value * 255)
-    #     return ubyte
-
-
-# def materialize(Shape):
-#     """Takes a Shape object and adds its Material"""
-
-#     if Shape.material_code:
-#         Shape.material = Material(material_code=Shape.material_code)
-#     else:
-#         Shape.material = Material(rgb=ast.literal_eval(Shape.rgb))
-
-#     return Shape
+            return pd.DataFrame({'wavelength': wavelength,
+                                 'reflectance': reflectance,
+                                 'std': std})

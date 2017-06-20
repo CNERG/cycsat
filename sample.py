@@ -1,4 +1,6 @@
 from cycsat.agent import Agent
+from cycsat.laboratory import Materials
+
 from shapely.geometry import Polygon, box, Point
 import random
 
