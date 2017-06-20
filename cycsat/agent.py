@@ -59,11 +59,11 @@ class Agent:
 
         return image
 
-    def evaluate_rules(self):
-        """Evaluates the rules of an agent."""
+    def place_in(self, agent, attempts=100):
+        """Places the agent within another agent's geometry."""
+        # bounding region of parent agent
+        region = agent.geometry
 
-    def place_in(self, region, attempts=100):
-        """Places the agent within a region."""
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
@@ -80,26 +80,26 @@ class Agent:
                     self.log(geometry=translate(
                         self.geometry, xoff=shift_x, yoff=shift_y))
                     return True
-
         return False
 
-    def place_agents(self, region=None, attempts=100):
+    # def evaluate(self, agents):
+
+    def place(self, agent=None, attempts=100):
         """Places the agent and all of it's sub agents randomly into a provided region.
 
         Parameters
         ----------
-        region - the region to place the shape within
+        agent - the agent to place the shape within
         attempts - the attempts before the placement fails
-        seq - the sequence of the agent
-
         """
-        if region:
-            result = self.place_in(region)
+        if agent:
+            result = self.place_in(agent)
         else:
             pass
 
-        for agent in self.agents:
-            agent.place_agents(region=self.geometry, attempts=attempts)
+        for sub_agent in self.agents:
+            # geometry needs to be edited
+            sub_agent.place(agent=self, attempts=attempts)
 
     def log(self, **args):
         """Record information about the agent."""
@@ -130,3 +130,23 @@ def posit_point(mask, attempts=1000):
 
         if posited_point.within(mask):
             return posited_point
+
+
+# class SpatialRule:
+
+#     def __init__(self):
+#         pass
+
+#     @property
+#     def targets(self, agents, attr=None):
+#         """Finds the targets given a list."""
+
+
+# class NEAR(SpatialRule):
+
+#     def __init__(self, target, value):
+#         self.target = target
+#         self.value = value
+#         pass
+
+#     def run(self):
