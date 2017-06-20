@@ -1,28 +1,33 @@
 from cycsat.agent import Agent
-from cycsat.laboratory import Materials
+from cycsat.laboratory import Material
 
 from shapely.geometry import Polygon, box, Point
 import random
 
-# initalize agents with random values
 site = Agent(geometry=box(0, 0, 500, 500), value=1)
 
-parking_lot1 = Agent(geometry=Point(0, 0).buffer(100), value=10)
-parking_lot2 = Agent(geometry=box(0, 0, 100, 100), value=10)
+circle = Agent(geometry=Point(0, 0).buffer(50), value=2)
+circle.agents = [Agent(geometry=Point(0, 0).buffer(5), value=0)
+                 for i in range(50)]
 
-site.agents = [parking_lot1, parking_lot2]
+site.agents = [circle]
 
-for pl in site.agents:
-    pl.place(site.geometry)
 
-parking_lot1.agents = [
-    Agent(geometry=Point(0, 0).buffer(10), value=random.randint(45, 50)) for i in range(20)]
+# class CoolingTower(Agent):
 
-for a in parking_lot1.agents:
-    a.place(parking_lot1.geometry)
+#     def __init__(self):
+#         self.geometry = Point(0, 0).buffer(10)
+#         self.name = 'cooling tower'
 
-parking_lot2.agents = [
-    Agent(geometry=Point(0, 0).buffer(10), value=random.randint(45, 50)) for i in range(20)]
+#     def run(self, **args):
+#         last = self.data.plume[-1]
+#         if last == 1:
+#             pass
+#         else:
 
-for a in parking_lot2.agents:
-    a.place(parking_lot2.geometry)
+
+# class ConcretePad(Agent):
+
+#     def __init__(self):
+#         self.geometry = box(0, 0, 100, 100)
+#         self.name = 'concrete pad'
