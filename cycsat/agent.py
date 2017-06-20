@@ -85,15 +85,8 @@ class Agent:
             for sub_agent in self.agents:
                 sub_agent.run(parent_agent=self)
 
-    def __run__(self, **args):
-        """USER DEFINED. Return a dictionary of attributes to record, or None."""
-
-        #geometry = self.place_in(args['parent_agent'])
-        g = translate(self.geometry, xoff=random.randint(-5, 5),
-                      yoff=random.randint(-5, 5))
-
-        return {'value': self.value + random.randint(-5, 5),
-                'geometry': g}
+    # def __run__(self, **args):
+    #     """USER DEFINED. Return a dictionary of attributes to record, or None."""
 
     def evaluate(self, parent_agent=None):
 
@@ -115,13 +108,9 @@ class Agent:
         """
         return parent_agent.geometry
 
-    def place_in(self, parent_agent, attempts=100):
+    def place_in(self, region, attempts=100):
         """Places the agent within another agent's geometry."""
         # bounding region of parent agent
-
-        region = self.evaluate(parent_agent=parent_agent)
-        if not region:
-            return self.geometry
 
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
@@ -151,12 +140,13 @@ class Agent:
         self.data = self.data.head(1)
 
         if parent_agent:
-            result = self.place_in(parent_agent)
-            if result:
-                self.data = self.data.set_value(0, 'geometry', result)
-                self.geometry = result
+            geometry = self.place_in(parent_agent.geometry)
         else:
-            pass
+            geometry = self.geometry
+
+        if geometry:
+            self.data = self.data.set_value(0, 'geometry', geometry)
+            self.geometry = geometry
 
         for sub_agent in self.agents:
             sub_agent.setup(parent_agent=self, attempts=attempts)
