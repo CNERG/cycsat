@@ -28,16 +28,22 @@ class Agent:
             log = log.append(agent.subdata, ignore_index=True)
         return log
 
-    def surface(self, value_field, image=[], res=1):
-
+    def surface(self, value_field):
+        """Generates a blank raster surface."""
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
 
+        image = np.zeros((maxx - minx, maxy - miny)) + \
+            getattr(self, value_field)
+
+        return image
+
+    def collect_surfaces(self, value_field, image=[], res=1):
+
         # if no image is provided create a blank
         if len(image) == 0:
-            image = np.zeros((maxx - minx, maxy - miny)) + \
-                getattr(self, value_field)
-        # else add the agent to the image
+            image = self.surface(value_field)
+            # else add the agent to the image
         else:
             coords = np.array(list(self.geometry.exterior.coords))
             rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
@@ -46,7 +52,7 @@ class Agent:
         # if there are agents add their surfaces too
         if self.agents:
             for agent in self.agents:
-                image = agent.surface(value_field, image=image)
+                image = agent.collect_surfaces(value_field, image=image)
 
         return image
 
