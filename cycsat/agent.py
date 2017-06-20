@@ -59,23 +59,47 @@ class Agent:
 
         return image
 
-    def place(self, region, attempts=100):
-        """Places the agent randomly into a region."""
+    def evaluate_rules(self):
+        """Evaluates the rules of an agent."""
+
+    def place_in(self, region, attempts=100):
+        """Places the agent within a region."""
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
-                x, y = [placement.coords.xy[0][0], placement.coords.xy[1][0]]
+                x, y = [placement.coords.xy[0][
+                    0], placement.coords.xy[1][0]]
                 _x, _y = [self.geometry.centroid.coords.xy[0][
                     0], self.geometry.centroid.coords.xy[1][0]]
                 shift_x = x - _x
                 shift_y = y - _y
 
-                geometry = translate(self.geometry, xoff=shift_x, yoff=shift_y)
+                geometry = translate(
+                    self.geometry, xoff=shift_x, yoff=shift_y)
                 if geometry.within(region):
                     self.log(geometry=translate(
                         self.geometry, xoff=shift_x, yoff=shift_y))
                     return True
+
         return False
+
+    def place_agents(self, region=None, attempts=100):
+        """Places the agent and all of it's sub agents randomly into a provided region.
+
+        Parameters
+        ----------
+        region - the region to place the shape within
+        attempts - the attempts before the placement fails
+        seq - the sequence of the agent
+
+        """
+        if region:
+            result = self.place_in(region)
+        else:
+            pass
+
+        for agent in self.agents:
+            agent.place_agents(region=self.geometry, attempts=attempts)
 
     def log(self, **args):
         """Record information about the agent."""
@@ -88,7 +112,9 @@ class Agent:
         self.data = self.data.append(args, ignore_index=True)
 
     def run(self, **args):
-        # update attributes
+        """A function to be customized."""
+
+        # update attributes and run sub_agents
         value = self.value + random.randint(-5., 5)
         self.log(value=value)
 

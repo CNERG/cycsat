@@ -4,8 +4,6 @@ laboratory.py
 import pandas as pd
 import numpy as np
 
-from cycsat.archetypes import Material
-
 import os
 import ast
 
@@ -21,22 +19,6 @@ for path, subdirs, files in f:
 
 Library = pd.DataFrame(samples,
                        columns=['path', 'subdir', 'name']).sort_values('name')
-
-
-class USGSMaterial(Material):
-    __mapper_args__ = {'polymorphic_identity': 'USGSMaterial'}
-
-    def __init__(self, name, mass=1):
-        self.name = name
-        self.mass = mass
-
-    def observe(self):
-        global Library
-        path = Library[Library['name'] == self.name]['path'].iloc[0]
-        df = pd.read_table(path, sep='\s+', skiprows=16, header=None,
-                           names=['wavelength', 'reflectance', 'std'])
-
-        return df
 
 
 class Material:
@@ -78,3 +60,19 @@ class Material:
             return pd.DataFrame({'wavelength': wavelength,
                                  'reflectance': reflectance,
                                  'std': std})
+
+
+class USGSMaterial(Material):
+    __mapper_args__ = {'polymorphic_identity': 'USGSMaterial'}
+
+    def __init__(self, name, mass=1):
+        self.name = name
+        self.mass = mass
+
+    def observe(self):
+        global Library
+        path = Library[Library['name'] == self.name]['path'].iloc[0]
+        df = pd.read_table(path, sep='\s+', skiprows=16, header=None,
+                           names=['wavelength', 'reflectance', 'std'])
+
+        return df
