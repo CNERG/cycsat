@@ -4,30 +4,46 @@ from cycsat.laboratory import Material
 from shapely.geometry import Polygon, box, Point
 import random
 
-site = Agent(geometry=box(0, 0, 500, 500), value=100)
 
-circle = Agent(geometry=Point(0, 0).buffer(50), value=50)
-circle.agents = [Agent(geometry=Point(0, 0).buffer(5), value=0)
-                 for i in range(50)]
+class Site(Agent):
 
-site.agents = [circle]
-
-
-# class CoolingTower(Agent):
-
-#     def __init__(self):
-#         self.geometry = Point(0, 0).buffer(10)
-#         self.name = 'cooling tower'
-
-#     def run(self, **args):
-#         last = self.data.plume[-1]
-#         if last == 1:
-#             pass
-#         else:
+    def __init__(self):
+        Agent.__init__(self)
+        self.geometry = box(0, 0, 500, 500)
 
 
-# class ConcretePad(Agent):
+class CoolingTower(Agent):
 
-#     def __init__(self):
-#         self.geometry = box(0, 0, 100, 100)
-#         self.name = 'concrete pad'
+    def __init__(self):
+        Agent.__init__(self)
+        self.geometry = Point(0, 0).buffer(50)
+        self.name = 'cooling tower'
+
+
+class Plume(Agent):
+
+    def __init__(self):
+        Agent.__init__(self)
+        self.geometry = Point(0, 0).buffer(25)
+        self.name = 'plume'
+
+    def __evaluate__(self, **args):
+
+        if args['parent_agent'].on:
+            return args['parent_agent'].geometry.buffer(100)
+
+    def __run__(self, **args):
+        valid = self.evaluate(args['parent_agent'])
+        spawn_zone = valid.centroid.buffer(50)
+
+        puffs = [Agent(geometry=Point(0, 0).buffer(25))]
+
+        return {'geometry': geo}
+
+site = Site()
+ctower = CoolingTower()
+
+plume = Plume()
+
+ctower.agents = [plume]
+site.agents = [ctower]
