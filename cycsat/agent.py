@@ -21,23 +21,22 @@ class Agent:
         self.variables = variables
         self.parent = False
         self.log(init=True)
-        self.__agents__ = list()
+        self.agents = list()
 
     @property
-    def agents(self):
+    def agent_frame(self):
         """Collects the current attributes of all subagents."""
         agent_info = GeoDataFrame()
-        for agent in self.__agents__:
+        for agent in self.agents:
             agent_info = agent_info.append(
                 agent.data.tail(1), ignore_index=True)
         return agent_info
 
-    @property
-    def get_data_tree(self):
+    def collect_agents(self):
         """Collects the current attributes of all agents by cascading."""
         log = self.data.tail(1)
         for agent in self.agents:
-            log = log.append(agent.subdata, ignore_index=True)
+            log = log.append(agent.collect_agents(), ignore_index=True)
         return log
 
     def add_agents(self, agents):
@@ -46,8 +45,8 @@ class Agent:
                 agent.parent = self
                 self.agents.append(agent)
         else:
-            agent.parent = self
-            self.agents.append(agent)
+            agents.parent = self
+            self.agents.append(agents)
 
     def add_variables(self, **args):
         """Adds a new variable to track in the log."""
@@ -71,22 +70,18 @@ class Agent:
             for var in self.variables:
                 log[var] = getattr(self, var)
 
-        if self.parent:
-            log['time'] = self.parent.time
-        else:
-            log['time'] = self.time
+        log['time'] = self.time
         self.data = self.data.append(log, ignore_index=True)
 
     def run(self, **args):
         """Evaluates the __run__ function and runs through sub agents."""
         self.time += 1
-
         try:
             active = self.__run__()
             if active:
                 self.log()
         except:
-            pass
+            print('run failed')
 
         for sub_agent in self.agents:
             sub_agent.run()
@@ -119,38 +114,48 @@ class Agent:
                 geometry = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
                 if geometry.within(region):
+                    self.geometry = geometry
                     return geometry
-        return False
+        self.geometry = None
+        return geometry
 
-    #  def surface(self, value_field):
-    #     """Generates a blank raster surface using the provided value field."""
-    #     minx, miny, maxx, maxy = [round(coord)
-    #                               for coord in self.geometry.bounds]
+    def surface(self, value_field):
+        """Generates a blank raster surface using the provided value field."""
+        minx, miny, maxx, maxy = [round(coord)
+                                  for coord in self.geometry.bounds]
 
-    #     image = np.zeros((maxx - minx, maxy - miny)) + \
-    #         getattr(self, value_field)
+        image = np.zeros((maxx - minx, maxy - miny)) + \
+            getattr(self, value_field)
 
-    #     return image
+        return image
 
-    # def collect_surfaces(self, value_field, image=[], res=1):
+    def collect_surfaces(self, value_field, image=[], res=1):
 
-    #     # if no image is provided create a blank
-    #     if len(image) == 0:
-    #         image = self.surface(value_field)
-    #         # else add the agent to the image
-    #     else:
-    #         coords = np.array(list(self.geometry.exterior.coords))
-    #         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-    #         image[rr, cc] = getattr(self, value_field)
+        # if no image is provided create a blank
+        if len(image) == 0:
+            image = self.surface(value_field)
+            # else add the agent to the image
+        else:
+            coords = np.array(list(self.geometry.exterior.coords))
+            rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+            image[rr, cc] = getattr(self, value_field)
 
-    #     if self.agents:
-    #         for agent in self.agents:
-    #             image = agent.collect_surfaces(value_field, image=image)
+        if self.agents:
+            for agent in self.agents:
+                image = agent.collect_surfaces(value_field, image=image)
 
-    #     return image
+        return image
 
-    # def __run__(self, **args):
-    #     """DEFINED. Returns a dictionary of attributes."""
+    def __run__(self, **args):
+        """DEFINED. Returns True to record."""
+        if self.parent:
+            if self.parent.on == 1:
+                self.on = 1
+            else:
+                self.on = 0
+        else:
+            self.on = random.choice([0, 1])
+        return True
 
 
 def posit_point(mask, attempts=1000):

@@ -4,43 +4,45 @@ from cycsat.laboratory import Material
 from shapely.geometry import Polygon, box, Point
 import random
 
-a = Agent()
 
-# class Site(Agent):
+class Site(Agent):
 
-#     def __init__(self):
-#         Agent.__init__(self)
-#         self.geometry = box(0, 0, 500, 500)
+    def __init__(self, variables):
+        Agent.__init__(self, **variables)
 
 
-# class CoolingTower(Agent):
+class CoolingTower(Agent):
 
-#     def __init__(self):
-#         Agent.__init__(self)
-#         self.geometry = Point(0, 0).buffer(50)
-#         self.name = 'cooling tower'
+    def __init__(self, **variables):
+        Agent.__init__(self, **variables)
 
-
-# class Plume(Agent):
-
-#     def __init__(self):
-#         Agent.__init__(self)
-#         self.geometry = Point(0, 0).buffer(25)
-#         self.name = 'plume'
-
-#     def __evaluate__(self, **args):
-
-#         if args['parent_agent'].on:
-#             return args['parent_agent'].geometry.buffer(100)
-
-#     def __run__(self, **args):
-#         valid = self.evaluate(args['parent_agent'])
-#         spawn_zone = valid.centroid.buffer(50)
+    def __run__(self):
+        if random.choice([True, False]):
+            self.on = 1
+            print('on')
+        else:
+            print('off')
+            self.on = 0
+        return True
 
 
-# site = Site()
-# ctower = CoolingTower()
-# plume = Plume()
+class Plume(Agent):
 
-# ctower.agents = [plume]
-# site.agents = [ctower]
+    def __init__(self, **variables):
+        Agent.__init__(self, **variables)
+
+    def __run__(self):
+
+        if self.parent.on == 1:
+            self.place_in(self.parent.geometry.buffer(50))
+            return True
+        else:
+            return False
+
+
+site = Agent(geometry=box(0, 0, 500, 500))
+ctower = CoolingTower(on=0, geometry=Point(0, 0).buffer(100))
+plume = Plume(geometry=Point(0, 0).buffer(75))
+
+ctower.add_agents(plume)
+site.add_agents(ctower)
