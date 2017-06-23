@@ -95,8 +95,17 @@ class Agent:
         attempts - the attempts before the placement fails
         """
 
+        try:
+            self.__place__()
+            self.log()
+        except:
+            for sub_agent in self.agents:
+                sub_agent.place_in(self.geometry)
+                sub_agent.log()
+
         for sub_agent in self.agents:
-            sub_agent.setup(parent_agent=self, attempts=attempts)
+            sub_agent.place()
+            self.log()
 
     def place_in(self, region, attempts=100):
         """Places in a given region."""
@@ -148,14 +157,6 @@ class Agent:
 
     def __run__(self, **args):
         """DEFINED. Returns True to record."""
-        if self.parent:
-            if self.parent.on == 1:
-                self.on = 1
-            else:
-                self.on = 0
-        else:
-            self.on = random.choice([0, 1])
-        return True
 
 
 def posit_point(mask, attempts=1000):
