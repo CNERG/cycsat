@@ -10,6 +10,7 @@ from skimage.draw import polygon
 
 from shapely.geometry import Point
 from shapely.affinity import rotate, translate
+from shapely.ops import cascaded_union, unary_union, polygonize
 
 
 class Agent:
@@ -57,6 +58,12 @@ class Agent:
             self.variables.update(args)
         else:
             self.variables = args
+
+    def agent_bounds(self):
+        """Merge the geometries of agents together."""
+        agents = cascaded_union([agent.geometry for agent in self.agents])
+        self.add_variables(geometry=agents)
+        self.log()
 
     def log(self, init=False):
         """Log the agent's variables."""
