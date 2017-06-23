@@ -59,11 +59,11 @@ class Agent:
         else:
             self.variables = args
 
-    def agent_bounds(self):
-        """Merge the geometries of agents together."""
-        agents = cascaded_union([agent.geometry for agent in self.agents])
-        self.add_variables(geometry=agents)
-        self.log()
+    # def agent_bounds(self):
+    #     """Merge the geometries of agents together."""
+    #     agents = cascaded_union([agent.geometry for agent in self.agents])
+    #     self.add_variables(geometry=agents)
+    #     self.log()
 
     def log(self, init=False):
         """Log the agent's variables."""
@@ -106,8 +106,10 @@ class Agent:
             self.__place__()
             self.log()
         except:
+            geometry = self.geometry
             for sub_agent in self.agents:
-                sub_agent.place_in(self.geometry)
+                geometry = geometry.difference(
+                    sub_agent.place_in(geometry))
                 sub_agent.log()
 
         for sub_agent in self.agents:
@@ -132,8 +134,7 @@ class Agent:
                 if geometry.within(region):
                     self.geometry = geometry
                     return geometry
-        self.geometry = None
-        return geometry
+        return self.geometry
 
     def surface(self, value_field):
         """Generates a blank raster surface using the provided value field."""
