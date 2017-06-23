@@ -5,12 +5,6 @@ from shapely.geometry import Polygon, box, Point
 import random
 
 
-class Site(Agent):
-
-    def __init__(self, variables):
-        Agent.__init__(self, **variables)
-
-
 class CoolingTower(Agent):
 
     def __init__(self, **variables):
@@ -41,8 +35,12 @@ class Plume(Agent):
 
 
 site = Agent(geometry=box(0, 0, 500, 500))
-ctower = CoolingTower(on=0, geometry=Point(0, 0).buffer(100))
+cblock = Agent()
+ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100))
+ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100))
 plume = Plume(geometry=Point(0, 0).buffer(75))
 
-ctower.add_agents(plume)
-site.add_agents(ctower)
+cblock.add_agents([ctower1, ctower2])
+cblock.agent_bounds()
+ctower1.add_agents(plume)
+site.add_agents(cblock)
