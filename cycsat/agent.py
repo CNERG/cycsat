@@ -7,6 +7,7 @@ import random
 import rasterio
 
 from skimage.draw import polygon
+from skimage.transform import downscale_local_mean
 
 from shapely.geometry import Point
 from shapely.affinity import rotate, translate
@@ -106,6 +107,8 @@ class Agent:
             self.__place__()
             self.log()
         except:
+            # if not place function is defined
+            # place sub agents within agent
             geometry = self.geometry
             for sub_agent in self.agents:
                 geometry = geometry.difference(
@@ -160,6 +163,10 @@ class Agent:
         if self.agents:
             for agent in self.agents:
                 image = agent.collect_surfaces(value_field, image=image)
+
+        if res != 1:
+            image = downscale_local_mean(
+                image, (res, res))
 
         return image
 
