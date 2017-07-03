@@ -1,5 +1,5 @@
 from cycsat.agent import Agent
-from cycsat.laboratory import Material
+from cycsat.laboratory import Material, USGSMaterial
 
 from shapely.geometry import Polygon, box, Point
 import random

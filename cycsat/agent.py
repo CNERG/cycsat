@@ -140,7 +140,10 @@ class Agent:
         return self.geometry
 
     def surface(self, value_field):
-        """Generates a blank raster surface using the provided value field."""
+        """Generates a blank raster surface using the provided value field.
+        This needs to work with a material.
+        """
+
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
 
