@@ -105,7 +105,7 @@ class Agent:
         for sub_agent in self.agents:
             sub_agent.run()
 
-    def place(self, attempts=100):
+    def place(self, time=None, attempts=100):
         """Places the agent and all of it's sub_agents.
 
         Parameters
@@ -113,29 +113,24 @@ class Agent:
         agent - the agent to place the shape within
         attempts - the attempts before the placement fails
         """
-
         try:
             self.__place__()
             self.log()
         except:
-            self.place_in()
-            self.log()
+            if len(self.agents) > 0:
+                mask = self.geometry
+                for sub_agent in self.agents:
+                    mask = mask.difference(sub_agent.place_in(mask))
+                    sub_agent.log()
 
         for sub_agent in self.agents:
             sub_agent.place()
 
-    def place_in(self, agent='parent', attempts=100):
-        """Places an agent within its parent given region."""
-
-        # if an agent is not provided infer next step
-        if agent == 'parent':
-            if self.parent:
-                agent = self.parent
-            else:
-                return self
+    def place_in(self, region, attempts=100):
+        """Places an agent within its parent region."""
 
         for i in range(attempts):
-            placement = posit_point(agent.geometry, attempts=attempts)
+            placement = posit_point(region, attempts=attempts)
             if placement:
                 x, y = [placement.coords.xy[0][
                     0], placement.coords.xy[1][0]]
@@ -144,12 +139,13 @@ class Agent:
                 shift_x = x - _x
                 shift_y = y - _y
 
-                geometry = translate(
+                placed = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
-                if geometry.within(agent.geometry):
-                    self.geometry = geometry
-                    return geometry
-        return agent
+                if placed.within(region):
+                    self.geometry = placed
+                    return self.geometry
+
+        return self.geometry
 
     def surface(self, variable, time=None):
         """Generates a blank raster surface using the provided value field.
@@ -168,7 +164,7 @@ class Agent:
         image = np.zeros((maxx - minx, maxy - miny)) + value
         return image
 
-    def collect_surfaces(self, value_field, image=[], res=1):
+    def render(self, value_field, image=[], res=1):
 
         # if no image is provided create a blank
         if len(image) == 0:
@@ -181,7 +177,7 @@ class Agent:
 
         if self.agents:
             for agent in self.agents:
-                image = agent.collect_surfaces(value_field, image=image)
+                image = agent.render(value_field, image=image)
 
         if res != 1:
             image = downscale_local_mean(
