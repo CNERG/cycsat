@@ -14,10 +14,15 @@ from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
 
+# need an agent creation tool?
+# agent as shape to be placed in
+
+
 class Agent:
 
     def __init__(self, **variables):
-        # clear the log and add init arguments
+        """Creates an agent. Takes any variables ats attributes."""
+
         self.data = GeoDataFrame()
         self.time = 0
         self.variables = variables
@@ -42,6 +47,7 @@ class Agent:
         return log
 
     def add_agents(self, agents):
+        """Adds sub agents. Takes a list of agents or single agent."""
         if type(agents) is list:
             for agent in agents:
                 agent.parent = self
@@ -60,15 +66,14 @@ class Agent:
         else:
             self.variables = args
 
-    # def agent_bounds(self):
-    #     """Merge the geometries of agents together."""
-    #     agents = cascaded_union([agent.geometry for agent in self.agents])
-    #     self.add_variables(geometry=agents)
-    #     self.log()
+    def agent_bounds(self):
+        """Merge the geometries of agents together."""
+        agents = cascaded_union([agent.geometry for agent in self.agents])
+        self.add_variables(geometry=agents)
+        self.log()
 
     def log(self, init=False):
-        """Log the agent's variables."""
-
+        """Logs the agent's variables."""
         if init:
             for var in self.variables:
                 setattr(self, var, self.variables[var])
@@ -118,6 +123,26 @@ class Agent:
         for sub_agent in self.agents:
             sub_agent.place()
             self.log()
+
+    def place_in(self, region, attempts=100):
+        """Places in a given region."""
+        # bounding region of parent agent
+        for i in range(attempts):
+            placement = posit_point(region, attempts=attempts)
+            if placement:
+                x, y = [placement.coords.xy[0][
+                    0], placement.coords.xy[1][0]]
+                _x, _y = [self.geometry.centroid.coords.xy[0][
+                    0], self.geometry.centroid.coords.xy[1][0]]
+                shift_x = x - _x
+                shift_y = y - _y
+
+                geometry = translate(
+                    self.geometry, xoff=shift_x, yoff=shift_y)
+                if geometry.within(region):
+                    self.geometry = geometry
+                    return geometry
+        return self.geometry
 
     def place_in(self, region, attempts=100):
         """Places in a given region."""
