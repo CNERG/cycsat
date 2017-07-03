@@ -31,19 +31,20 @@ class Agent:
         self.agents = list()
 
     @property
-    def agent_frame(self):
-        """Collects the current attributes of all subagents."""
-        agent_info = GeoDataFrame()
+    def agentframe(self):
+        """Attributes frame of all sub agents."""
+        agent_frame = GeoDataFrame()
         for agent in self.agents:
-            agent_info = agent_info.append(
+            agent_frame = agent_frame.append(
                 agent.data.tail(1), ignore_index=True)
-        return agent_info
+        return agent_frame
 
-    def collect_agents(self):
+    @property
+    def agenttree(self):
         """Collects the current attributes of all agents by cascading."""
         log = self.data.tail(1)
         for agent in self.agents:
-            log = log.append(agent.collect_agents(), ignore_index=True)
+            log = log.append(agent.agenttree, ignore_index=True)
         return log
 
     def add_agents(self, agents):
@@ -55,6 +56,11 @@ class Agent:
         else:
             agents.parent = self
             self.agents.append(agents)
+
+    def query(self, sql):
+        """Queries the sub agent list and returns agents."""
+        # self.agent_frame().query(sql)
+        pass
 
     def add_variables(self, **args):
         """Adds a new variable to track in the log."""
@@ -112,23 +118,24 @@ class Agent:
             self.__place__()
             self.log()
         except:
-            # if not place function is defined
-            # place sub agents within agent
-            geometry = self.geometry
-            for sub_agent in self.agents:
-                geometry = geometry.difference(
-                    sub_agent.place_in(geometry))
-                sub_agent.log()
+            self.place_in()
+            self.log()
 
         for sub_agent in self.agents:
             sub_agent.place()
-            self.log()
 
-    def place_in(self, region, attempts=100):
-        """Places in a given region."""
-        # bounding region of parent agent
+    def place_in(self, agent='parent', attempts=100):
+        """Places an agent within its parent given region."""
+
+        # if an agent is not provided infer next step
+        if agent == 'parent':
+            if self.parent:
+                agent = self.parent
+            else:
+                return self
+
         for i in range(attempts):
-            placement = posit_point(region, attempts=attempts)
+            placement = posit_point(agent.geometry, attempts=attempts)
             if placement:
                 x, y = [placement.coords.xy[0][
                     0], placement.coords.xy[1][0]]
@@ -139,42 +146,26 @@ class Agent:
 
                 geometry = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
-                if geometry.within(region):
+                if geometry.within(agent.geometry):
                     self.geometry = geometry
                     return geometry
-        return self.geometry
+        return agent
 
-    def place_in(self, region, attempts=100):
-        """Places in a given region."""
-        # bounding region of parent agent
-        for i in range(attempts):
-            placement = posit_point(region, attempts=attempts)
-            if placement:
-                x, y = [placement.coords.xy[0][
-                    0], placement.coords.xy[1][0]]
-                _x, _y = [self.geometry.centroid.coords.xy[0][
-                    0], self.geometry.centroid.coords.xy[1][0]]
-                shift_x = x - _x
-                shift_y = y - _y
-
-                geometry = translate(
-                    self.geometry, xoff=shift_x, yoff=shift_y)
-                if geometry.within(region):
-                    self.geometry = geometry
-                    return geometry
-        return self.geometry
-
-    def surface(self, value_field):
+    def surface(self, variable, time=None):
         """Generates a blank raster surface using the provided value field.
         This needs to work with a material.
         """
 
+        # get dimensions of self
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
 
-        image = np.zeros((maxx - minx, maxy - miny)) + \
-            getattr(self, value_field)
+        if time:
+            value = self.data.iloc[0][variable]
+        else:
+            value = getattr(self, variable)
 
+        image = np.zeros((maxx - minx, maxy - miny)) + value
         return image
 
     def collect_surfaces(self, value_field, image=[], res=1):

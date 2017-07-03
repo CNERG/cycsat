@@ -19,6 +19,7 @@ class CoolingTower(Agent):
     def __run__(self):
         if random.choice([True, False]):
             self.on = 1
+            self.value += 1
             print('on')
         else:
             print('off')
