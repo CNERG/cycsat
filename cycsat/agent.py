@@ -9,13 +9,12 @@ import rasterio
 from skimage.draw import polygon
 from skimage.transform import downscale_local_mean
 
+from scipy.ndimage import gaussian_filter
+from scipy.interpolate import griddata, interp2d, bisplrep, Rbf
+
 from shapely.geometry import Point
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
-
-
-# need an agent creation tool?
-# agent as shape to be placed in
 
 
 class Agent:
@@ -57,11 +56,6 @@ class Agent:
             agents.parent = self
             self.agents.append(agents)
 
-    def query(self, sql):
-        """Queries the sub agent list and returns agents."""
-        # self.agent_frame().query(sql)
-        pass
-
     def add_variables(self, **args):
         """Adds a new variable to track in the log."""
         for arg in args:
@@ -71,12 +65,6 @@ class Agent:
             self.variables.update(args)
         else:
             self.variables = args
-
-    def agent_bounds(self):
-        """Merge the geometries of agents together."""
-        agents = cascaded_union([agent.geometry for agent in self.agents])
-        self.add_variables(geometry=agents)
-        self.log()
 
     def log(self, init=False):
         """Logs the agent's variables."""
@@ -161,7 +149,7 @@ class Agent:
         else:
             value = getattr(self, variable)
 
-        image = np.zeros((maxx - minx, maxy - miny)) + value
+        image = np.zeros((maxx, maxy)) + value
         return image
 
     def render(self, value_field, image=[], res=1):
