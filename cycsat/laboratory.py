@@ -23,6 +23,7 @@ Library = pd.DataFrame(samples,
 
 
 class Material:
+    """Functional response to wavelengths of light."""
 
     def __init__(self, wavelengths, response, variation, points=10):
 
