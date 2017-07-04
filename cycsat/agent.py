@@ -7,6 +7,7 @@ import random
 import rasterio
 
 from skimage.draw import polygon
+from skimage.transform import rotate as rotate_image
 from skimage.transform import downscale_local_mean
 
 from scipy.ndimage import gaussian_filter
@@ -144,6 +145,8 @@ class Agent:
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
 
+        image = np.zeros((maxx, maxy))
+
         if time:
             value = self.data.iloc[0][variable]
         else:
@@ -157,6 +160,7 @@ class Agent:
         # if no image is provided create a blank
         if len(image) == 0:
             image = self.surface(value_field)
+            image = rotate_image(image, 90)
             # else add the agent to the image
         else:
             coords = np.array(list(self.geometry.exterior.coords))
