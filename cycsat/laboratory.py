@@ -23,11 +23,17 @@ Library = pd.DataFrame(samples,
 
 class Material:
 
-    def __init__(self, wavelengths=None, relectance=None, std=None):
-        pass
+    def __init__(self, wavelengths, relectance, std):
+
+        self.__wavelengths__ = wavelengths
+        self.__relectance__ = relectance
+        self.__std__ = std
+
+    def measure(self, band=None):
+        wavelengths
 
     def plot(self):
-        sample = self.measure()
+        self.measure()
 
         std = sample.describe().reflectance.loc['std']
         top = sample.describe().reflectance.loc['75%']
@@ -39,27 +45,6 @@ class Material:
         ax = df.plot(x='wavelength', y='reflectance')
         ax.set_title(self.name)
         return ax
-
-    def measure(self):
-        try:
-            return self.observe()
-
-        except:
-            try:
-                rgb = self.shape.get_rgb()
-            except:
-                rgb = [random.randint(0, 255) for i in range(3)]
-
-            wavelength = (np.arange(281) / 100) + 0.20
-            reflectance = np.zeros(281)
-            reflectance[(wavelength >= 0.64) & (wavelength <= 0.67)] = rgb[0]
-            reflectance[(wavelength >= 0.53) & (wavelength <= 0.59)] = rgb[1]
-            reflectance[(wavelength >= 0.45) & (wavelength <= 0.51)] = rgb[2]
-            std = np.zeros(281)
-
-            return pd.DataFrame({'wavelength': wavelength,
-                                 'reflectance': reflectance,
-                                 'std': std})
 
 
 class USGSMaterial(Material):

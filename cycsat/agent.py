@@ -196,12 +196,3 @@ def posit_point(mask, attempts=1000):
 
 def fullname(o):
     return o.__module__ + "." + o.__class__.__name__
-
-
-class SpatialRule:
-
-    def __init__(self):
-        """A defined set of instructions (function) for returning."""
-
-    def evaluate(self):
-        self.run.__evaluate__(to_place, target_list)
