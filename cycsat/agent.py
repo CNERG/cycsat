@@ -173,6 +173,7 @@ class Agent:
         else:
             minx, miny, maxx, maxy = [round(coord)
                                       for coord in self.geometry.bounds]
+
             image[miny:maxy, minx:maxx] = self.surface(value_field)
 
         if self.agents:
