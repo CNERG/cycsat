@@ -29,6 +29,7 @@ class Agent:
         self.parent = False
         self.log(init=True)
         self.agents = list()
+        self.material = False
 
     @property
     def agentframe(self):
@@ -138,44 +139,42 @@ class Agent:
 
     def footprint(self):
 
-    def surface(self, variable, pts=10, time=None):
+        # get dimensions corners
+        minx, miny, maxx, maxy = [round(coord)
+                                  for coord in self.geometry.bounds]
+        ylen = maxy - miny
+        xlen = maxx - minx
+
+        image = np.zeros((ylen, xlen))
+
+        rel_geo = translate(
+            self.geometry, xoff=-1 * minx, yoff=-1 * miny)
+
+        coords = np.array(list(rel_geo.exterior.coords))
+        rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+        image[rr, cc] = 1
+
+        return image
+
+    def surface(self, variable):
         """Generates a blank raster surface using the provided value field.
         This needs to work with a material.
         """
-
-        # get dimensions of self
-        minx, miny, maxx, maxy = [round(coord)
-                                  for coord in self.geometry.bounds]
-
-        # get corner
-        corner = (minx, miny)
-
-        coords = np.array(list(self.geometry.exterior.coords))
-        rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-
-        #image[rr, cc] = getattr(self, value_field)
-
-        image = np.zeros((maxx, maxy))
-
-        if time:
-            value = self.data.iloc[0][variable]
-        else:
-            value = getattr(self, variable)
-
-        image = np.zeros((maxx, maxy)) + value
-        return image
+        footprint = self.footprint()
+        return footprint * getattr(self, variable)
 
     def render(self, value_field, image=[], res=1):
 
         # if no image is provided create a blank
         if len(image) == 0:
             image = self.surface(value_field)
-            image = rotate_image(image, 90)
+            # image = rotate_image(image, 90)
             # else add the agent to the image
         else:
-            coords = np.array(list(self.geometry.exterior.coords))
-            rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-            image[rr, cc] = getattr(self, value_field)
+            minx, miny, maxx, maxy = [round(coord)
+                                      for coord in self.geometry.bounds]
+            mask = image[miny:maxy, minx:maxx]
+            image[miny:maxy, minx:maxx] = mask * self.surface(value_field)
 
         if self.agents:
             for agent in self.agents:
