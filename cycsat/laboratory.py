@@ -24,11 +24,12 @@ Library = pd.DataFrame(samples,
 
 class Material:
 
-    def __init__(self, wavelengths, response, variation):
+    def __init__(self, wavelengths, response, variation, points=10):
 
         self.wavelengths = wavelengths
         self.response = response
         self.variation = variation
+        self.points = points
 
     def measure(self, band=None):
         values = self.response[
@@ -37,9 +38,6 @@ class Material:
             (self.wavelengths > band[0]) & (self.wavelengths < band[1])]
 
         return [values, variation]
-
-    def surface(self, geometry):
-        pass
 
     def plot(self):
         plt.plot(self.wavelengths, self.response)
@@ -53,9 +51,3 @@ class USGSMaterial(Material):
                            names=['wavelength', 'response', 'variation'])
 
         Material.__init__(self, df.wavelength, df.response, df.variation)
-
-    def observe(self):
-        global Library
-        path = Library[Library['name'] == self.name]['path'].iloc[0]
-
-        return df
