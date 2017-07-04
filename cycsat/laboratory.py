@@ -27,7 +27,7 @@ class Material:
 
     def __init__(self, wavelengths, response, variation, points=10):
 
-        self.wavelengths = wavelengths
+        self.wavelength = wavelengths
         self.response = response
         self.variation = variation
         self.points = points
