@@ -137,7 +137,7 @@ class Agent:
 
         return self.geometry
 
-    def footprint(self):
+    def surface(self, value_field):
 
         # get dimensions corners
         minx, miny, maxx, maxy = [round(coord)
@@ -154,14 +154,7 @@ class Agent:
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
         image[rr, cc] = 1
 
-        return image
-
-    def surface(self, variable):
-        """Generates a blank raster surface using the provided value field.
-        This needs to work with a material.
-        """
-        footprint = self.footprint()
-        return footprint * getattr(self, variable)
+        return image * getattr(self, value_field)
 
     def render(self, value_field, image=[], res=1):
 
