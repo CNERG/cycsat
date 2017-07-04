@@ -6,6 +6,8 @@ import numpy as np
 import random
 import rasterio
 
+from cycsat.laboratory import USGSMaterial
+
 from skimage.draw import polygon
 from skimage.transform import rotate as rotate_image
 from skimage.transform import downscale_local_mean
@@ -29,7 +31,7 @@ class Agent:
         self.parent = False
         self.log(init=True)
         self.agents = list()
-        self.material = False
+        self.materials = [USGSMaterial('lawn_grass_gds91b.31126.asc')]
 
     @property
     def agentframe(self):
@@ -167,7 +169,7 @@ class Agent:
             minx, miny, maxx, maxy = [round(coord)
                                       for coord in self.geometry.bounds]
 
-            image[miny:maxy, minx:maxx] = self.surface(value_field)
+            image[miny:maxy, minx:maxx] += self.surface(value_field)
 
         if self.agents:
             for agent in self.agents:
