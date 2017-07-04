@@ -3,6 +3,7 @@ laboratory.py
 """
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 import os
 import ast
@@ -23,41 +24,38 @@ Library = pd.DataFrame(samples,
 
 class Material:
 
-    def __init__(self, wavelengths, relectance, std):
+    def __init__(self, wavelengths, response, variation):
 
-        self.__wavelengths__ = wavelengths
-        self.__relectance__ = relectance
-        self.__std__ = std
+        self.wavelengths = wavelengths
+        self.response = response
+        self.variation = variation
 
     def measure(self, band=None):
-        wavelengths
+        values = self.response[
+            (self.wavelengths > band[0]) & (self.wavelengths < band[1])]
+        variation = self.variation[
+            (self.wavelengths > band[0]) & (self.wavelengths < band[1])]
+
+        return [values, variation]
+
+    def surface(self, geometry):
+        pass
 
     def plot(self):
-        self.measure()
-
-        std = sample.describe().reflectance.loc['std']
-        top = sample.describe().reflectance.loc['75%']
-        bottom = sample.describe().reflectance.loc['25%']
-
-        df = sample[(sample.reflectance > bottom) & (sample.reflectance < top)]
-        if len(df) == 0:
-            df = sample
-        ax = df.plot(x='wavelength', y='reflectance')
-        ax.set_title(self.name)
-        return ax
+        plt.plot(self.wavelengths, self.response)
 
 
 class USGSMaterial(Material):
-    __mapper_args__ = {'polymorphic_identity': 'USGSMaterial'}
 
-    def __init__(self, name, mass=1):
-        self.name = name
-        self.mass = mass
+    def __init__(self, name):
+        path = Library[Library['name'] == name]['path'].iloc[0]
+        df = pd.read_table(path, sep='\s+', skiprows=16, header=None,
+                           names=['wavelength', 'response', 'variation'])
+
+        Material.__init__(self, df.wavelength, df.response, df.variation)
 
     def observe(self):
         global Library
         path = Library[Library['name'] == self.name]['path'].iloc[0]
-        df = pd.read_table(path, sep='\s+', skiprows=16, header=None,
-                           names=['wavelength', 'reflectance', 'std'])
 
         return df

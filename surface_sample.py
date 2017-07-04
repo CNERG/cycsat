@@ -22,7 +22,10 @@ pts = [CtrlPt() for i in range(200)]
 surface.add_agents(pts)
 surface.place()
 
-from scipy.ndimage.filters import gaussian_filter
-out = surface.render('value')
+# from scipy.ndimage.filters import gaussian_filter
+# out = surface.render('value')
 
-a = gaussian_filter(out, sigma=10)
+# a = gaussian_filter(out, sigma=10)
+
+w = np.arange(10)
+m = Material(w, w * 2, np.random.rand(10))
