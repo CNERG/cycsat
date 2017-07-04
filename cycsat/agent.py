@@ -136,6 +136,8 @@ class Agent:
 
         return self.geometry
 
+    def footprint(self):
+
     def surface(self, variable, pts=10, time=None):
         """Generates a blank raster surface using the provided value field.
         This needs to work with a material.
@@ -144,6 +146,9 @@ class Agent:
         # get dimensions of self
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
+
+        # get corner
+        corner = (minx, miny)
 
         coords = np.array(list(self.geometry.exterior.coords))
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
