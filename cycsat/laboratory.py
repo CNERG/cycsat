@@ -4,9 +4,6 @@ laboratory.py
 import pandas as pd
 import numpy as np
 
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import griddata, interp2d, bisplrep, Rbf
-
 import os
 import ast
 
