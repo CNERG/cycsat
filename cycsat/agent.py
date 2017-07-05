@@ -50,22 +50,22 @@ class Agent:
 
         log = self.data.tail(1)
 
-        x, y, z, w = self.geometry.bounds
-
         if len(origin) > 0:
             log = log.assign(geometry=log.translate(
                 xoff=origin[0], yoff=origin[1]))
-            origin += np.array([x, y])
+            origin += self.origin
         else:
             log = log.assign(geometry=self.relative_geo)
             origin = np.array([0.0, 0.0])
-
-        print(origin)
 
         for agent in self.agents:
             log = log.append(agent.agenttree(origin.copy()), ignore_index=True)
 
         return log
+
+    @property
+    def origin(self):
+        return np.array([self.geometry.bounds[0], self.geometry.bounds[1]])
 
     @property
     def relative_geo(self):
@@ -186,21 +186,24 @@ class Agent:
         image[rr, cc] = getattr(self, value_field)
         return image
 
-    def render(self, value_field, image=[], res=1):
+    def render(self, value_field, image=[], origin=[], res=1):
 
-        # if no image is provided create a blank and shift geos
+        # if no image is provided create a blank
         if len(image) == 0:
             image = self.surface(value_field)
+            origin = np.array([0.0, 0.0])
             # image = rotate_image(image, 90)
-            # else add the agent to the image
         else:
+            origin += self.origin
             minx, miny, maxx, maxy = [round(coord)
                                       for coord in self.geometry.bounds]
+            minx += origin[0]
+            maxx += origin[0]
             image[miny:maxy, minx:maxx] = self.surface(value_field)
 
-        if self.agents:
-            for agent in self.agents:
-                image = agent.render(value_field, image=image)
+        for agent in self.agents:
+            image = agent.render(value_field, image=image,
+                                 origin=origin.copy())
 
         if res != 1:
             image = downscale_local_mean(
