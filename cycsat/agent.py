@@ -45,13 +45,39 @@ class Agent:
                 agent.data.tail(1), ignore_index=True)
         return agent_frame
 
-    @property
-    def agenttree(self):
+    def agenttree(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
+
         log = self.data.tail(1)
+
+        x, y, z, w = self.geometry.bounds
+
+        if len(origin) > 0:
+            log = log.assign(geometry=log.translate(
+                xoff=origin[0], yoff=origin[1]))
+            origin += np.array([x, y])
+        else:
+            log = log.assign(geometry=self.relative_geo)
+            origin = np.array([0.0, 0.0])
+
+        print(origin)
+
         for agent in self.agents:
-            log = log.append(agent.agenttree, ignore_index=True)
+            log = log.append(agent.agenttree(origin.copy()), ignore_index=True)
+
         return log
+
+    @property
+    def relative_geo(self):
+        minx, miny, maxx, maxy = [round(coord)
+                                  for coord in self.geometry.bounds]
+        rel_geo = translate(
+            self.geometry, xoff=-1 * minx, yoff=-1 * miny)
+        return rel_geo
+
+    def translate(self, shift):
+        if shift:
+            return translate(self.geometry, xoff=shift[0], yoff=shift[1])
 
     def add_agents(self, agents):
         """Adds sub agents. Takes a list of agents or single agent."""
@@ -113,7 +139,7 @@ class Agent:
             self.log()
         except:
             if len(self.agents) > 0:
-                mask = self.geometry
+                mask = self.relative_geo
                 for sub_agent in self.agents:
                     mask = mask.difference(sub_agent.place_in(mask))
                     sub_agent.log()
@@ -157,21 +183,12 @@ class Agent:
 
         coords = np.array(list(rel_geo.exterior.coords))
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-        image[rr, cc] = 1
-
-        pts = np.zeros((ctrlpts, 3))
-        pts[:, 0] = np.random.randint(0, xlen, size=ctrlpts)
-        pts[:, 1] = np.random.randint(0, ylen, size=ctrlpts)
-        pts[:, 2] = np.random.normal(
-            getattr(self, value_field), 5, size=ctrlpts)
-
-        image = invDist(pts[:, 0], pts[:, 1], pts[:, 2], xlen, ylen)
-
+        image[rr, cc] = getattr(self, value_field)
         return image
 
     def render(self, value_field, image=[], res=1):
 
-        # if no image is provided create a blank
+        # if no image is provided create a blank and shift geos
         if len(image) == 0:
             image = self.surface(value_field)
             # image = rotate_image(image, 90)
@@ -179,8 +196,7 @@ class Agent:
         else:
             minx, miny, maxx, maxy = [round(coord)
                                       for coord in self.geometry.bounds]
-
-            image[miny:maxy, minx:maxx] += self.surface(value_field)
+            image[miny:maxy, minx:maxx] = self.surface(value_field)
 
         if self.agents:
             for agent in self.agents:
@@ -213,30 +229,30 @@ def fullname(o):
     return o.__module__ + "." + o.__class__.__name__
 
 
-def pointValue(x, y, power, smoothing, xv, yv, values):
-    nominator = 0
-    denominator = 0
-    for i in range(0, len(values)):
-        dist = sqrt((x - xv[i]) * (x - xv[i]) + (y - yv[i])
-                    * (y - yv[i]) + smoothing * smoothing)
-        # If the point is really close to one of the data points, return the
-        # data point value to avoid singularities
-        if(dist < 0.0000000001):
-            return values[i]
-        nominator = nominator + (values[i] / pow(dist, power))
-        denominator = denominator + (1 / pow(dist, power))
-    # Return NODATA if the denominator is zero
-    if denominator > 0:
-        value = nominator / denominator
-    else:
-        value = -9999
-    return value
+# def pointValue(x, y, power, smoothing, xv, yv, values):
+#     nominator = 0
+#     denominator = 0
+#     for i in range(0, len(values)):
+#         dist = sqrt((x - xv[i]) * (x - xv[i]) + (y - yv[i])
+#                     * (y - yv[i]) + smoothing * smoothing)
+#         # If the point is really close to one of the data points, return the
+#         # data point value to avoid singularities
+#         if(dist < 0.0000000001):
+#             return values[i]
+#         nominator = nominator + (values[i] / pow(dist, power))
+#         denominator = denominator + (1 / pow(dist, power))
+#     # Return NODATA if the denominator is zero
+#     if denominator > 0:
+#         value = nominator / denominator
+#     else:
+#         value = -9999
+#     return value
 
 
-def invDist(xv, yv, values, xsize=100, ysize=100, power=2, smoothing=0):
-    valuesGrid = np.zeros((ysize, xsize))
-    for x in range(0, xsize):
-        for y in range(0, ysize):
-            valuesGrid[y][x] = pointValue(
-                x, y, power, smoothing, xv, yv, values)
-    return valuesGrid
+# def invDist(xv, yv, values, xsize=100, ysize=100, power=2, smoothing=0):
+#     valuesGrid = np.zeros((ysize, xsize))
+#     for x in range(0, xsize):
+#         for y in range(0, ysize):
+#             valuesGrid[y][x] = pointValue(
+#                 x, y, power, smoothing, xv, yv, values)
+#     return valuesGrid
