@@ -18,7 +18,7 @@ from skimage.transform import downscale_local_mean
 from scipy.ndimage import gaussian_filter
 from scipy.interpolate import griddata, interp2d, bisplrep, Rbf
 
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
@@ -74,10 +74,6 @@ class Agent:
         rel_geo = translate(
             self.geometry, xoff=-1 * minx, yoff=-1 * miny)
         return rel_geo
-
-    def translate(self, shift):
-        if shift:
-            return translate(self.geometry, xoff=shift[0], yoff=shift[1])
 
     def add_agents(self, agents):
         """Adds sub agents. Takes a list of agents or single agent."""
@@ -194,12 +190,12 @@ class Agent:
             origin = np.array([0.0, 0.0])
             # image = rotate_image(image, 90)
         else:
+            bounds = translate(box(*self.geometry.bounds),
+                               xoff=origin[0], yoff=origin[1])
+
+            minx, miny, maxx, maxy = [round(coord) for coord in bounds.bounds]
+            image[miny:maxy, minx:maxx] += self.surface(value_field)
             origin += self.origin
-            minx, miny, maxx, maxy = [round(coord)
-                                      for coord in self.geometry.bounds]
-            minx += origin[0]
-            maxx += origin[0]
-            image[miny:maxy, minx:maxx] = self.surface(value_field)
 
         for agent in self.agents:
             image = agent.render(value_field, image=image,
