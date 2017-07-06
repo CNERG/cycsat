@@ -174,7 +174,7 @@ class Agent:
         image = np.ones((ylen, xlen))
 
         coords = np.array(list(self.relative_geo.exterior.coords))
-        if len(coords) == 4:
+        if len(coords) == 5:
             return image * 0
 
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
@@ -188,7 +188,6 @@ class Agent:
         if len(image) == 0:
             image = self.mask() + getattr(self, value_field)
             origin = np.array([0.0, 0.0])
-            # image = rotate_image(image, 90)
         else:
             shifted = translate(self.geometry,
                                 xoff=origin[0], yoff=origin[1])

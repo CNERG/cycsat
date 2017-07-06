@@ -41,7 +41,7 @@ class Plume(Agent):
             return False
 
 
-site = Agent(geometry=box(0, 0, 5000, 5000), value=100)
+site = Agent(geometry=box(0, 0, 1000, 1000), value=100)
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
