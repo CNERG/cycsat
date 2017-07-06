@@ -99,6 +99,9 @@ class Agent:
         """Logs the agent's variables."""
         if init:
             for var in self.variables:
+                # if var == 'geometry':
+                #     self.__geometry__ = self.variables[var]
+                # else:
                 setattr(self, var, self.variables[var])
             log = self.variables
         else:
@@ -137,8 +140,13 @@ class Agent:
             if len(self.agents) > 0:
                 mask = self.relative_geo
                 for sub_agent in self.agents:
-                    mask = mask.difference(sub_agent.place_in(mask))
-                    sub_agent.log()
+                    placed = sub_agent.place_in(mask)
+                    if placed:
+                        mask = mask.difference(sub_agent.geometry)
+                        sub_agent.log()
+                    else:
+                        print('fail')
+                        break
 
         for sub_agent in self.agents:
             sub_agent.place()
@@ -160,9 +168,9 @@ class Agent:
                     self.geometry, xoff=shift_x, yoff=shift_y)
                 if placed.within(region):
                     self.geometry = placed
-                    return self.geometry
+                    return True
 
-        return self.geometry
+        return False
 
     def mask(self):
         # get dimensions corners
