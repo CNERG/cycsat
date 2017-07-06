@@ -164,37 +164,43 @@ class Agent:
 
         return self.geometry
 
-    def surface(self, value_field, ctrlpts=10):
-
+    def mask(self):
         # get dimensions corners
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
         ylen = maxy - miny
         xlen = maxx - minx
 
-        image = np.zeros((ylen, xlen))
+        image = np.ones((ylen, xlen))
 
-        rel_geo = translate(
-            self.geometry, xoff=-1 * minx, yoff=-1 * miny)
+        coords = np.array(list(self.relative_geo.exterior.coords))
+        if len(coords) == 4:
+            return image * 0
 
-        coords = np.array(list(rel_geo.exterior.coords))
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-        image[rr, cc] = getattr(self, value_field)
+        image[rr, cc] = 0
+
         return image
 
     def render(self, value_field, image=[], origin=[], res=1):
 
         # if no image is provided create a blank
         if len(image) == 0:
-            image = self.surface(value_field)
+            image = self.mask() + getattr(self, value_field)
             origin = np.array([0.0, 0.0])
             # image = rotate_image(image, 90)
         else:
-            bounds = translate(box(*self.geometry.bounds),
-                               xoff=origin[0], yoff=origin[1])
+            shifted = translate(self.geometry,
+                                xoff=origin[0], yoff=origin[1])
 
-            minx, miny, maxx, maxy = [round(coord) for coord in bounds.bounds]
-            image[miny:maxy, minx:maxx] += self.surface(value_field)
+            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
+
+            # clear and add pixels
+            image[miny:maxy, minx:maxx] *= self.mask()
+            invert = 1 - self.mask()
+            image[miny:maxy,
+                  minx:maxx] += (invert * getattr(self, value_field))
+
             origin += self.origin
 
         for agent in self.agents:
