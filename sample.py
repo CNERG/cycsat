@@ -35,7 +35,7 @@ class Plume(Agent):
     def __run__(self):
 
         if self.parent.on == 1:
-            self.place_in(self.parent.geometry.buffer(100))
+            self.place_in(self.parent.relative_geo.buffer(100))
             return True
         else:
             return False
