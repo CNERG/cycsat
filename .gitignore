@@ -20,7 +20,7 @@ simulations/
 plots/
 materials/
 *.pdf
-materials/ASCII/
+cycsat/materials
 *dbf
 *shp
 *shx
