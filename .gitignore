@@ -1,29 +1,6 @@
 # byte-compiled / optimized / DLL files
 *.pyc
 cycsat/config.ini
-__pycache__/*
+__pycache__/
 
-.ipynb_checkpoints/
-
-# Other
-testing.py
-test_data/*
-.ipynb_checkpoints/*
-demos/*
-*.db
-*.tif
-*.xml
-notes/
-output/
-swu_capacitated.xml
-simulations/
-plots/
-*.pdf
-cycsat/materials
-*dbf
-*shp
-*shx
-extra/
-*.sqlite
-
-archetypes.py
+/cycsat/data/
