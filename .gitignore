@@ -25,3 +25,5 @@ cycsat/materials
 *shx
 extra/
 *.sqlite
+
+archetypes.py
