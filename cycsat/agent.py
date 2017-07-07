@@ -34,7 +34,7 @@ class Agent:
         self.parent = False
         self.log(init=True)
         self.agents = list()
-        self.materials = [USGSMaterial('lawn_grass_gds91b.31126.asc')]
+        self.materials = []
 
     @property
     def agentframe(self):
