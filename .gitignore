@@ -1,6 +1,7 @@
-# byte-compiled / optimized / DLL files
+# ignore
 *.pyc
-cycsat/config.ini
 __pycache__/
+/cycsat/data/*
 
-/cycsat/data/
+# exceptions
+!/cycsat/data/info.md
