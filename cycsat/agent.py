@@ -241,6 +241,10 @@ def fullname(o):
     return o.__module__ + "." + o.__class__.__name__
 
 
+def grid(geometry):
+    """Takes a geometry and returns a grid."""
+
+
 # def pointValue(x, y, power, smoothing, xv, yv, values):
 #     nominator = 0
 #     denominator = 0
