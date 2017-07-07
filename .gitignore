@@ -19,7 +19,7 @@ swu_capacitated.xml
 simulations/
 plots/
 *.pdf
-materials/ASCII/
+cycsat/materials
 *dbf
 *shp
 *shx
