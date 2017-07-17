@@ -57,6 +57,19 @@ def intersect(polygons, default=None):
     return False
 
 
+def posit_point(mask, attempts=1000):
+    """Generates a random point within a mask."""
+    x_min, y_min, x_max, y_max = mask.bounds
+
+    for i in range(attempts):
+        x = random.uniform(x_min, x_max + 1)
+        y = random.uniform(y_min, y_max + 1)
+        posited_point = Point(x, y)
+
+        if posited_point.within(mask):
+            return posited_point
+
+
 def grid(geometry):
     """Takes a geometry and returns a grid."""
     pass

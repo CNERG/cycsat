@@ -20,6 +20,8 @@ from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
+from .geometry import posit_point
+
 
 class Agent:
 
@@ -179,6 +181,8 @@ class Agent:
         return False
 
     def mask(self):
+        """Returns a array mask of the agent's geometry."""
+
         # get dimensions corners
         minx, miny, maxx, maxy = [round(coord)
                                   for coord in self.geometry.bounds]
@@ -229,20 +233,3 @@ class Agent:
     def __run__(self, **args):
         """DEFINED"""
         pass
-
-
-def posit_point(mask, attempts=1000):
-    """Generates a random point within a mask."""
-    x_min, y_min, x_max, y_max = mask.bounds
-
-    for i in range(attempts):
-        x = random.uniform(x_min, x_max + 1)
-        y = random.uniform(y_min, y_max + 1)
-        posited_point = Point(x, y)
-
-        if posited_point.within(mask):
-            return posited_point
-
-
-def fullname(o):
-    return o.__module__ + "." + o.__class__.__name__
