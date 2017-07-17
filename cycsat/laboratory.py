@@ -19,6 +19,7 @@ class Material:
         try:
             self.response(**args)
         except:
+            pass
 
     def __response__(self, **args):
         """DEFINED"""

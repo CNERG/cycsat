@@ -9,8 +9,6 @@ import numpy as np
 import random
 import rasterio
 
-from cycsat.laboratory import USGSMaterial
-
 from skimage.draw import polygon
 from skimage.transform import rotate as rotate_image
 from skimage.transform import downscale_local_mean
@@ -25,16 +23,32 @@ from shapely.ops import cascaded_union, unary_union, polygonize
 
 class Agent:
 
-    def __init__(self, **variables):
-        """Creates an agent. Takes any variables ats attributes."""
+    def __init__(self, **attrs):
+        """Creates an agent."""
 
         self.data = GeoDataFrame()
         self.time = 0
-        self.variables = variables
+        self.attrs = attrs
         self.parent = False
         self.log(init=True)
         self.agents = list()
         self.materials = []
+
+    def log(self, init=False):
+        """Logs the agent's attrs."""
+
+        if init:
+            for attr in self.attrs:
+                setattr(self, attr, self.attrs[attr])
+            log = self.attrs
+        else:
+            log = {}
+            for attr in self.attrs:
+                log[attr] = getattr(self, attr)
+
+        if self.geometry is not None:
+            log['time'] = self.time
+            self.data = self.data.append(log, ignore_index=True)
 
     @property
     def agentframe(self):
@@ -48,6 +62,9 @@ class Agent:
     def agenttree(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
 
+        if self.geometry is None:
+            return pd.DataFrame()
+
         log = self.data.tail(1)
 
         if len(origin) > 0:
@@ -59,7 +76,8 @@ class Agent:
             origin = np.array([0.0, 0.0])
 
         for agent in self.agents:
-            log = log.append(agent.agenttree(origin.copy()), ignore_index=True)
+            log = log.append(agent.agenttree(
+                origin=origin.copy()), ignore_index=True)
 
         return log
 
@@ -85,71 +103,60 @@ class Agent:
             agents.parent = self
             self.agents.append(agents)
 
-    def add_variables(self, **args):
+    def add_attrs(self, **args):
         """Adds a new variable to track in the log."""
         for arg in args:
             setattr(self, arg, args[arg])
 
-        if self.variables:
-            self.variables.update(args)
+        if self.attrs:
+            self.attrs.update(args)
         else:
-            self.variables = args
-
-    def log(self, init=False):
-        """Logs the agent's variables."""
-        if init:
-            for var in self.variables:
-                # if var == 'geometry':
-                #     self.__geometry__ = self.variables[var]
-                # else:
-                setattr(self, var, self.variables[var])
-            log = self.variables
-        else:
-            log = {}
-            for var in self.variables:
-                log[var] = getattr(self, var)
-
-        log['time'] = self.time
-        self.data = self.data.append(log, ignore_index=True)
+            self.attrs = args
 
     def run(self, **args):
         """Evaluates the __run__ function and runs through sub agents."""
         self.time += 1
+        if self.geometry is None:
+            self.geometry = self.attrs['geometry']
         try:
-            active = self.__run__()
-            if active:
-                self.log()
-        except:
-            print('run failed')
+            self.__run__()
+            self.log()
+        except BaseException as e:
+            print('run failed:')
+            print(str(e))
 
         for sub_agent in self.agents:
             sub_agent.run()
 
-    def place(self, time=None, attempts=100):
-        """Places the agent and all of it's sub_agents.
+    def assemble(self, time=None, iterations=100, attempts=100):
+        """Places the agent and all of it's sub agents.
 
         Parameters
         ----------
         agent - the agent to place the shape within
-        attempts - the attempts before the placement fails
+        iterations - the times to try before failing
+        attempts - the attempts before the placement of a subagent fails
         """
         try:
             self.__place__()
             self.log()
         except:
+
             if len(self.agents) > 0:
                 mask = self.relative_geo
                 for sub_agent in self.agents:
-                    placed = sub_agent.place_in(mask)
+                    placed = sub_agent.place_in(mask, attempts)
                     if placed:
                         mask = mask.difference(sub_agent.geometry)
                         sub_agent.log()
                     else:
-                        print('fail')
-                        break
+                        return False
 
         for sub_agent in self.agents:
-            sub_agent.place()
+            result = sub_agent.assemble()
+            if not result:
+                return False
+        return True
 
     def place_in(self, region, attempts=100):
         """Places an agent within its parent region."""
@@ -169,7 +176,6 @@ class Agent:
                 if placed.within(region):
                     self.geometry = placed
                     return True
-
         return False
 
     def mask(self):
@@ -222,6 +228,7 @@ class Agent:
 
     def __run__(self, **args):
         """DEFINED"""
+        pass
 
 
 def posit_point(mask, attempts=1000):

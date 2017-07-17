@@ -1,5 +1,5 @@
 from cycsat.agent import Agent
-from cycsat.laboratory import Material, USGSMaterial
+from cycsat.laboratory import Material
 
 from shapely.geometry import Polygon, box, Point
 import random
@@ -30,18 +30,17 @@ class CoolingTower(Agent):
 class Plume(Agent):
 
     def __init__(self, **variables):
-        Agent.__init__(self, **variables)
+        Agent.__init__(self, name='plume', **variables)
 
     def __run__(self):
 
         if self.parent.on == 1:
             self.place_in(self.parent.relative_geo.buffer(100))
-            return True
         else:
-            return False
+            self.geometry = None
 
 
-site = Agent(geometry=box(0, 0, 1000, 1000), value=100)
+site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
@@ -53,4 +52,4 @@ cblock.add_agents([ctower1, ctower2, ctower3, ctower4])
 ctower1.add_agents(plume)
 site.add_agents(cblock)
 
-site.place()
+site.assemble()
