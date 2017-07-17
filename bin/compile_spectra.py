@@ -19,7 +19,7 @@ DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
 print('Clearing data')
 # contents = os.listdir(DATA_DIR)
 # for path in contents:
-#     if path == 'citation.md':
+#     if path == 'info.md':
 #         continue
 
 #     if os.path.isdir(DATA_DIR + path):
@@ -84,6 +84,10 @@ for chap in chapters:
 
         result = scale.assign(data=data)
         sensors.append(result)
+
+
+print('Fitting models')
+
 
 X = sensors[0][0].values.reshape(-1, 1)
 y = sensors[0]['data']

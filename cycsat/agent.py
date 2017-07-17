@@ -221,7 +221,7 @@ class Agent:
         return image
 
     def __run__(self, **args):
-        """DEFINED. Returns True to record."""
+        """DEFINED"""
 
 
 def posit_point(mask, attempts=1000):
@@ -239,36 +239,3 @@ def posit_point(mask, attempts=1000):
 
 def fullname(o):
     return o.__module__ + "." + o.__class__.__name__
-
-
-def grid(geometry):
-    """Takes a geometry and returns a grid."""
-
-
-# def pointValue(x, y, power, smoothing, xv, yv, values):
-#     nominator = 0
-#     denominator = 0
-#     for i in range(0, len(values)):
-#         dist = sqrt((x - xv[i]) * (x - xv[i]) + (y - yv[i])
-#                     * (y - yv[i]) + smoothing * smoothing)
-#         # If the point is really close to one of the data points, return the
-#         # data point value to avoid singularities
-#         if(dist < 0.0000000001):
-#             return values[i]
-#         nominator = nominator + (values[i] / pow(dist, power))
-#         denominator = denominator + (1 / pow(dist, power))
-#     # Return NODATA if the denominator is zero
-#     if denominator > 0:
-#         value = nominator / denominator
-#     else:
-#         value = -9999
-#     return value
-
-
-# def invDist(xv, yv, values, xsize=100, ysize=100, power=2, smoothing=0):
-#     valuesGrid = np.zeros((ysize, xsize))
-#     for x in range(0, xsize):
-#         for y in range(0, ysize):
-#             valuesGrid[y][x] = pointValue(
-#                 x, y, power, smoothing, xv, yv, values)
-#     return valuesGrid
