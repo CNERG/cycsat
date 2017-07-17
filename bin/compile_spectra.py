@@ -5,6 +5,16 @@ USGS Spectral Library (https://www.sciencebase.gov/catalog/item/586e8c88e4b0f5ce
 import wget
 import zipfile
 import os
+import pandas as pd
+import pickle
+
+from sklearn import svm
+from sklearn.neighbors import KNeighborsRegressor
+
+DATA_DIR = '../cycsat/data/ASCIIdata_splib07a/'
+
+# clear the data directory
+os.walk(data_dir)
 
 # print('Downloading the USGS Spectral Library Verson 7')
 # print('More about it here:
@@ -20,36 +30,57 @@ import os
 # zip_ref.close()
 
 # wavelengths
-# ASD = pd.read_table('splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt')
-# AVIRIS = pd.read_table('splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt')
-# BECK = pd.read_table('splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt')
-# NIC41 = pd.read_table('splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt')
-# NIC48 = pd.read_table('splib07a_Wavenumber_NIC4_Nicolet_8,900_-_46_cm^-1.txt')
+ASD = pd.read_table(
+    DATA_DIR + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt', skiprows=1, header=None)
 
-chaps = ['ChapterA_ArtificialMaterials',
-         'ChapterC_Coatings',
-         'ChapterL_Liquids',
-         'ChapterM_Minerals',
-         'ChapterO_OrganicCompounds',
-         'ChapterS_SoilsAndMixtures',
-         'ChapterV_Vegetation']
+AVIRIS = pd.read_table(
+    DATA_DIR + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt', skiprows=1, header=None)
 
-data = []
-for chap in chaps:
-    fs = os.listdir('../cycsat/data/ASCIIdata_splib07a/' + chap)
+BECK = pd.read_table(
+    DATA_DIR + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt', skiprows=1, header=None)
+
+NIC41 = pd.read_table(
+    DATA_DIR + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt', skiprows=1, header=None)
+
+# the chapters of the spectra library
+chapters = ['ChapterA_ArtificialMaterials',
+            'ChapterC_Coatings',
+            'ChapterL_Liquids',
+            'ChapterM_Minerals',
+            'ChapterO_OrganicCompounds',
+            'ChapterS_SoilsAndMixtures',
+            'ChapterV_Vegetation']
+
+
+def detect_scale(filename):
+    if 'ASDFR' in filename:
+        return ASD
+    elif 'AVIRIS' in filename:
+        return AVIRIS
+    elif 'BECK' in filename:
+        return BECK
+    elif 'NIC':
+        return NIC41
+
+sensors = []
+for chap in chapters:
+    fs = os.listdir(DATA_DIR + chap)
     for f in fs:
-        data.append(f.split('_'))
+        scale = detect_scale(f)
+        data = pd.read_table(DATA_DIR + chap + '//' +
+                             f, skiprows=1, header=None)
 
-# def detect_scale(filename):
-#     if 'ASDFR' in filename:
-#         return ASD
-#     elif 'AVIRIS' in filename:
-#         return AVIRIS
-#     elif 'BECK' in filename:
-#         return BECK
-#     elif 'NIC'
-# def learn(filename):
+        result = scale.assign(data=data)
+        sensors.append(result)
 
+X = sensors[0][0].values.reshape(-1, 1)
+y = sensors[0]['data']
+
+model = KNeighborsRegressor()
+model.fit(X, y)
+
+filename = 'finalized_model.sav'
+pickle.dump(model, open(filename, 'wb'))
 
 # if __name__ == "__main__":
 #     learn('splib07a_Alizarin_crimson_(dk)_GDS780_ASDFRa_AREF.txt')
