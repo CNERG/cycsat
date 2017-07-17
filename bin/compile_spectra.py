@@ -5,16 +5,27 @@ USGS Spectral Library (https://www.sciencebase.gov/catalog/item/586e8c88e4b0f5ce
 import wget
 import zipfile
 import os
+import shutil
 import pandas as pd
 import pickle
 
 from sklearn import svm
 from sklearn.neighbors import KNeighborsRegressor
 
-DATA_DIR = '../cycsat/data/ASCIIdata_splib07a/'
+DATA_DIR = '../cycsat/data/'
+DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
 
 # clear the data directory
-os.walk(data_dir)
+print('Clearing data')
+contents = os.listdir(DATA_DIR)
+for path in contents:
+    if path == 'citation.md':
+        continue
+
+    if os.path.isdir(DATA_DIR + path):
+        shutil.rmtree(DATA_DIR + path)
+    else:
+        os.remove(DATA_DIR + path)
 
 # print('Downloading the USGS Spectral Library Verson 7')
 # print('More about it here:
@@ -31,16 +42,16 @@ os.walk(data_dir)
 
 # wavelengths
 ASD = pd.read_table(
-    DATA_DIR + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt', skiprows=1, header=None)
+    DATASET + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt', skiprows=1, header=None)
 
 AVIRIS = pd.read_table(
-    DATA_DIR + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt', skiprows=1, header=None)
+    DATASET + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt', skiprows=1, header=None)
 
 BECK = pd.read_table(
-    DATA_DIR + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt', skiprows=1, header=None)
+    DATASET + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt', skiprows=1, header=None)
 
 NIC41 = pd.read_table(
-    DATA_DIR + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt', skiprows=1, header=None)
+    DATASET + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt', skiprows=1, header=None)
 
 # the chapters of the spectra library
 chapters = ['ChapterA_ArtificialMaterials',
@@ -64,10 +75,10 @@ def detect_scale(filename):
 
 sensors = []
 for chap in chapters:
-    fs = os.listdir(DATA_DIR + chap)
+    fs = os.listdir(DATASET + chap)
     for f in fs:
         scale = detect_scale(f)
-        data = pd.read_table(DATA_DIR + chap + '//' +
+        data = pd.read_table(DATASET + chap + '//' +
                              f, skiprows=1, header=None)
 
         result = scale.assign(data=data)
@@ -76,6 +87,7 @@ for chap in chapters:
 X = sensors[0][0].values.reshape(-1, 1)
 y = sensors[0]['data']
 
+print('fit model')
 model = KNeighborsRegressor()
 model.fit(X, y)
 

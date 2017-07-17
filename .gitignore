@@ -2,6 +2,7 @@
 *.pyc
 __pycache__/
 /cycsat/data/*
+data_bkp/
 
 # exceptions
 !/cycsat/data/info.md
