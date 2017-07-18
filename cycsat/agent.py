@@ -57,8 +57,10 @@ class Agent:
         """Attributes frame of all sub agents."""
         agent_frame = GeoDataFrame()
         for agent in self.agents:
+            attrs = agent.data.tail(1)
+            attrs = attrs.assign(agent=agent)
             agent_frame = agent_frame.append(
-                agent.data.tail(1), ignore_index=True)
+                attrs, ignore_index=True)
         return agent_frame
 
     def agenttree(self, origin=[]):
@@ -229,6 +231,9 @@ class Agent:
                 image, (res, res))
 
         return image
+
+    def move(self, xoff, yoff):
+        self.geometry = translate(self.geometry, xoff, yoff)
 
     def __run__(self, **args):
         """DEFINED"""
