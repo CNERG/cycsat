@@ -9,12 +9,14 @@ import shutil
 import pandas as pd
 import pickle
 import argparse
+import sys
 
 from sklearn import svm
 from sklearn.neighbors import KNeighborsRegressor
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--file', default=False)
+parser.add_argument('--file', default=False,
+                    help="Loads the USGS library from file (optional).")
 args = parser.parse_args()
 
 DATA_DIR = '../cycsat/data/'
@@ -95,8 +97,7 @@ for chap in chapters:
         sensors[f.replace('splib07a_', '')] = scale.assign(data=data)
 
 os.mkdir('../cycsat/data/spectra')
-print('Fitting models')
-for material in sensors:
+for i, material in enumerate(sensors, start=1):
     df = sensors[material]
 
     X = df[0].values.reshape(-1, 1)
@@ -104,8 +105,17 @@ for material in sensors:
 
     model = KNeighborsRegressor()
     model.fit(X, y)
-
     pickle.dump(model, open('../cycsat/data/spectra/' + material, 'wb'))
+
+    sys.stdout.write("Fitting models: %d%%   \r" %
+                     (round((i / len(sensors)) * 100, 2)))
+    sys.stdout.flush()
+
+print('Fitting models: 100%')
+print('Cleaning up')
+
+shutil.rmtree(DATASET)
+os.remove(DATA_DIR + 'spectra.zip')
 
 if __name__ == "__main__":
     pass
