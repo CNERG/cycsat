@@ -8,7 +8,7 @@ setup(
     packages=['cycsat'],
     # scripts=[],
     # url='',
-    license='LICENSE.txt',
+    license='LICENSE.rst',
     description='A synthetic satellite image generator.',
     long_description=open('README.md').read(),
     install_requires=[
