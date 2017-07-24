@@ -48,37 +48,26 @@ def get_library(DATA_DIR, file=False):
     zip_ref.close()
 
 
-ASD = pd.read_table(
-    DATASET + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt',
-    skiprows=1, header=None)
-
-AVIRIS = pd.read_table(
-    DATASET + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt',
-    skiprows=1, header=None)
-
-BECK = pd.read_table(
-    DATASET + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt',
-    skiprows=1, header=None)
-
-NIC41 = pd.read_table(
-    DATASET + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt',
-    skiprows=1, header=None)
-
-
 def detect_scale(file):
     if 'ASD' in file:
-        return ASD
+        return pd.read_table(
+            DATASET + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt',
+            skiprows=1, header=None)
     elif 'AVIRIS' in file:
-        return AVIRIS
+        return pd.read_table(
+            DATASET + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt',
+            skiprows=1, header=None)
     elif 'BECK' in file:
-        return BECK
+        return pd.read_table(
+            DATASET + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt',
+            skiprows=1, header=None)
     elif 'NIC':
-        return NIC41
+        return pd.read_table(
+            DATASET + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt',
+            skiprows=1, header=None)
 
 
 def learn_lib(DATA_DIR, DATASET):
-    # wavelengths
-
     # the chapters of the spectra library
     chapters = ['ChapterA_ArtificialMaterials',
                 'ChapterC_Coatings',

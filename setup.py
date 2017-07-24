@@ -1,4 +1,8 @@
 from distutils.core import setup
+import subprocess
+
+# install the spectral library
+subprocess.run("python bin\compile_spectra.py")
 
 setup(
     name='cycsat',
