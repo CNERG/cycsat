@@ -14,7 +14,9 @@ import sys
 from sklearn import svm
 from sklearn.neighbors import KNeighborsRegressor
 
-# make data directory
+DATA_DIR = 'cycsat/data/'
+DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
+
 if not os.path.isdir(DATA_DIR):
     os.mkdir(DATA_DIR)
 
@@ -116,12 +118,10 @@ def compile_spectra(DATA_DIR, DATASET, file=False):
     learn_lib(DATA_DIR, DATASET)
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', default=False,
                         help="Loads the USGS library from file (optional).")
     args = parser.parse_args()
-
-    DATA_DIR = 'cycsat/data/'
-    DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
 
     compile_spectra(DATA_DIR, DATASET, args.file)
