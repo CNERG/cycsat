@@ -14,8 +14,9 @@ import sys
 from sklearn import svm
 from sklearn.neighbors import KNeighborsRegressor
 
-DATA_DIR = '../cycsat/data/'
-DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
+# make data directory
+if not os.path.isdir(DATA_DIR):
+    os.mkdir(DATA_DIR)
 
 
 def clear_data(DATA_DIR):
@@ -87,7 +88,7 @@ def learn_lib(DATA_DIR, DATASET):
                                  f, skiprows=1, header=None)
             sensors[f.replace('splib07a_', '')] = scale.assign(data=data)
 
-    os.mkdir('../cycsat/data/spectra')
+    os.mkdir('cycsat/data/spectra')
     for i, material in enumerate(sensors, start=1):
         df = sensors[material]
 
@@ -115,10 +116,12 @@ def compile_spectra(DATA_DIR, DATASET, file=False):
     learn_lib(DATA_DIR, DATASET)
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', default=False,
                         help="Loads the USGS library from file (optional).")
     args = parser.parse_args()
+
+    DATA_DIR = 'cycsat/data/'
+    DATASET = DATA_DIR + 'ASCIIdata_splib07a/'
 
     compile_spectra(DATA_DIR, DATASET, args.file)

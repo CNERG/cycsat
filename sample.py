@@ -52,4 +52,4 @@ cblock.add_agents([ctower1, ctower2, ctower3, ctower4])
 ctower1.add_agents(plume)
 site.add_agents(cblock)
 
-site.assemble()
+# site.place()

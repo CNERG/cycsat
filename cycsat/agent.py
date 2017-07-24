@@ -30,6 +30,7 @@ class Agent:
 
         self.data = GeoDataFrame()
         self.time = 0
+        self.initattrs = attrs
         self.attrs = attrs
         self.parent = False
         self.log(init=True)
@@ -37,18 +38,24 @@ class Agent:
         self.materials = []
 
     def log(self, init=False):
-        """Logs the agent's attrs."""
-
+        """Looks for changes and logs the agents attributes if there is a change."""
         if init:
-            for attr in self.attrs:
-                setattr(self, attr, self.attrs[attr])
-            log = self.attrs
+            change = True
+            for attr in self.initattrs:
+                setattr(self, attr, self.initattrs[attr])
+            log = self.initattrs.copy()
         else:
+            change = False
             log = {}
             for attr in self.attrs:
+                check = getattr(self, attr)
+                compare = self.attrs[attr]
                 log[attr] = getattr(self, attr)
 
-        if self.geometry is not None:
+                if check != compare:
+                    change = True
+
+        if change:
             log['time'] = self.time
             self.data = self.data.append(log, ignore_index=True)
 
@@ -132,7 +139,7 @@ class Agent:
         for sub_agent in self.agents:
             sub_agent.run()
 
-    def assemble(self, time=None, iterations=100, attempts=100):
+    def place(self, iterations=100, attempts=100):
         """Places the agent and all of it's sub agents.
 
         Parameters
@@ -146,6 +153,8 @@ class Agent:
             self.log()
         except:
 
+            # check if children are too large for parent
+
             if len(self.agents) > 0:
                 mask = self.relative_geo
                 for sub_agent in self.agents:
@@ -157,7 +166,7 @@ class Agent:
                         return False
 
         for sub_agent in self.agents:
-            result = sub_agent.assemble()
+            result = sub_agent.place()
             if not result:
                 return False
         return True

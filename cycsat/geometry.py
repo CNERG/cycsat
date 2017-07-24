@@ -2,8 +2,6 @@
 geometry.py
 """
 from collections import defaultdict
-from sqlalchemy import Column, Integer, String
-
 import random
 import itertools
 import time
