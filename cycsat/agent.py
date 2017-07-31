@@ -32,7 +32,8 @@ class Agent:
         self.parent = False
         self.log(init=True)
         self.agents = list()
-        self.materials = []
+        self.materials = list()
+        self.rules = list()
 
     def log(self, init=False):
         """Looks for changes and logs the agents attributes if there is a change."""
@@ -124,6 +125,17 @@ class Agent:
             self.attrs.update(args)
         else:
             self.attrs = args
+
+    def add_rules(self, rules):
+        """Adds placement rules to agent."""
+
+        if type(rules) is list:
+            for rule in rules:
+                rule.agent = self
+                self.rules.append(rule)
+        else:
+            rules.agent = self
+            self.rules.append(rules)
 
     def run(self, **args):
         """Evaluates the __run__ function and runs through sub agents."""
@@ -278,5 +290,4 @@ class Agent:
         self.geometry = translate(self.geometry, xoff, yoff)
 
     def __run__(self, **args):
-        """DEFINED"""
         pass

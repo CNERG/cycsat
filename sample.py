@@ -11,6 +11,12 @@ class CoolingTowerBlock(Agent):
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
 
+    def __place__(self):
+        points = self.grid(3)
+        for a in self.agents:
+            place = points.pop(random.randrange(len(points)))
+            a.place_in(place)
+
 
 class CoolingTower(Agent):
 
