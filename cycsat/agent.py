@@ -3,6 +3,8 @@ import os
 from math import pow
 from math import sqrt
 
+import re
+
 import pandas as pd
 from geopandas import GeoDataFrame
 import numpy as np
@@ -22,9 +24,11 @@ from .geometry import posit_point, grid
 
 class Agent:
 
-    def __init__(self, **attrs):
+    def __init__(self, name=None, **attrs):
         """Creates an agent."""
 
+        self.__handle__ = name
+        self.__dependents__ = list()
         self.data = GeoDataFrame()
         self.time = 0
         self.initattrs = attrs
@@ -56,6 +60,16 @@ class Agent:
         if change:
             log['time'] = self.time
             self.data = self.data.append(log, ignore_index=True)
+
+    @property
+    def name(self):
+        if self.__handle__:
+            return self.__handle__
+        else:
+            return self.__class__.__name__
+
+    def rename(self, name):
+        self.__handle__ = name
 
     @property
     def agentframe(self):
@@ -106,15 +120,22 @@ class Agent:
             self.geometry, xoff=-1 * minx, yoff=-1 * miny)
         return rel_geo
 
-    def add_agents(self, agents):
+    def get_agent(self, name):
+        return [a for a in self.agents if a.name.startswith(name)]
+
+    def add_agent(self, agent):
         """Adds sub agents. Takes a list of agents or single agent."""
-        if type(agents) is list:
-            for agent in agents:
-                agent.parent = self
-                self.agents.append(agent)
-        else:
-            agents.parent = self
-            self.agents.append(agents)
+        num = ''
+        existing = self.get_agent(agent.name)
+        if existing:
+            num = str(len(existing))
+        agent.__handle__ = agent.name + num
+        agent.parent = self
+        self.agents.append(agent)
+
+    def add_agents(self, agents):
+        for agent in agents:
+            self.add_agent(agent)
 
     def add_attrs(self, **args):
         """Adds a new variable to track in the log."""
@@ -188,33 +209,46 @@ class Agent:
                 return False
         return True
 
-    # def dep_graph(self):
-    #     """Returns groups of children based on their dependencies."""
+    def dep_graph(self):
+        """Returns groups of children based on their dependencies."""
+        for agent in self.agents:
+            agent.__dependents__ = list()
 
-    #     graph = dict((f.name, f.depends_on())
-    #                  for f in self.observables)
-    #     name_to_instance = dict((f.name, f) for f in self.observables)
+        for rule in self.rules:
 
-    #     # where to store the batches
-    #     batches = list()
+            depend = rule.depend
+            try:
+                if depend:
+                    rule.target.__dependents__.append(depend)
+            except:
+                pass
 
-    #     while graph:
-    #         # Get all observables with no dependencies
-    #         ready = {name for name, deps in graph.items() if not deps}
-    #         if not ready:
-    #             msg = "Circular dependencies found!"
-    #             raise ValueError(msg)
-    #         # Remove them from the dependency graph
-    #         for name in ready:
-    #             graph.pop(name)
-    #         for deps in graph.values():
-    #             deps.difference_update(ready)
+        graph = dict((a.name, a.__dependents__)
+                     for a in self.agents)
 
-    #         # Add the batch to the list
-    #         batches.append([name_to_instance[name] for name in ready])
+        #name_to_instance = dict((a.name, a) for a in self.observables)
 
-    #     # Return the list of batches
-    #     return batches
+        # # where to store the batches
+        # batches = list()
+
+        # while graph:
+        #     # Get all observables with no dependencies
+        #     ready = {name for name, deps in graph.items() if not deps}
+        #     if not ready:
+        #         msg = "Circular dependencies found!"
+        #         raise ValueError(msg)
+        #     # Remove them from the dependency graph
+        #     for name in ready:
+        #         graph.pop(name)
+        #     for deps in graph.values():
+        #         deps.difference_update(ready)
+
+        #     # Add the batch to the list
+        #     batches.append([name_to_instance[name] for name in ready])
+
+        # # Return the list of batches
+        # return batches
+        return graph
 
     def place_in(self, region, strict=False, attempts=100):
         """Places an agent within a region."""

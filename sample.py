@@ -1,4 +1,5 @@
 from cycsat.agent import Agent
+from cycsat.rules import NEAR
 from cycsat.geometry import grid
 from cycsat.laboratory import Material
 
@@ -10,12 +11,6 @@ class CoolingTowerBlock(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
-
-    def __place__(self):
-        points = self.grid(3)
-        for a in self.agents:
-            place = points.pop(random.randrange(len(points)))
-            a.place_in(place)
 
 
 class CoolingTower(Agent):
@@ -46,15 +41,17 @@ class Plume(Agent):
         else:
             self.geometry = None
 
-
 site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
+
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
+cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=1000))
+
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
 cblock.add_agents([ctower1, ctower2])
-ctower1.add_agents(plume)
-site.add_agents(cblock)
+ctower1.add_agent(plume)
+site.add_agent(cblock)
 
 site.place()
