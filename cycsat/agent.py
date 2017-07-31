@@ -216,7 +216,7 @@ class Agent:
     #     # Return the list of batches
     #     return batches
 
-    def place_in(self, region, attempts=100):
+    def place_in(self, region, strict=False, attempts=100):
         """Places an agent within a region."""
 
         for i in range(attempts):
@@ -231,7 +231,13 @@ class Agent:
 
                 placed = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
-                if placed.within(region):
+                if strict:
+                    if placed.within(region):
+                        self.geometry = placed
+                        return True
+                    else:
+                        return False
+                else:
                     self.geometry = placed
                     return True
         return False
