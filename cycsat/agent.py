@@ -211,44 +211,46 @@ class Agent:
 
     def dep_graph(self):
         """Returns groups of children based on their dependencies."""
+
+        # clear dependencies
         for agent in self.agents:
             agent.__dependents__ = list()
 
+        # map dependencies
         for rule in self.rules:
-
             depend = rule.depend
             try:
                 if depend:
-                    rule.target.__dependents__.append(depend)
+                    rule.target.__dependents__.append(depend.name)
             except:
                 pass
 
-        graph = dict((a.name, a.__dependents__)
+        # create dependency graph
+        graph = dict((a.name, set(a.__dependents__))
                      for a in self.agents)
 
-        #name_to_instance = dict((a.name, a) for a in self.observables)
+        name_to_instance = dict((a.name, a) for a in self.agents)
 
-        # # where to store the batches
-        # batches = list()
+        # where to store the batches
+        batches = list()
 
-        # while graph:
-        #     # Get all observables with no dependencies
-        #     ready = {name for name, deps in graph.items() if not deps}
-        #     if not ready:
-        #         msg = "Circular dependencies found!"
-        #         raise ValueError(msg)
-        #     # Remove them from the dependency graph
-        #     for name in ready:
-        #         graph.pop(name)
-        #     for deps in graph.values():
-        #         deps.difference_update(ready)
+        while graph:
+            # Get all observables with no dependencies
+            ready = {name for name, deps in graph.items() if not deps}
+            if not ready:
+                msg = "Circular dependencies found!"
+                raise ValueError(msg)
+            # Remove them from the dependency graph
+            for name in ready:
+                graph.pop(name)
+            for deps in graph.values():
+                deps.difference_update(ready)
 
-        #     # Add the batch to the list
-        #     batches.append([name_to_instance[name] for name in ready])
+            # Add the batch to the list
+            batches.append([name_to_instance[name] for name in ready])
 
-        # # Return the list of batches
-        # return batches
-        return graph
+        # Return the list of batches
+        return batches
 
     def place_in(self, region, strict=False, attempts=100):
         """Places an agent within a region."""
