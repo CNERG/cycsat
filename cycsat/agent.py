@@ -144,7 +144,7 @@ class Agent:
         return grid(self, grid_size, buffer)
 
     def place(self, iterations=100, attempts=100):
-        """Places the agent and all of it's sub agents.
+        """Places sub agents.
 
         Parameters
         ----------
