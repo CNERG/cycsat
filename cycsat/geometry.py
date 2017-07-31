@@ -5,6 +5,7 @@ from collections import defaultdict
 import random
 import itertools
 import time
+import itertools
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
@@ -16,6 +17,17 @@ from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
 from shapely.ops import cascaded_union, unary_union, polygonize
+
+
+def grid(agent, grid_size=1, buffer=10):
+    minx, miny, maxx, maxy = agent.geometry.bounds
+    grid_size = grid_size + 2
+
+    x = np.linspace(minx, maxx, num=grid_size)[1:-1]
+    y = np.linspace(miny, maxy, num=grid_size)[1:-1]
+
+    c = list(itertools.product(x, y))
+    return [Point(i[0], i[1]).buffer(buffer) for i in c]
 
 
 def intersect(polygons, default=None):
@@ -66,11 +78,6 @@ def posit_point(mask, attempts=1000):
 
         if posited_point.within(mask):
             return posited_point
-
-
-def grid(geometry):
-    """Takes a geometry and returns a grid."""
-    pass
 
 
 def line_func(line, precision=1):

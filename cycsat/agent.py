@@ -13,14 +13,11 @@ from skimage.draw import polygon
 from skimage.transform import rotate as rotate_image
 from skimage.transform import downscale_local_mean
 
-from scipy.ndimage import gaussian_filter
-from scipy.interpolate import griddata, interp2d, bisplrep, Rbf
-
 from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
-from .geometry import posit_point
+from .geometry import posit_point, grid
 
 
 class Agent:
@@ -139,6 +136,9 @@ class Agent:
         for sub_agent in self.agents:
             sub_agent.run()
 
+    def grid(self, grid_size=1, buffer=10, align='none'):
+        return grid(self, grid_size, buffer)
+
     def place(self, iterations=100, attempts=100):
         """Places the agent and all of it's sub agents.
 
@@ -152,8 +152,9 @@ class Agent:
             self.__place__()
             self.log()
         except:
-
-            # check if children are too large for parent
+            if sum([a.geometry.area for a in self.agents]) > self.geometry.area:
+                print('insufficent area for subagents.')
+                return False
 
             if len(self.agents) > 0:
                 mask = self.relative_geo
@@ -171,8 +172,36 @@ class Agent:
                 return False
         return True
 
+    # def dep_graph(self):
+    #     """Returns groups of children based on their dependencies."""
+
+    #     graph = dict((f.name, f.depends_on())
+    #                  for f in self.observables)
+    #     name_to_instance = dict((f.name, f) for f in self.observables)
+
+    #     # where to store the batches
+    #     batches = list()
+
+    #     while graph:
+    #         # Get all observables with no dependencies
+    #         ready = {name for name, deps in graph.items() if not deps}
+    #         if not ready:
+    #             msg = "Circular dependencies found!"
+    #             raise ValueError(msg)
+    #         # Remove them from the dependency graph
+    #         for name in ready:
+    #             graph.pop(name)
+    #         for deps in graph.values():
+    #             deps.difference_update(ready)
+
+    #         # Add the batch to the list
+    #         batches.append([name_to_instance[name] for name in ready])
+
+    #     # Return the list of batches
+    #     return batches
+
     def place_in(self, region, attempts=100):
-        """Places an agent within its parent region."""
+        """Places an agent within a region."""
 
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
@@ -192,7 +221,7 @@ class Agent:
         return False
 
     def mask(self):
-        """Returns a array mask of the agent's geometry."""
+        """Returns an array mask of the agent's geometry."""
 
         # get dimensions corners
         minx, miny, maxx, maxy = [round(coord)
@@ -212,8 +241,8 @@ class Agent:
         return image
 
     def render(self, value_field, image=[], origin=[], res=1):
+        """Cascades through agents and renders geometries as a numpy array."""
 
-        # if no image is provided create a blank
         if len(image) == 0:
             image = self.mask() + getattr(self, value_field)
             origin = np.array([0.0, 0.0])

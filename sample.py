@@ -1,4 +1,5 @@
 from cycsat.agent import Agent
+from cycsat.geometry import grid
 from cycsat.laboratory import Material
 
 from shapely.geometry import Polygon, box, Point
@@ -42,14 +43,12 @@ class Plume(Agent):
 
 site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
-ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
-ctower3 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
-ctower4 = CoolingTower(on=0, geometry=Point(0, 0).buffer(100), value=20)
-plume = Plume(geometry=Point(0, 0).buffer(75), value=100)
+ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
+ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
+plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
-cblock.add_agents([ctower1, ctower2, ctower3, ctower4])
+cblock.add_agents([ctower1, ctower2])
 ctower1.add_agents(plume)
 site.add_agents(cblock)
 
-# site.place()
+site.place()

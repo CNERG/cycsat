@@ -42,12 +42,13 @@ def get_library(DATA_DIR, file=False):
     else:
         print('Downloading the USGS Spectral Library Verson 7')
         url = 'http://www.sciencebase.gov/catalog/file/get/586e8c88e4b0f5ce109fccae/?f=__disk__a7%2F4f%2F91%2Fa74f913e0b7d1b8123ad059e52506a02b75a2832'
-        filename = '../cycsat/data/spectra.zip'
+        filename = 'cycsat/data/spectra.zip'
         filename = wget.download(url, filename)
 
+    print('')
     print('Unpacking...')
     zip_ref = zipfile.ZipFile(filename, 'r')
-    zip_ref.extractall('../cycsat/data/')
+    zip_ref.extractall('cycsat/data/')
     zip_ref.close()
 
 
@@ -99,7 +100,7 @@ def learn_lib(DATA_DIR, DATASET):
 
         model = KNeighborsRegressor()
         model.fit(X, y)
-        pickle.dump(model, open('../cycsat/data/spectra/' + material, 'wb'))
+        pickle.dump(model, open('cycsat/data/spectra/' + material, 'wb'))
 
         sys.stdout.write("Fitting models: %d%%   \r" %
                          (round((i / len(sensors)) * 100, 2)))
