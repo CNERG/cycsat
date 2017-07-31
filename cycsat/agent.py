@@ -67,7 +67,11 @@ class Agent:
                 attrs, ignore_index=True)
         return agent_frame
 
-    def agenttree(self, origin=[]):
+    @property
+    def agenttree(self):
+        return self.__agenttree()
+
+    def __agenttree(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
 
         if self.geometry is None:
@@ -84,7 +88,7 @@ class Agent:
             origin = np.array([0.0, 0.0])
 
         for agent in self.agents:
-            log = log.append(agent.agenttree(
+            log = log.append(agent.__agenttree(
                 origin=origin.copy()), ignore_index=True)
 
         return log
