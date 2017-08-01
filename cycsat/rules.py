@@ -11,7 +11,7 @@ class Rule:
         self.agent = False
 
         for arg in args:
-            setattr(self, 'arg', args[arg])
+            setattr(self, arg, args[arg])
 
     def __str__(self):
         return '{} {} {} ARGS: {}'.format(self.__target__,
