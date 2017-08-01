@@ -53,17 +53,24 @@ class NEAR(Rule):
         outer_buffer = inner_buffer.buffer(100)
         return outer_buffer.difference(inner_buffer)
 
-    def __sharpen__(self):
-        inner_buffer = self.depend.geometry.buffer(self.args['value'])
-        x, y = nearest_points(self.target.geometry, inner_buffer)
-        xoff, yoff = calulate_shift(x, y)
-        self.target.move(xoff, yoff)
+    # def __sharpen__(self):
+    #     inner_buffer = self.depend.geometry.buffer(self.args['value'])
+    #     x, y = nearest_points(self.target.geometry, inner_buffer)
+    #     xoff, yoff = calulate_shift(x, y)
+    #     self.target.move(xoff, yoff)
 
 
 class ALIGN(Rule):
 
     def __evaluate__(self):
-        maxy = self.target.parent.geometry.bounds[-1]
+
         value = getattr(self.depend.geometry.centroid, self.args['axis'])
-        line = LineString([[value, 0], [value, maxy]])
+
+        if self.args['axis'] == 'x':
+            maxy = self.target.parent.geometry.bounds[-1]
+            line = LineString([[value, 0], [value, maxy]])
+        else:
+            maxx = self.target.parent.geometry.bounds[-1]
+            line = LineString([[0, value], [maxx, value]])
+
         return line.buffer(10)
