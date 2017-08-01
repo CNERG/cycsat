@@ -205,7 +205,7 @@ class Agent:
                     valid_area = [mask] + evals
                     region = intersect(valid_area)
                     placed = agent.place_in(
-                        region, strict=True, attempts=attempts)
+                        region, mask, attempts=attempts)
 
                     if placed:
                         mask = mask.difference(agent.geometry)
@@ -262,7 +262,7 @@ class Agent:
         # Return the list of batches
         return batches
 
-    def place_in(self, region, strict=False, attempts=100):
+    def place_in(self, region, restrict=None, attempts=100):
         """Places an agent within a region that is contained by the parent.
 
         Parameters
@@ -285,8 +285,8 @@ class Agent:
                 placed = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
 
-                if strict:
-                    if placed.within(region):
+                if restrict is not None:
+                    if placed.within(restrict):
                         self.geometry = placed
                         return True
                     else:

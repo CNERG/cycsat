@@ -37,4 +37,11 @@ class Rule:
 class NEAR(Rule):
 
     def __evaluate__(self):
+        inner_buffer = mask.buffer(int(self.value))
+
+        diagaonal_dist = Point(mask[0:2]).distance(Point(mask[2:]))
+
+        buffer_value = diagaonal_dist * 2
+        second_buffer = inner_buffer.buffer(buffer_value)
+
         return self.depend.geometry.buffer(self.args['value'])
