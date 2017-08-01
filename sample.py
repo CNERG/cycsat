@@ -1,5 +1,5 @@
 from cycsat.agent import Agent
-from cycsat.rules import NEAR
+from cycsat.rules import NEAR, ALIGN
 from cycsat.geometry import grid
 from cycsat.laboratory import Material
 
@@ -45,7 +45,8 @@ class Plume(Agent):
 site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=100))
+cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=50))
+cblock.add_rules(ALIGN('CoolingTower1', 'CoolingTower', axis='x'))
 
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)

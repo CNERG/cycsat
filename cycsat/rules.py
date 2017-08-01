@@ -1,4 +1,5 @@
 from shapely.ops import nearest_points
+from shapely.geometry import LineString
 from .geometry import calulate_shift
 
 
@@ -57,3 +58,12 @@ class NEAR(Rule):
         x, y = nearest_points(self.target.geometry, inner_buffer)
         xoff, yoff = calulate_shift(x, y)
         self.target.move(xoff, yoff)
+
+
+class ALIGN(Rule):
+
+    def __evaluate__(self):
+        maxy = self.target.parent.geometry.bounds[-1]
+        value = getattr(self.depend.geometry.centroid, self.args['axis'])
+        line = LineString([[value, 0], [value, maxy]])
+        return line.buffer(10)
