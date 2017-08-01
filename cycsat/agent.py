@@ -19,7 +19,7 @@ from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
-from .geometry import posit_point, grid
+from .geometry import posit_point, grid, intersect
 
 
 class Agent:
@@ -190,16 +190,26 @@ class Agent:
             self.log()
         except:
             if sum([a.geometry.area for a in self.agents]) > self.geometry.area:
-                print('insufficent area for subagents.')
+                print('Insufficent area for subagents.')
                 return False
 
-            if len(self.agents) > 0:
-                mask = self.relative_geo
-                for sub_agent in self.agents:
-                    placed = sub_agent.place_in(mask, attempts)
+            mask = self.relative_geo
+            dep_graph = self.dep_graph()
+
+            for batch in dep_graph:
+                for agent in batch:
+
+                    evals = [rule.evaluate()
+                             for rule in self.rules if rule.__target__ == agent.name]
+
+                    valid_area = [mask] + evals
+                    region = intersect(valid_area)
+                    placed = agent.place_in(
+                        region, strict=True, attempts=attempts)
+
                     if placed:
-                        mask = mask.difference(sub_agent.geometry)
-                        sub_agent.log()
+                        mask = mask.difference(agent.geometry)
+                        agent.log()
                     else:
                         return False
 
@@ -210,8 +220,8 @@ class Agent:
         return True
 
     def dep_graph(self):
-        """Returns groups of children based on their dependencies."""
-
+        """Returns groups of agents based on their dependencies found from rules.
+        """
         # clear dependencies
         for agent in self.agents:
             agent.__dependents__ = list()
@@ -253,7 +263,14 @@ class Agent:
         return batches
 
     def place_in(self, region, strict=False, attempts=100):
-        """Places an agent within a region."""
+        """Places an agent within a region that is contained by the parent.
+
+        Parameters
+        ----------
+        region - region to place agent in
+        strict - if True, cannot be outside parent (default False)
+        attempts - attempts before failure
+        """
 
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
@@ -267,15 +284,17 @@ class Agent:
 
                 placed = translate(
                     self.geometry, xoff=shift_x, yoff=shift_y)
+
                 if strict:
                     if placed.within(region):
                         self.geometry = placed
                         return True
                     else:
-                        return False
-                else:
-                    self.geometry = placed
-                    return True
+                        continue
+
+                self.geometry = placed
+                return True
+
         return False
 
     def mask(self):

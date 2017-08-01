@@ -37,6 +37,4 @@ class Rule:
 class NEAR(Rule):
 
     def __evaluate__(self):
-        buf = self.depend.geometry.buffer(self.args['value'])
-        self.target.place_in(buf, strict=False)
-        print(self.target.geometry.distance(self.depend.geometry))
+        return self.depend.geometry.buffer(self.args['value'])
