@@ -80,6 +80,12 @@ def posit_point(mask, attempts=1000):
             return posited_point
 
 
+def calulate_shift(point1, point2):
+    xoff = (point1.x - point2.x)
+    yoff = (point1.y - point2.y)
+    return xoff, yoff
+
+
 def line_func(line, precision=1):
     """Returns a list of coords for a staight line given end coords"""
     start, end = list(line.coords)

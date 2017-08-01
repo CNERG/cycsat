@@ -45,7 +45,7 @@ class Plume(Agent):
 site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-#cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=30))
+cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=100))
 
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
@@ -56,10 +56,10 @@ ctower1.add_agent(plume)
 site.add_agent(cblock)
 
 # 25 build tests!
-# fig, axes = plt.subplots(5, 5)
-# axes = axes.flatten()
+fig, axes = plt.subplots(5, 5)
+axes = axes.flatten()
 
-# for ax in axes:
-#     ax.set_aspect('equal')
-#     site.place()
-#     site.agenttree.plot(ax=ax)
+for ax in axes:
+    ax.set_aspect('equal')
+    site.place()
+    site.agenttree.plot(ax=ax)

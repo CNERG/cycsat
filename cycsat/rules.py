@@ -1,3 +1,6 @@
+from shapely.ops import nearest_points
+from .geometry import calulate_shift
+
 
 class Rule:
 
@@ -30,18 +33,27 @@ class Rule:
     def evaluate(self):
         try:
             return self.__evaluate__()
-        except:
+        except BaseException as e:
+            print(e)
+            return False
+
+    def sharpen(self):
+        try:
+            return self.__sharpen__()
+        except BaseException as e:
+            print(e)
             return False
 
 
 class NEAR(Rule):
 
     def __evaluate__(self):
-        inner_buffer = mask.buffer(int(self.value))
+        inner_buffer = self.depend.geometry.buffer(self.args['value'])
+        outer_buffer = inner_buffer.buffer(100)
+        return outer_buffer.difference(inner_buffer)
 
-        diagaonal_dist = Point(mask[0:2]).distance(Point(mask[2:]))
-
-        buffer_value = diagaonal_dist * 2
-        second_buffer = inner_buffer.buffer(buffer_value)
-
-        return self.depend.geometry.buffer(self.args['value'])
+    def __sharpen__(self):
+        inner_buffer = self.depend.geometry.buffer(self.args['value'])
+        x, y = nearest_points(self.target.geometry, inner_buffer)
+        xoff, yoff = calulate_shift(x, y)
+        self.target.move(xoff, yoff)

@@ -207,6 +207,10 @@ class Agent:
                     placed = agent.place_in(
                         region, mask, attempts=attempts)
 
+                    # if placed:
+                    #     evals = [rule.sharpen()
+                    # for rule in self.rules if rule.__target__ == agent.name]
+
                     if placed:
                         mask = mask.difference(agent.geometry)
                         agent.log()
