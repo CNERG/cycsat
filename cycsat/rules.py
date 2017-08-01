@@ -8,8 +8,10 @@ class Rule:
     def __init__(self, target, dep, **args):
         self.__target__ = target
         self.__dep__ = dep
-        self.args = args
         self.agent = False
+
+        for arg in args:
+            setattr(self, 'arg', args[arg])
 
     def __str__(self):
         return '{} {} {} ARGS: {}'.format(self.__target__,
@@ -49,7 +51,7 @@ class Rule:
 class NEAR(Rule):
 
     def __evaluate__(self):
-        inner_buffer = self.depend.geometry.buffer(self.args['value'])
+        inner_buffer = self.depend.geometry.buffer(self.value)
         outer_buffer = inner_buffer.buffer(100)
         return outer_buffer.difference(inner_buffer)
 
@@ -64,9 +66,9 @@ class ALIGN(Rule):
 
     def __evaluate__(self):
 
-        value = getattr(self.depend.geometry.centroid, self.args['axis'])
+        value = getattr(self.depend.geometry.centroid, self.axis)
 
-        if self.args['axis'] == 'x':
+        if self.axis == 'x':
             maxy = self.target.parent.geometry.bounds[-1]
             line = LineString([[value, 0], [value, maxy]])
         else:
