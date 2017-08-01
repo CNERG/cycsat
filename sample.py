@@ -27,6 +27,7 @@ class CoolingTower(Agent):
         else:
             print('off')
             self.on = 0
+
         return True
 
 
@@ -39,8 +40,10 @@ class Plume(Agent):
 
         if self.parent.on == 1:
             self.place_in(self.parent.relative_geo.buffer(100))
+            return True
         else:
             self.geometry = None
+            return False
 
 site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
 
@@ -58,11 +61,11 @@ cblock.add_agents([ctower1, ctower2, turbine])
 ctower1.add_agent(plume)
 site.add_agent(cblock)
 
-# 25 build tests!
-fig, axes = plt.subplots(5, 5)
-axes = axes.flatten()
+# # 25 build tests!
+# fig, axes = plt.subplots(5, 5)
+# axes = axes.flatten()
 
-for ax in axes:
-    ax.set_aspect('equal')
-    site.place()
-    site.agenttree.plot(ax=ax)
+# for ax in axes:
+#     ax.set_aspect('equal')
+#     site.place()
+#     site.agenttree.plot(ax=ax)

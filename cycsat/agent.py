@@ -22,6 +22,20 @@ from shapely.ops import cascaded_union, unary_union, polygonize
 from .geometry import posit_point, grid, intersect
 
 
+class Log:
+
+    def __init__(self, agent, time=None):
+        self.agent = agent
+        self.time = time
+
+    @property
+    def data(self):
+        data = {'time': self.time}
+        for attr in self.agent.attrs:
+            data[attr] = getattr(self, attr)
+        return data
+
+
 class Agent:
 
     def __init__(self, name=None, **attrs):
@@ -29,37 +43,38 @@ class Agent:
 
         self.__handle__ = name
         self.__dependents__ = list()
-        self.data = GeoDataFrame()
+        self.agents = list()
+        self.rules = list()
+        self.journal = list()
         self.time = 0
-        self.initattrs = attrs
         self.attrs = attrs
         self.parent = False
+
         self.log(init=True)
-        self.agents = list()
-        self.materials = list()
-        self.rules = list()
 
     def log(self, init=False):
         """Looks for changes and logs the agents attributes if there is a change."""
+
+        log = Log(agent=self)
+
         if init:
-            change = True
-            for attr in self.initattrs:
-                setattr(self, attr, self.initattrs[attr])
-            log = self.initattrs.copy()
-        else:
-            change = False
-            log = {}
+            self.time = 0
+            self.journal = list()
             for attr in self.attrs:
-                check = getattr(self, attr)
-                compare = self.attrs[attr]
-                log[attr] = getattr(self, attr)
+                setattr(self, attr, self.attrs[attr])
+            for agent in self.agents:
+                agent.log(init=True)
 
-                if check != compare:
-                    change = True
+        for attr in self.attrs:
+            setattr(log, attr, getattr(self, attr))
 
-        if change:
-            log['time'] = self.time
-            self.data = self.data.append(log, ignore_index=True)
+        log.time = self.time
+        self.journal.append(log)
+
+    @property
+    def dataframe(self):
+        data = [log.data for log in self.journal]
+        return GeoDataFrame(data)
 
     @property
     def name(self):
@@ -76,7 +91,7 @@ class Agent:
         """Attributes frame of all sub agents."""
         agent_frame = GeoDataFrame()
         for agent in self.agents:
-            attrs = agent.data.tail(1)
+            attrs = agent.dataframe.tail(1)
             attrs = attrs.assign(agent=agent)
             agent_frame = agent_frame.append(
                 attrs, ignore_index=True)
@@ -84,15 +99,15 @@ class Agent:
 
     @property
     def agenttree(self):
-        return self.__agenttree()
+        return self.__agenttree__()
 
-    def __agenttree(self, origin=[]):
+    def __agenttree__(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
 
         if self.geometry is None:
             return pd.DataFrame()
 
-        log = self.data.tail(1)
+        log = self.dataframe.tail(1)
 
         if len(origin) > 0:
             log = log.assign(geometry=log.translate(
@@ -164,8 +179,8 @@ class Agent:
         if self.geometry is None:
             self.geometry = self.attrs['geometry']
         try:
-            self.__run__()
-            self.log()
+            if self.__run__():
+                self.log()
         except BaseException as e:
             print('run failed:')
             print(str(e))
@@ -355,4 +370,4 @@ class Agent:
         self.geometry = translate(self.geometry, xoff, yoff)
 
     def __run__(self, **args):
-        pass
+        return True
