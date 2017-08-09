@@ -52,6 +52,22 @@ class Agent:
 
         self.log(init=True)
 
+    def __repr__(self):
+        return '<{}>'.format(self.__handle__)
+
+    @property
+    def level(self):
+        level = 0
+        if self.parent:
+            level += 1
+            level += self.parent.level
+        return level
+
+    def print_diagram(self):
+        print('    ' * self.level, self)
+        for agent in self.agents:
+            agent.print_diagram()
+
     def log(self, init=False):
         """Looks for changes and logs the agents attributes if there is a change."""
 
@@ -118,7 +134,7 @@ class Agent:
             origin = np.array([0.0, 0.0])
 
         for agent in self.agents:
-            log = log.append(agent.__agenttree(
+            log = log.append(agent.__agenttree__(
                 origin=origin.copy()), ignore_index=True)
 
         return log
@@ -139,12 +155,7 @@ class Agent:
         return [a for a in self.agents if a.name.startswith(name)]
 
     def add_agent(self, agent):
-        """Adds sub agents. Takes a list of agents or single agent."""
-        num = ''
-        existing = self.get_agent(agent.name)
-        if existing:
-            num = str(len(existing))
-        agent.__handle__ = agent.name + num
+        agent.__handle__ = agent.name + ' ' + str(len(self.agents) + 1)
         agent.parent = self
         self.agents.append(agent)
 

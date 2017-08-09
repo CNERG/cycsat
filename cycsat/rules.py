@@ -9,12 +9,13 @@ class Rule:
         self.__target__ = target
         self.__dep__ = dep
         self.agent = False
+        self.args = args
 
         for arg in args:
             setattr(self, arg, args[arg])
 
-    def __str__(self):
-        return '{} {} {} ARGS: {}'.format(self.__target__,
+    def __repr__(self):
+        return '<"{}" {} "{}" {}>'.format(self.__target__,
                                           self.__class__.__name__,
                                           self.__dep__,
                                           self.args)

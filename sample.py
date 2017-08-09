@@ -45,14 +45,14 @@ class Plume(Agent):
             self.geometry = None
             return False
 
-site = Agent(geometry=box(0, 0, 1000, 1000), name='site', value=100)
+site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-cblock.add_rules(NEAR('CoolingTower1', 'CoolingTower', value=50))
-cblock.add_rules(ALIGN('CoolingTower1', 'CoolingTower', axis='x'))
-cblock.add_rules(ALIGN('turbine', 'CoolingTower1', axis='y'))
+cblock.add_rules(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
+cblock.add_rules(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
+cblock.add_rules(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
-turbine = Agent(name='turbine', geometry=box(0, 0, 50, 100), value=0)
+turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
