@@ -413,6 +413,20 @@ class Agent:
 
         return image
 
+    def render_composite(self, wavelengths=[0.48, 0.56, 0.66]):
+
+        bands = list()
+        for wl in wavelengths:
+            bands.append(self.render_material(wl))
+
+        img = np.zeros((bands[0].shape[0], bands[
+                       0].shape[1], 3), dtype=np.int8)
+
+        for i, band in enumerate(bands):
+            img[:, :, i] = band * 255
+
+        return img
+
     def move(self, xoff, yoff):
         self.geometry = translate(self.geometry, xoff, yoff)
 
