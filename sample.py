@@ -22,7 +22,7 @@ class CoolingTower(Agent):
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
         self.__material__ = USGSMaterial(
-            'Gypsum_HS333.3B_(Selenite)_NIC4aaa_RREF')
+            'Brick_GDS354_Building_Lt_Gry_ASDFRa_AREF')
 
     def __run__(self):
         if random.choice([True, False]):
@@ -60,7 +60,8 @@ cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
 cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
 turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
-turbine.set_material(USGSMaterial('Concrete_GDS375_Lt_Gry_Road_ASDFRa_AREF'))
+turbine.set_material(USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF'))
+
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
