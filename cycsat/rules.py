@@ -58,7 +58,7 @@ class Rule:
 class SET(Rule):
 
     def __evaluate__(self):
-        parent = self.depend.geometry
+        parent = self.depend.relative_geo
         minx, miny, maxx, maxy = parent.bounds
         parent_bounds = box(minx, miny, maxx, maxy)
 
