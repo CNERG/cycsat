@@ -1,5 +1,5 @@
 from cycsat.agent import Agent
-from cycsat.rules import NEAR, ALIGN
+from cycsat.rules import NEAR, ALIGN, SET
 from cycsat.geometry import grid
 from cycsat.laboratory import Material
 
@@ -34,7 +34,7 @@ class CoolingTower(Agent):
 class Plume(Agent):
 
     def __init__(self, **variables):
-        Agent.__init__(self, name='plume', **variables)
+        Agent.__init__(self, name='Plume', **variables)
 
     def __run__(self):
 
@@ -48,9 +48,10 @@ class Plume(Agent):
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-cblock.add_rules(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
-cblock.add_rules(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
-cblock.add_rules(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
+cblock.add_rule(SET('CoolingTower 2', '$parent$', x=0, y=0, padding=10))
+cblock.add_rule(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
+cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
+cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
 turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)

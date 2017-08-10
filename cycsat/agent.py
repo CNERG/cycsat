@@ -117,6 +117,9 @@ class Agent:
     def agenttree(self):
         return self.__agenttree__()
 
+    def plot(self, **args):
+        self.agenttree.plot(**args)
+
     def __agenttree__(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
 
@@ -173,16 +176,9 @@ class Agent:
         else:
             self.attrs = args
 
-    def add_rules(self, rules):
-        """Adds placement rules to agent."""
-
-        if type(rules) is list:
-            for rule in rules:
-                rule.agent = self
-                self.rules.append(rule)
-        else:
-            rules.agent = self
-            self.rules.append(rules)
+    def add_rule(self, rule):
+        rule.agent = self
+        self.rules.append(rule)
 
     def run(self, **args):
         """Evaluates the __run__ function and runs through sub agents."""
@@ -211,37 +207,34 @@ class Agent:
         iterations - the times to try before failing
         attempts - the attempts before the placement of a subagent fails
         """
-        try:
-            self.__place__()
-            self.log()
-        except:
-            if sum([a.geometry.area for a in self.agents]) > self.geometry.area:
-                print('Insufficent area for subagents.')
-                return False
 
-            mask = self.relative_geo
-            dep_graph = self.dep_graph()
+        if sum([a.geometry.area for a in self.agents]) > self.geometry.area:
+            print('Insufficent area for subagents.')
+            return False
 
-            for batch in dep_graph:
-                for agent in batch:
+        mask = self.relative_geo
+        dep_graph = self.dep_graph()
 
-                    evals = [rule.evaluate()
-                             for rule in self.rules if rule.__target__ == agent.name]
+        for batch in dep_graph:
+            for agent in batch:
 
-                    valid_area = [mask] + evals
-                    region = intersect(valid_area)
-                    placed = agent.place_in(
-                        region, mask, attempts=attempts)
+                evals = [rule.evaluate()
+                         for rule in self.rules if rule.__target__ == agent.name]
 
-                    # if placed:
-                    #     evals = [rule.sharpen()
-                    # for rule in self.rules if rule.__target__ == agent.name]
+                valid_area = [mask] + evals
+                region = intersect(valid_area)
+                placed = agent.place_in(
+                    region, mask, attempts=attempts)
 
-                    if placed:
-                        mask = mask.difference(agent.geometry)
-                        agent.log()
-                    else:
-                        return False
+                # if placed:
+                #     evals = [rule.sharpen()
+                # for rule in self.rules if rule.__target__ == agent.name]
+
+                if placed:
+                    mask = mask.difference(agent.geometry)
+                    agent.log()
+                else:
+                    return False
 
         for sub_agent in self.agents:
             result = sub_agent.place()
@@ -261,7 +254,8 @@ class Agent:
             depend = rule.depend
             try:
                 if depend:
-                    rule.target.__dependents__.append(depend.name)
+                    if depend.name != self.name:
+                        rule.target.__dependents__.append(depend.name)
             except:
                 pass
 

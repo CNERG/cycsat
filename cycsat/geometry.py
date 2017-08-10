@@ -6,6 +6,7 @@ import random
 import itertools
 import time
 import itertools
+import math
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
@@ -17,6 +18,16 @@ from shapely.wkt import loads as load_wkt
 from shapely.affinity import translate as shift_shape
 from shapely.affinity import rotate
 from shapely.ops import cascaded_union, unary_union, polygonize
+
+
+def relative_position(mask, x, y, padding=10):
+
+    minx, miny, maxx, maxy = container.bounds
+
+    width = (maxx - minx) * x
+    length = (maxy - miny) * y
+
+    return Point(width, length).buffer(padding)
 
 
 def grid(agent, grid_size=1, buffer=10):

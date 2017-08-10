@@ -1,5 +1,5 @@
 from shapely.ops import nearest_points
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, box
 from .geometry import calulate_shift
 
 
@@ -30,6 +30,12 @@ class Rule:
     @property
     def depend(self):
         try:
+            if self.__dep__ == '$parent$':
+                if self.target.parent:
+                    return self.target.parent
+        except:
+            pass
+        try:
             return [i for i in self.agent.agents if i.name == self.__dep__][0]
         except:
             return False
@@ -47,6 +53,24 @@ class Rule:
         except BaseException as e:
             print(e)
             return False
+
+
+class SET(Rule):
+
+    def __evaluate__(self):
+        parent = self.depend.geometry
+        minx, miny, maxx, maxy = parent.bounds
+        parent_bounds = box(minx, miny, maxx, maxy)
+
+        shift_x = (maxx - minx) * self.x
+        shift_y = (maxy - miny) * self.y
+        print(shift_x, shift_y)
+
+        center_x, center_y = parent_bounds.centroid.x, parent_bounds.centroid.y
+        center_x += shift_x
+        center_y += shift_y
+
+        return Point(center_x, center_y).buffer(self.padding)
 
 
 class NEAR(Rule):
