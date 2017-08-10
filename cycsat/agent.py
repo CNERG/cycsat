@@ -20,7 +20,7 @@ from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
 from .geometry import posit_point, grid, intersect
-from laboratory import Material
+from .laboratory import Material
 
 
 class Log:
@@ -44,6 +44,7 @@ class Agent:
 
         self.__handle__ = name
         self.__dependents__ = list()
+        self.__material__ = False
         self.agents = list()
         self.rules = list()
         self.journal = list()
@@ -56,9 +57,6 @@ class Agent:
     def __repr__(self):
         return '<{}>'.format(self.__handle__)
 
-    def response(self):
-        pass
-
     @property
     def level(self):
         level = 0
@@ -66,6 +64,16 @@ class Agent:
             level += 1
             level += self.parent.level
         return level
+
+    def set_material(self, Material):
+        self.__material__ = Material
+
+    def material_response(self, wavelength):
+        if self.__material__:
+            return self.__material__.observe(wavelength)
+        else:
+            print('No material set.')
+            return 0
 
     def print_diagram(self):
         print('    ' * self.level, self)
@@ -345,7 +353,7 @@ class Agent:
 
         return image
 
-    def render(self, value_field, image=[], origin=[], res=1):
+    def render_value(self, value_field, image=[], origin=[], res=1):
         """Cascades through agents and renders geometries as a numpy array."""
 
         if len(image) == 0:
@@ -366,8 +374,38 @@ class Agent:
             origin += self.origin
 
         for agent in self.agents:
-            image = agent.render(value_field, image=image,
-                                 origin=origin.copy())
+            image = agent.render_value(value_field, image=image,
+                                       origin=origin.copy())
+
+        if res != 1:
+            image = downscale_local_mean(
+                image, (res, res))
+
+        return image
+
+    def render_material(self, wavelength, image=[], origin=[], res=1):
+        """Cascades through agents and renders geometries as a numpy array."""
+
+        if len(image) == 0:
+            image = self.mask() + self.material_response(wavelength)
+            origin = np.array([0.0, 0.0])
+        else:
+            shifted = translate(self.geometry,
+                                xoff=origin[0], yoff=origin[1])
+
+            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
+
+            # clear and add pixels
+            image[miny:maxy, minx:maxx] *= self.mask()
+            invert = 1 - self.mask()
+            image[miny:maxy,
+                  minx:maxx] += (invert * self.material_response(wavelength))
+
+            origin += self.origin
+
+        for agent in self.agents:
+            image = agent.render_material(wavelength, image=image,
+                                          origin=origin.copy())
 
         if res != 1:
             image = downscale_local_mean(

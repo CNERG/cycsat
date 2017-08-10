@@ -7,17 +7,22 @@ from shapely.geometry import Polygon, box, Point
 import random
 import matplotlib.pyplot as plt
 
+from cycsat.laboratory import USGSMaterial
+
 
 class CoolingTowerBlock(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
+        self.__material__ = USGSMaterial('Concrete_WTC01-37A_ASDFRa_AREF')
 
 
 class CoolingTower(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
+        self.__material__ = USGSMaterial(
+            'Gypsum_HS333.3B_(Selenite)_NIC4aaa_RREF')
 
     def __run__(self):
         if random.choice([True, False]):
@@ -46,6 +51,7 @@ class Plume(Agent):
             return False
 
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
+site.set_material(USGSMaterial('Lawn_Grass_GDS91_green_BECKa_AREF'))
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
 cblock.add_rule(SET('CoolingTower 2', '$parent$', x=0.30, y=0.30, padding=10))
@@ -54,6 +60,7 @@ cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
 cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
 turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
+turbine.set_material(USGSMaterial('Concrete_GDS375_Lt_Gry_Road_ASDFRa_AREF'))
 ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
