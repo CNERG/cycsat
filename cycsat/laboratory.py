@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 
 import os
 import ast
+import pickle
+
+DIR = os.path.dirname(__file__)
 
 
 class Material:
@@ -15,12 +18,18 @@ class Material:
     def __init__(self):
         pass
 
-    def observe(self, **args):
+    def observe(self, wavelength):
         try:
-            self.response(**args)
+            return self.__response__(wavelength)
         except:
             pass
 
-    def __response__(self, **args):
-        """DEFINED"""
-        pass
+
+class USGSMaterial(Material):
+
+    def __init__(self, name):
+        self.model = pickle.load(
+            open('{}/data/spectra/{}.txt'.format(DIR, name), 'rb'))
+
+    def __response__(self, wavelength):
+        return list(self.model.predict(wavelength))[0]

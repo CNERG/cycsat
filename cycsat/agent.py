@@ -20,6 +20,7 @@ from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
 from .geometry import posit_point, grid, intersect
+from laboratory import Material
 
 
 class Log:
@@ -54,6 +55,9 @@ class Agent:
 
     def __repr__(self):
         return '<{}>'.format(self.__handle__)
+
+    def response(self):
+        pass
 
     @property
     def level(self):
