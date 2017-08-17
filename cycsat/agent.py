@@ -10,6 +10,7 @@ from geopandas import GeoDataFrame
 import numpy as np
 import random
 import rasterio
+from matplotlib import pyplot as plt
 
 from skimage.draw import polygon
 from skimage.transform import rotate as rotate_image
@@ -21,26 +22,12 @@ from shapely.ops import cascaded_union, unary_union, polygonize
 
 from .geometry import posit_point, grid, intersect
 from .laboratory import Material
-
-
-class Log:
-
-    def __init__(self, agent, time=None):
-        self.agent = agent
-        self.time = time
-
-    @property
-    def data(self):
-        data = {'time': self.time}
-        for attr in self.agent.attrs:
-            data[attr] = getattr(self, attr)
-        return data
+from .metrics import Log
 
 
 class Agent:
 
     def __init__(self, name=None, **attrs):
-        """Creates an agent."""
 
         self.__handle__ = name
         self.__dependents__ = list()
@@ -131,6 +118,15 @@ class Agent:
 
     def plot(self, **args):
         self.agenttree.plot(**args)
+
+        if virtual in args:
+            plt.savefig(virtual, format='png')
+
+    def gif(self, runs):
+
+        for run in runs:
+            self.plot()
+        pass
 
     def __agenttree__(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""

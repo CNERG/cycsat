@@ -50,6 +50,7 @@ class Plume(Agent):
             self.geometry = None
             return False
 
+
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
 site.set_material(USGSMaterial('Lawn_Grass_GDS91_green_BECKa_AREF'))
 
@@ -70,11 +71,11 @@ cblock.add_agents([ctower1, ctower2, turbine])
 ctower1.add_agent(plume)
 site.add_agent(cblock)
 
-# # 25 build tests!
-# fig, axes = plt.subplots(5, 5)
-# axes = axes.flatten()
+# 25 test builds
+fig, axes = plt.subplots(5, 5)
+axes = axes.flatten()
 
-# for ax in axes:
-#     ax.set_aspect('equal')
-#     site.place()
-#     site.agenttree.plot(ax=ax)
+for ax in axes:
+    ax.set_aspect('equal')
+    site.place()
+    site.agenttree.plot(ax=ax)

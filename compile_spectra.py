@@ -21,7 +21,8 @@ if not os.path.isdir(DATA_DIR):
     os.mkdir(DATA_DIR)
 
 
-def clear_data(DATA_DIR):
+def clear_datadir(DATA_DIR):
+    """Clears all data from the data directory."""
     print('Clearing data')
     contents = os.listdir(DATA_DIR)
     for path in contents:
@@ -32,6 +33,15 @@ def clear_data(DATA_DIR):
             shutil.rmtree(DATA_DIR + path)
         else:
             os.remove(DATA_DIR + path)
+
+
+def clear_spectral_data(DATA_DIR):
+    """Clears spectral data from the data directory."""
+    print('Clearing spectral data')
+    contents = os.listdir(DATA_DIR)
+    for path in contents:
+        if path == 'spectra':
+            shutil.rmtree(DATA_DIR + path)
 
 
 def get_library(DATA_DIR, file=False):
@@ -114,7 +124,7 @@ def learn_lib(DATA_DIR, DATASET):
 
 
 def compile_spectra(DATA_DIR, DATASET, file=False):
-    clear_data(DATA_DIR)
+    clear_spectral_data(DATA_DIR)
     get_library(DATA_DIR, file)
     learn_lib(DATA_DIR, DATASET)
 
