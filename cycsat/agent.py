@@ -110,14 +110,24 @@ class Agent:
     def agenttree(self):
         return self.__agenttree__()
 
-    def plot(self, **args):
+    def plot(self, data='vector', wavelengths='default', **args):
 
         gif = False
         if 'virtual' in args:
             gif = True
             virtual = args.pop('virtual')
 
-        fig = self.agenttree.plot(**args)
+        if data == 'raster':
+
+            if 'mmu' in args:
+                mmu = args.pop('mmu')
+            else:
+                mmu = 1
+            fig = plt.imshow(self.render_composite(
+                wavelengths=wavelengths, mmu=mmu), origin='lower')
+
+        else:
+            fig = self.agenttree.plot(**args)
 
         if gif:
             plt.savefig(virtual, format='png')
@@ -125,15 +135,14 @@ class Agent:
 
         return fig
 
-    def vector_gif(self, runs, name=None, fps=1):
+    def gif(self, runs, data='vector', name=None, fps=1):
 
         plt.ioff()
         plots = list()
         for run in range(runs):
             self.run()
-
             virtual_plot = io.BytesIO()
-            plot = self.plot(virtual=virtual_plot)
+            plot = self.plot(data=data, virtual=virtual_plot)
             plots.append(plot)
             plt.close()
 
@@ -144,7 +153,7 @@ class Agent:
             images.append(image)
 
         if not name:
-            name = self.name + '.gif'
+            name = self.name + '_vector.gif'
 
         imageio.mimsave(name, images, fps=fps)
         plt.ion()
@@ -380,7 +389,7 @@ class Agent:
 
         return image
 
-    def render_value(self, value_field, image=[], origin=[], res=1):
+    def render_value(self, value_field, image=[], origin=[], mmu=1):
         """Cascades through agents and renders geometries as a numpy array."""
 
         if len(image) == 0:
@@ -404,13 +413,13 @@ class Agent:
             image = agent.render_value(value_field, image=image,
                                        origin=origin.copy())
 
-        if res != 1:
+        if mmu != 1:
             image = downscale_local_mean(
-                image, (res, res))
+                image, (mmu, mmu))
 
         return image
 
-    def render_material(self, wavelength, image=[], origin=[], res=1):
+    def render_material(self, wavelength, image=[], origin=[], mmu=1):
         """Cascades through agents and renders geometries as a numpy array."""
 
         if len(image) == 0:
@@ -434,17 +443,20 @@ class Agent:
             image = agent.render_material(wavelength, image=image,
                                           origin=origin.copy())
 
-        if res != 1:
+        if mmu != 1:
             image = downscale_local_mean(
-                image, (res, res))
+                image, (mmu, mmu))
 
         return image
 
-    def render_composite(self, wavelengths=[0.48, 0.56, 0.66], res=1):
+    def render_composite(self, wavelengths='default', mmu=1):
+
+        if wavelengths == 'default':
+            wavelengths = [0.48, 0.56, 0.66]
 
         bands = list()
         for wl in wavelengths:
-            bands.append(self.render_material(wl, res=res))
+            bands.append(self.render_material(wl, mmu=mmu))
 
         img = np.zeros((bands[0].shape[0], bands[
                        0].shape[1], 3), dtype=np.uint8)
