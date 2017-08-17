@@ -4,6 +4,8 @@ from math import pow
 from math import sqrt
 
 import re
+import io
+import imageio
 
 import pandas as pd
 from geopandas import GeoDataFrame
@@ -46,23 +48,15 @@ class Agent:
 
     @property
     def level(self):
+        """Determines the agent's level by looking for ancestors."""
         level = 0
         if self.parent:
             level += 1
             level += self.parent.level
         return level
 
-    def set_material(self, Material):
-        self.__material__ = Material
-
-    def material_response(self, wavelength):
-        if self.__material__:
-            return self.__material__.observe(wavelength)
-        else:
-            print('No material set.')
-            return 0
-
     def print_diagram(self):
+        """Prints a diagram of this agents and all its children."""
         print('    ' * self.level, self)
         for agent in self.agents:
             agent.print_diagram()
@@ -117,16 +111,43 @@ class Agent:
         return self.__agenttree__()
 
     def plot(self, **args):
-        self.agenttree.plot(**args)
 
-        if virtual in args:
+        gif = False
+        if 'virtual' in args:
+            gif = True
+            virtual = args.pop('virtual')
+
+        fig = self.agenttree.plot(**args)
+
+        if gif:
             plt.savefig(virtual, format='png')
+            return virtual
 
-    def gif(self, runs):
+        return fig
 
-        for run in runs:
-            self.plot()
-        pass
+    def vector_gif(self, runs, name=None, fps=1):
+
+        plt.ioff()
+        plots = list()
+        for run in range(runs):
+            self.run()
+
+            virtual_plot = io.BytesIO()
+            plot = self.plot(virtual=virtual_plot)
+            plots.append(plot)
+            plt.close()
+
+        images = list()
+        for plot in plots:
+            plot.seek(0)
+            image = imageio.imread(plot)
+            images.append(image)
+
+        if not name:
+            name = self.name + '.gif'
+
+        imageio.mimsave(name, images, fps=fps)
+        plt.ion()
 
     def __agenttree__(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
@@ -161,6 +182,16 @@ class Agent:
         rel_geo = translate(
             self.geometry, xoff=-1 * minx, yoff=-1 * miny)
         return rel_geo
+
+    def set_material(self, Material):
+        self.__material__ = Material
+
+    def material_response(self, wavelength):
+        if self.__material__:
+            return self.__material__.observe(wavelength)
+        else:
+            print('No material set.')
+            return 0
 
     def get_agent(self, name):
         return [a for a in self.agents if a.name.startswith(name)]
