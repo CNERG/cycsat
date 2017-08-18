@@ -125,8 +125,9 @@ def calulate_shift(point1, point2):
     return xdist * xdir, ydist * ydir
 
 
-def shift_geometry(geometry, endpoint=(0, 0)):
-    endpoint = Point(endpoint)
+def shift_geometry(geometry, endpoint='origin'):
+    if endpoint == 'origin':
+        endpoint = Point(0, 0)
     xoff, yoff = calulate_shift(geometry.centroid, endpoint)
     new_geometry = translate(geometry, xoff, yoff)
     return new_geometry

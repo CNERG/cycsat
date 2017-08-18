@@ -6,6 +6,7 @@ from cycsat.laboratory import Material
 from shapely.geometry import Polygon, box, Point
 import random
 import matplotlib.pyplot as plt
+import geopandas as gpd
 
 from cycsat.laboratory import USGSMaterial
 
@@ -14,17 +15,17 @@ class CoolingTowerBlock(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
-        self.__material__ = USGSMaterial('Concrete_WTC01-37A_ASDFRa_AREF')
+        self._material = USGSMaterial('Concrete_WTC01-37A_ASDFRa_AREF')
 
 
 class CoolingTower(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, **variables)
-        self.__material__ = USGSMaterial(
+        self._material = USGSMaterial(
             'Brick_GDS354_Building_Lt_Gry_ASDFRa_AREF')
 
-    def __run__(self):
+    def _run(self, state):
         if random.choice([True, False]):
             self.on = 1
             self.value += 1
@@ -32,7 +33,6 @@ class CoolingTower(Agent):
         else:
             print('off')
             self.on = 0
-
         return True
 
 
@@ -40,9 +40,9 @@ class Plume(Agent):
 
     def __init__(self, **variables):
         Agent.__init__(self, name='Plume', **variables)
-        self.__material__ = USGSMaterial('Melting_snow_mSnw01a_ASDFRa_AREF')
+        self._material = USGSMaterial('Melting_snow_mSnw01a_ASDFRa_AREF')
 
-    def __run__(self):
+    def _run(self, state):
 
         if self.parent.on == 1:
             self.place_in(self.parent.relative_geo.buffer(5))
@@ -61,14 +61,13 @@ cblock.add_rule(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
 cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
 cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
-buildings = LoadFootprints(
-    'north-america-us-wisconsin', size=2, random_state=3)
-buildings = Agent(geometry=buildings.iloc[0], value=10)
-# buildings = buildings.apply(lambda x: Agent(geometry=x, value=10))
-# buildings.apply(lambda x: x.set_material(
-#     USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF')))
-buildings.set_material(USGSMaterial(
-    'Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF'))
+# buildings = LoadFootprints(
+#     'north-america-us-wisconsin', size=1)
+buildings = gpd.read_file('../cycsat_play/testing.shp').head(8)
+buildings = buildings.geometry.apply(lambda x: Agent(geometry=x, value=10))
+
+buildings.apply(lambda x: x.set_material(
+    USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF')))
 
 turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
 turbine.set_material(USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF'))
@@ -78,7 +77,7 @@ ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
 cblock.add_agents([ctower1, ctower2, turbine])
-cblock.add_agent(buildings, scale=True, scale_ratio=0.20)
+cblock.add_agents(buildings.tolist(), scale=True, scale_ratio=0.10)
 ctower1.add_agent(plume)
 site.add_agent(cblock)
 

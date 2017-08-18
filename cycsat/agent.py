@@ -1,8 +1,9 @@
 import os
+import sys
 
 from math import pow
 from math import sqrt
-from math import ceil
+from math import floor
 
 import re
 import io
@@ -24,6 +25,7 @@ from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
 from .geometry import posit_point, grid, intersect, rescale
+from .geometry import shift_geometry
 from .laboratory import Material
 from .metrics import Log
 
@@ -32,9 +34,9 @@ class Agent:
 
     def __init__(self, name=None, **attrs):
 
-        self.__handle__ = name
-        self.__dependents__ = list()
-        self.__material__ = False
+        self._handle = name
+        self._dependents = list()
+        self._material = False
         self.agents = list()
         self.rules = list()
         self.journal = list()
@@ -45,7 +47,7 @@ class Agent:
         self.log(init=True)
 
     def __repr__(self):
-        return '<{}>'.format(self.__handle__)
+        return '<{}>'.format(self._handle)
 
     @property
     def level(self):
@@ -79,7 +81,9 @@ class Agent:
             setattr(log, attr, getattr(self, attr))
 
         log.time = self.time
-        self.journal.append(log)
+
+        if log.geometry is not None:
+            self.journal.append(log)
 
     @property
     def dataframe(self):
@@ -88,13 +92,13 @@ class Agent:
 
     @property
     def name(self):
-        if self.__handle__:
-            return self.__handle__
+        if self._handle:
+            return self._handle
         else:
             return self.__class__.__name__
 
     def rename(self, name):
-        self.__handle__ = name
+        self._handle = name
 
     @property
     def agentframe(self):
@@ -109,7 +113,7 @@ class Agent:
 
     @property
     def agenttree(self):
-        return self.__agenttree__()
+        return self._agenttree()
 
     def plot(self, data='vector', wavelengths='default', **args):
 
@@ -159,7 +163,7 @@ class Agent:
         imageio.mimsave(name, images, fps=fps)
         plt.ion()
 
-    def __agenttree__(self, origin=[]):
+    def _agenttree(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
 
         if self.geometry is None:
@@ -176,29 +180,29 @@ class Agent:
             origin = np.array([0.0, 0.0])
 
         for agent in self.agents:
-            log = log.append(agent.__agenttree__(
+            log = log.append(agent._agenttree(
                 origin=origin.copy()), ignore_index=True)
 
         return log
 
     @property
     def origin(self):
-        return np.array([ceil(self.geometry.bounds[0]), ceil(self.geometry.bounds[1])])
+        return np.array([floor(self.geometry.bounds[0]), floor(self.geometry.bounds[1])])
 
     @property
     def relative_geo(self):
-        minx, miny, maxx, maxy = [ceil(coord)
+        minx, miny, maxx, maxy = [floor(coord)
                                   for coord in self.geometry.bounds]
         rel_geo = translate(
             self.geometry, xoff=-1 * minx, yoff=-1 * miny)
         return rel_geo
 
     def set_material(self, Material):
-        self.__material__ = Material
+        self._material = Material
 
     def material_response(self, wavelength):
-        if self.__material__:
-            return self.__material__.observe(wavelength)
+        if self._material:
+            return self._material.observe(wavelength)
         else:
             print('No material set.')
             return 0
@@ -212,7 +216,7 @@ class Agent:
             rescale(self, agent, scale_ratio)
             agent.log()
 
-        agent.__handle__ = agent.name + ' ' + str(len(self.agents) + 1)
+        agent._handle = agent.name + ' ' + str(len(self.agents) + 1)
         agent.parent = self
         self.agents.append(agent)
 
@@ -234,31 +238,32 @@ class Agent:
         rule.agent = self
         self.rules.append(rule)
 
-    def run(self, **args):
-        """Evaluates the __run__ function and runs through sub agents."""
+    def run(self, state={}, **args):
+        """Evaluates the _run function and runs through sub agents."""
         self.time += 1
         if self.geometry is None:
             self.geometry = self.attrs['geometry']
         try:
-            if self.__run__():
-                self.log()
+            self._run(state)
+            self.log()
         except BaseException as e:
             print('run failed:')
             print(str(e))
 
         for sub_agent in self.agents:
-            sub_agent.run()
+            sub_agent.run(state)
+
+        return state
 
     def grid(self, grid_size=1, buffer=10, align='none'):
         return grid(self, grid_size, buffer)
 
-    def place(self, iterations=100, attempts=100):
+    def place(self, attempts=100):
         """Places sub agents.
 
         Parameters
         ----------
         agent - the agent to place the shape within
-        iterations - the times to try before failing
         attempts - the attempts before the placement of a subagent fails
         """
 
@@ -273,16 +278,13 @@ class Agent:
             for agent in batch:
 
                 evals = [rule.evaluate()
-                         for rule in self.rules if rule.__target__ == agent.name]
+                         for rule in self.rules if rule._target == agent.name]
 
                 valid_area = [mask] + evals
                 region = intersect(valid_area)
+
                 placed = agent.place_in(
                     region, mask, attempts=attempts)
-
-                # if placed:
-                #     evals = [rule.sharpen()
-                # for rule in self.rules if rule.__target__ == agent.name]
 
                 if placed:
                     mask = mask.difference(agent.geometry)
@@ -291,7 +293,7 @@ class Agent:
                     return False
 
         for sub_agent in self.agents:
-            result = sub_agent.place()
+            result = sub_agent.place(attempts)
             if not result:
                 return False
         return True
@@ -301,7 +303,7 @@ class Agent:
         """
         # clear dependencies
         for agent in self.agents:
-            agent.__dependents__ = list()
+            agent._dependents = list()
 
         # map dependencies
         for rule in self.rules:
@@ -309,12 +311,12 @@ class Agent:
             try:
                 if depend:
                     if depend.name != self.name:
-                        rule.target.__dependents__.append(depend.name)
+                        rule.target._dependents.append(depend.name)
             except:
                 pass
 
         # create dependency graph
-        graph = dict((a.name, set(a.__dependents__))
+        graph = dict((a.name, set(a._dependents))
                      for a in self.agents)
 
         name_to_instance = dict((a.name, a) for a in self.agents)
@@ -351,36 +353,33 @@ class Agent:
         """
 
         for i in range(attempts):
+            sys.stdout.write("attempts: %d   \r" % (i))
+            sys.stdout.flush()
+
             placement = posit_point(region, attempts=attempts)
             if placement:
-
-                x, y = [placement.coords.xy[0][
-                    0], placement.coords.xy[1][0]]
-                _x, _y = [self.geometry.centroid.coords.xy[0][
-                    0], self.geometry.centroid.coords.xy[1][0]]
-                shift_x = x - _x
-                shift_y = y - _y
-
-                placed = translate(
-                    self.geometry, xoff=shift_x, yoff=shift_y)
+                placed = shift_geometry(self.geometry, placement)
 
                 if restrict is not None:
                     if placed.within(restrict):
                         self.geometry = placed
+                        print(self.name, 'attempts:', i + 1)
                         return True
                     else:
                         continue
 
                 self.geometry = placed
+                print(self.name, 'attempts:', i + 1)
                 return True
 
+        print(self.name, 'failed')
         return False
 
-    def mask(self, xoff=0, yoff=0):
+    def mask(self, inverted=False, xoff=0, yoff=0):
         """Returns an array mask of the agent's geometry."""
 
         # get corners
-        minx, miny, maxx, maxy = [ceil(coord)
+        minx, miny, maxx, maxy = [floor(coord)
                                   for coord in self.geometry.bounds]
         ylen = maxy - miny
         xlen = maxx - minx
@@ -395,6 +394,8 @@ class Agent:
         print(rr.shape)
         image[rr, cc] = 0
 
+        if inverted:
+            image = 1 - image
         return image
 
     def render_value(self, value_field, image=[], origin=[], mmu=1):
@@ -408,8 +409,6 @@ class Agent:
                                 xoff=origin[0], yoff=origin[1])
 
             minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
-
-            # clear and add pixels
 
             image[minx:maxx, miny:maxy] *= self.mask()
 
@@ -433,18 +432,19 @@ class Agent:
         """Cascades through agents and renders geometries as a numpy array."""
 
         if len(image) == 0:
-            image = self.mask() + self.material_response(wavelength)
+            image = self.mask() + \
+                self.material_response(wavelength)
             origin = np.array([0.0, 0.0])
         else:
             shifted = translate(self.geometry,
                                 xoff=origin[0], yoff=origin[1])
 
-            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
+            minx, miny, maxx, maxy = [floor(coord) for coord in shifted.bounds]
 
-            # clear and add pixels
             image[minx:maxx, miny:maxy] *= self.mask()
 
             invert = 1 - self.mask()
+
             image[minx:maxx,
                   miny:maxy] += (invert * self.material_response(wavelength))
 
@@ -470,7 +470,7 @@ class Agent:
             bands.append(self.render_material(wl, mmu=mmu))
 
         img = np.zeros((bands[0].shape[0], bands[
-                       0].shape[1], 3), dtype=np.uint8)
+            0].shape[1], 3), dtype=np.uint8)
 
         for i, band in enumerate(bands):
             img[:, :, i] = band * 255
@@ -480,5 +480,5 @@ class Agent:
     def move(self, xoff, yoff):
         self.geometry = translate(self.geometry, xoff, yoff)
 
-    def __run__(self, **args):
+    def _run(self, state):
         return True
