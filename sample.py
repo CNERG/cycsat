@@ -55,15 +55,16 @@ class Plume(Agent):
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
 site.set_material(USGSMaterial('Lawn_Grass_GDS91_green_BECKa_AREF'))
 
-cblock = CoolingTowerBlock(geometry=box(0, 0, 900, 900), value=10)
+cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
 cblock.add_rule(SET('CoolingTower 2', '$parent$', x=0.30, y=0.30, padding=10))
 cblock.add_rule(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
 cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
 cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
 
-fpts = LoadFootprints('north-america-us-wisconsin', size=100)
-building = Agent(geometry=fpts.iloc[25], value=10)
-building.set_material(USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF'))
+buildings = LoadFootprints('north-america-us-wisconsin', size=5)
+buildings = buildings.apply(lambda x: Agent(geometry=x, value=10))
+buildings.apply(lambda x: x.set_material(
+    USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF')))
 
 turbine = Agent(name='Turbine', geometry=box(0, 0, 50, 100), value=0)
 turbine.set_material(USGSMaterial('Asphalt_Tar_GDS346_Blck_Roof_ASDFRa_AREF'))
@@ -72,8 +73,8 @@ ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
-#cblock.add_agents([ctower1, ctower2, turbine])
-cblock.add_agent(building, scale=False)
+cblock.add_agents([ctower1, ctower2, turbine])
+#cblock.add_agents(buildings.tolist(), scale=True, scale_ratio=0.20)
 ctower1.add_agent(plume)
 site.add_agent(cblock)
 

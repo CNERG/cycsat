@@ -187,7 +187,7 @@ class Agent:
 
     @property
     def relative_geo(self):
-        minx, miny, maxx, maxy = [round(coord)
+        minx, miny, maxx, maxy = [ceil(coord)
                                   for coord in self.geometry.bounds]
         rel_geo = translate(
             self.geometry, xoff=-1 * minx, yoff=-1 * miny)
@@ -216,9 +216,9 @@ class Agent:
         agent.parent = self
         self.agents.append(agent)
 
-    def add_agents(self, agents):
+    def add_agents(self, agents, scale=False, scale_ratio=0.25):
         for agent in agents:
-            self.add_agent(agent)
+            self.add_agent(agent, scale, scale_ratio)
 
     def add_attrs(self, **args):
         """Adds a new variable to track in the log."""
@@ -376,16 +376,16 @@ class Agent:
 
         return False
 
-    def mask(self):
+    def mask(self, xoff=0, yoff=0):
         """Returns an array mask of the agent's geometry."""
 
         # get corners
         minx, miny, maxx, maxy = [ceil(coord)
-                                  for coord in self.geometry.bounds]
+                                  for coord in self.relative_geo.bounds]
         ylen = maxy - miny
         xlen = maxx - minx
 
-        image = np.ones((xlen, ylen))
+        image = np.ones((ylen, xlen))
 
         coords = np.array(list(self.relative_geo.exterior.coords))
         if len(coords) == 5:
@@ -394,7 +394,7 @@ class Agent:
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
         image[rr, cc] = 0
 
-        return np.flipud(rotate_image(image, 90, resize=True))
+        return image
 
     def render_value(self, value_field, image=[], origin=[], mmu=1):
         """Cascades through agents and renders geometries as a numpy array."""
@@ -438,14 +438,11 @@ class Agent:
             shifted = translate(self.geometry,
                                 xoff=origin[0], yoff=origin[1])
 
-            minx, miny, maxx, maxy = [ceil(coord) for coord in shifted.bounds]
+            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
 
             # clear and add pixels
-            print(self.name)
-            print(image[miny:maxy, minx:maxx].shape)
-            print(self.mask().shape)
-
             image[miny:maxy, minx:maxx] *= self.mask()
+
             invert = 1 - self.mask()
             image[miny:maxy,
                   minx:maxx] += (invert * self.material_response(wavelength))
