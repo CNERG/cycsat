@@ -31,7 +31,7 @@ def LoadFootprints(library, size, random_state=None):
     df = gpd.read_file(FPT_DIR + library + '.shp')
     df = df.assign(sort_area=df.area)
     #df = df.sort_values('sort_area')
-    df = df.sample(size, random_state)
+    df = df.sample(size, random_state=random_state)
     df = df.to_crs({'init': 'epsg:3857'})
     geos = df.geometry.apply(shift_geometry)
     return geos

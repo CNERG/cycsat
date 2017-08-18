@@ -124,8 +124,8 @@ class Agent:
                 mmu = args.pop('mmu')
             else:
                 mmu = 1
-            fig = plt.imshow(self.render_composite(
-                wavelengths=wavelengths, mmu=mmu), origin='lower')
+            fig = plt.imshow(np.flipud(rotate_image(self.render_composite(
+                wavelengths=wavelengths, mmu=mmu), 90, resize=True)), origin='lower')
 
         else:
             fig = self.agenttree.plot(**args)
@@ -381,17 +381,18 @@ class Agent:
 
         # get corners
         minx, miny, maxx, maxy = [ceil(coord)
-                                  for coord in self.relative_geo.bounds]
+                                  for coord in self.geometry.bounds]
         ylen = maxy - miny
         xlen = maxx - minx
 
-        image = np.ones((ylen, xlen))
+        image = np.ones((xlen, ylen))
 
         coords = np.array(list(self.relative_geo.exterior.coords))
         if len(coords) == 5:
             return image * 0
 
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
+        print(rr.shape)
         image[rr, cc] = 0
 
         return image
@@ -441,11 +442,11 @@ class Agent:
             minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
 
             # clear and add pixels
-            image[miny:maxy, minx:maxx] *= self.mask()
+            image[minx:maxx, miny:maxy] *= self.mask()
 
             invert = 1 - self.mask()
-            image[miny:maxy,
-                  minx:maxx] += (invert * self.material_response(wavelength))
+            image[minx:maxx,
+                  miny:maxy] += (invert * self.material_response(wavelength))
 
             origin += self.origin
 
