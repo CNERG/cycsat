@@ -2,6 +2,7 @@ import os
 
 from math import pow
 from math import sqrt
+from math import ceil
 
 import re
 import io
@@ -22,7 +23,7 @@ from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
 
-from .geometry import posit_point, grid, intersect
+from .geometry import posit_point, grid, intersect, rescale
 from .laboratory import Material
 from .metrics import Log
 
@@ -182,7 +183,7 @@ class Agent:
 
     @property
     def origin(self):
-        return np.array([self.geometry.bounds[0], self.geometry.bounds[1]])
+        return np.array([ceil(self.geometry.bounds[0]), ceil(self.geometry.bounds[1])])
 
     @property
     def relative_geo(self):
@@ -205,7 +206,12 @@ class Agent:
     def get_agent(self, name):
         return [a for a in self.agents if a.name.startswith(name)]
 
-    def add_agent(self, agent):
+    def add_agent(self, agent, scale=False, scale_ratio=0.25):
+
+        if scale:
+            rescale(self, agent, scale_ratio)
+            agent.log()
+
         agent.__handle__ = agent.name + ' ' + str(len(self.agents) + 1)
         agent.parent = self
         self.agents.append(agent)
@@ -347,6 +353,7 @@ class Agent:
         for i in range(attempts):
             placement = posit_point(region, attempts=attempts)
             if placement:
+
                 x, y = [placement.coords.xy[0][
                     0], placement.coords.xy[1][0]]
                 _x, _y = [self.geometry.centroid.coords.xy[0][
@@ -372,13 +379,13 @@ class Agent:
     def mask(self):
         """Returns an array mask of the agent's geometry."""
 
-        # get dimensions corners
-        minx, miny, maxx, maxy = [round(coord)
+        # get corners
+        minx, miny, maxx, maxy = [ceil(coord)
                                   for coord in self.geometry.bounds]
         ylen = maxy - miny
         xlen = maxx - minx
 
-        image = np.ones((ylen, xlen))
+        image = np.ones((xlen, ylen))
 
         coords = np.array(list(self.relative_geo.exterior.coords))
         if len(coords) == 5:
@@ -387,7 +394,7 @@ class Agent:
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
         image[rr, cc] = 0
 
-        return image
+        return np.flipud(rotate_image(image, 90, resize=True))
 
     def render_value(self, value_field, image=[], origin=[], mmu=1):
         """Cascades through agents and renders geometries as a numpy array."""
@@ -402,10 +409,12 @@ class Agent:
             minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
 
             # clear and add pixels
-            image[miny:maxy, minx:maxx] *= self.mask()
+
+            image[minx:maxx, miny:maxy] *= self.mask()
+
             invert = 1 - self.mask()
-            image[miny:maxy,
-                  minx:maxx] += (invert * getattr(self, value_field))
+            image[minx:maxx,
+                  miny:maxy] += (invert * getattr(self, value_field))
 
             origin += self.origin
 
@@ -429,9 +438,13 @@ class Agent:
             shifted = translate(self.geometry,
                                 xoff=origin[0], yoff=origin[1])
 
-            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
+            minx, miny, maxx, maxy = [ceil(coord) for coord in shifted.bounds]
 
             # clear and add pixels
+            print(self.name)
+            print(image[miny:maxy, minx:maxx].shape)
+            print(self.mask().shape)
+
             image[miny:maxy, minx:maxx] *= self.mask()
             invert = 1 - self.mask()
             image[miny:maxy,

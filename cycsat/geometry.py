@@ -7,17 +7,34 @@ import itertools
 import time
 import itertools
 import math
+import os
 
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 
 import numpy as np
 
+import geopandas as gpd
+
 from shapely.geometry import Polygon, Point, LineString, box
 from shapely.wkt import loads as load_wkt
-from shapely.affinity import translate as shift_shape
+from shapely.affinity import translate
 from shapely.affinity import rotate
+from shapely.affinity import scale
 from shapely.ops import cascaded_union, unary_union, polygonize
+
+DIR = os.path.dirname(__file__) + '/'
+FPT_DIR = DIR + '/data/footprints/'
+
+
+def LoadFootprints(library, size):
+    df = gpd.read_file(FPT_DIR + library + '.shp')
+    df = df.assign(sort_area=df.area)
+    df = df.sort_values('sort_area')
+    df = df.tail(size)
+    df = df.to_crs({'init': 'epsg:3857'})
+    geos = df.geometry.apply(shift_geometry)
+    return geos
 
 
 def relative_position(mask, x, y, padding=10):
@@ -92,9 +109,27 @@ def posit_point(mask, attempts=1000):
 
 
 def calulate_shift(point1, point2):
-    xoff = (point1.x - point2.x)
-    yoff = (point1.y - point2.y)
-    return xoff, yoff
+
+    if point1.x > point2.x:
+        xdir = -1
+    else:
+        xdir = 1
+    if point1.y > point2.y:
+        ydir = -1
+    else:
+        ydir = 1
+
+    xdist = abs((point1.x - point2.x))
+    ydist = abs((point1.y - point2.y))
+
+    return xdist * xdir, ydist * ydir
+
+
+def shift_geometry(geometry, endpoint=(0, 0)):
+    endpoint = Point(endpoint)
+    xoff, yoff = calulate_shift(geometry.centroid, endpoint)
+    new_geometry = translate(geometry, xoff, yoff)
+    return new_geometry
 
 
 def line_func(line, precision=1):
@@ -109,3 +144,13 @@ def line_func(line, precision=1):
     points = [Point(c[0], c[1]) for c in coords]
 
     return points
+
+
+def rescale(parent, child, ratio=0.25):
+    """Rescales a child agent to be a ratio of the parent's width."""
+
+    pminx, pminy, pmaxx, pmaxy = parent.geometry.bounds
+    cminx, cminy, cmaxx, cmaxy = child.geometry.bounds
+    adjust_width = (pmaxx - pminx) * ratio
+    factor = adjust_width / (cmaxx - cminx)
+    child.geometry = scale(child.geometry, xfact=factor, yfact=factor)
