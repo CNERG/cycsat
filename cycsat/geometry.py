@@ -37,6 +37,13 @@ def LoadFootprints(library, size, random_state=None):
     return geos
 
 
+def longest_side(geometry):
+    minx, miny, maxx, maxy = geometry.bounds
+    corner1 = Point(minx, miny)
+    corner2 = Point(maxx, maxy)
+    return corner1.distance(corner2)
+
+
 def relative_position(mask, x, y, padding=10):
 
     minx, miny, maxx, maxy = container.bounds
@@ -95,16 +102,16 @@ def intersect(polygons, default=None):
     return False
 
 
-def posit_point(mask, attempts=1000):
-    """Generates a random point within a mask."""
-    x_min, y_min, x_max, y_max = mask.bounds
+def posit_point(region, attempts=1000):
+    """Generates a random point within a region."""
+    x_min, y_min, x_max, y_max = region.bounds
 
     for i in range(attempts):
         x = random.uniform(x_min, x_max + 1)
         y = random.uniform(y_min, y_max + 1)
         posited_point = Point(x, y)
 
-        if posited_point.within(mask):
+        if posited_point.within(region):
             return posited_point
 
 

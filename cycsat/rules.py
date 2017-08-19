@@ -1,11 +1,11 @@
 from shapely.ops import nearest_points
 from shapely.geometry import LineString, Point, box
-from .geometry import calulate_shift
+from .geometry import calulate_shift, longest_side
 
 
 class Rule:
 
-    def __init__(self, target, dep, **args):
+    def __init__(self, target, dep='parent', **args):
         self._target = target
         self._dep = dep
         self.agent = False
@@ -30,7 +30,7 @@ class Rule:
     @property
     def depend(self):
         try:
-            if self._dep == '$parent$':
+            if self._dep == 'parent':
                 if self.target.parent:
                     return self.target.parent
         except:
@@ -42,7 +42,7 @@ class Rule:
 
     def evaluate(self):
         try:
-            return self.__evaluate__()
+            return self._evaluate()
         except BaseException as e:
             print(e)
             return False
@@ -50,7 +50,7 @@ class Rule:
 
 class SET(Rule):
 
-    def __evaluate__(self):
+    def _evaluate(self):
         parent = self.depend.relative_geo
         minx, miny, maxx, maxy = parent.bounds
         parent_bounds = box(minx, miny, maxx, maxy)
@@ -65,9 +65,19 @@ class SET(Rule):
         return Point(center_x, center_y).buffer(self.padding)
 
 
+class SIDE(Rule):
+
+    def _evaluate(self):
+        parent = self.depend.relative_geo
+        outer_buffer = parent.buffer(self.value * -1)
+        band_width = longest_side(self.target.geometry) * 0.10
+        inner_buffer = outer_buffer.buffer(band_width * -1)
+        return outer_buffer.difference(inner_buffer)
+
+
 class NEAR(Rule):
 
-    def __evaluate__(self):
+    def _evaluate(self):
         inner_buffer = self.depend.geometry.buffer(self.value)
         outer_buffer = inner_buffer.buffer(100)
         return outer_buffer.difference(inner_buffer)
@@ -75,7 +85,7 @@ class NEAR(Rule):
 
 class ALIGN(Rule):
 
-    def __evaluate__(self):
+    def _evaluate(self):
 
         value = getattr(self.depend.geometry.centroid, self.axis)
 

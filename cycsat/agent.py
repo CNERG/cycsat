@@ -32,7 +32,7 @@ from .metrics import Log
 
 class Agent:
 
-    def __init__(self, name=None, **attrs):
+    def __init__(self, name=None, level=0, **attrs):
 
         self._handle = name
         self._dependents = list()
@@ -40,6 +40,7 @@ class Agent:
         self.agents = list()
         self.rules = list()
         self.journal = list()
+        self.level = level
         self.time = 0
         self.attrs = attrs
         self.parent = False
@@ -50,7 +51,7 @@ class Agent:
         return '<{}>'.format(self._handle)
 
     @property
-    def level(self):
+    def _depth(self):
         """Determines the agent's level by looking for ancestors."""
         level = 0
         if self.parent:
@@ -58,11 +59,11 @@ class Agent:
             level += self.parent.level
         return level
 
-    def print_diagram(self):
+    def diagram(self):
         """Prints a diagram of this agents and all its children."""
-        print('    ' * self.level, self)
+        print('    ' * self._depth, self)
         for agent in self.agents:
-            agent.print_diagram()
+            agent.diagram()
 
     def log(self, init=False):
         """Looks for changes and logs the agents attributes if there is a change."""
@@ -123,7 +124,6 @@ class Agent:
             virtual = args.pop('virtual')
 
         if data == 'raster':
-
             if 'mmu' in args:
                 mmu = args.pop('mmu')
             else:
@@ -158,10 +158,29 @@ class Agent:
             images.append(image)
 
         if not name:
-            name = self.name + '_vector.gif'
+            name = self.name + '_{}.gif'.format(data)
 
         imageio.mimsave(name, images, fps=fps)
         plt.ion()
+
+    def _collect_agents(self, origin=[], agentframe=None):
+        """Collects agents by cascading to gather information for global placement."""
+
+        if len(origin) == 0:
+            origin = np.array([0, 0])
+            agentframe = pd.DataFrame()
+        else:
+            origin += self.origin
+
+            agentframe = agentframe.append({'agent': self,
+                                            'depth': self._depth,
+                                            'level': self.level,
+                                            'origin': origin.copy()}, ignore_index=True)
+
+        for agent in self.agents:
+            agentframe = agent._collect_agents(origin.copy(), agentframe)
+
+        return agentframe
 
     def _agenttree(self, origin=[]):
         """Collects the current attributes of all agents by cascading."""
@@ -258,7 +277,7 @@ class Agent:
     def grid(self, grid_size=1, buffer=10, align='none'):
         return grid(self, grid_size, buffer)
 
-    def place(self, attempts=100):
+    def place(self, verbose=False, attempts=100):
         """Places sub agents.
 
         Parameters
@@ -282,9 +301,12 @@ class Agent:
 
                 valid_area = [mask] + evals
                 region = intersect(valid_area)
+                if not region:
+                    print(self.name, 'failed')
+                    return False
 
                 placed = agent.place_in(
-                    region, mask, attempts=attempts)
+                    region, mask, verbose, attempts=attempts)
 
                 if placed:
                     mask = mask.difference(agent.geometry)
@@ -293,7 +315,7 @@ class Agent:
                     return False
 
         for sub_agent in self.agents:
-            result = sub_agent.place(attempts)
+            result = sub_agent.place(verbose, attempts)
             if not result:
                 return False
         return True
@@ -301,7 +323,8 @@ class Agent:
     def dep_graph(self):
         """Returns groups of agents based on their dependencies found from rules.
         """
-        # clear dependencies
+
+        # clears dependencies variable from early builds
         for agent in self.agents:
             agent._dependents = list()
 
@@ -321,7 +344,7 @@ class Agent:
 
         name_to_instance = dict((a.name, a) for a in self.agents)
 
-        # where to store the batches
+        # store the batches here
         batches = list()
 
         while graph:
@@ -336,43 +359,61 @@ class Agent:
             for deps in graph.values():
                 deps.difference_update(ready)
 
-            # Add the batch to the list
+            # add the batch to the list
             batches.append([name_to_instance[name] for name in ready])
 
-        # Return the list of batches
+        # return the list of batches
         return batches
 
-    def place_in(self, region, restrict=None, attempts=100):
+    def place_in(self, region, restrict=None, verbose=False, attempts=100):
         """Places an agent within a region that is contained by the parent.
 
         Parameters
         ----------
-        region - region to place agent in
-        strict - if True, cannot be outside parent (default False)
-        attempts - attempts before failure
+        region : region to place agent in
+        restrict : bounds to restric placement by
+        attempts : attempts before failure
+
         """
-
         for i in range(attempts):
-            sys.stdout.write("attempts: %d   \r" % (i))
-            sys.stdout.flush()
-
             placement = posit_point(region, attempts=attempts)
             if placement:
                 placed = shift_geometry(self.geometry, placement)
-
                 if restrict is not None:
                     if placed.within(restrict):
                         self.geometry = placed
-                        print(self.name, 'attempts:', i + 1)
                         return True
                     else:
                         continue
-
                 self.geometry = placed
-                print(self.name, 'attempts:', i + 1)
                 return True
+        if verbose:
+            print('failed on:', self.name)
+        return False
 
-        print(self.name, 'failed')
+    def build(self, verbose=True, attempts=100):
+        """Attempts to place all the agent's sub-agents until success.
+
+        Parameters
+        ----------
+        verbose : Flag for printing out detailed results
+        attempts : The number of attempts before failure, this paramater cascades
+                down to the place and place_in functions
+
+        """
+        for i in range(attempts):
+            if verbose:
+                sys.stdout.write("attempt: %d   \r" % (i + 1))
+                sys.stdout.flush()
+
+            if self.place(verbose, attempts):
+                if verbose:
+                    print('success in {} attempts'.format(i + 1))
+                return True
+            else:
+                continue
+        if verbose:
+            print('failure in {} attempts'.format(i + 1))
         return False
 
     def mask(self, inverted=False, xoff=0, yoff=0):
@@ -391,7 +432,6 @@ class Agent:
             return image * 0
 
         rr, cc = polygon(coords[:, 0], coords[:, 1], image.shape)
-        print(rr.shape)
         image[rr, cc] = 0
 
         if inverted:
@@ -431,11 +471,15 @@ class Agent:
     def render_material(self, wavelength, image=[], origin=[], mmu=1):
         """Cascades through agents and renders geometries as a numpy array."""
 
+        if self.geometry is None:
+            return image
+
         if len(image) == 0:
             image = self.mask() + \
                 self.material_response(wavelength)
             origin = np.array([0.0, 0.0])
         else:
+
             shifted = translate(self.geometry,
                                 xoff=origin[0], yoff=origin[1])
 
@@ -444,7 +488,6 @@ class Agent:
             image[minx:maxx, miny:maxy] *= self.mask()
 
             invert = 1 - self.mask()
-
             image[minx:maxx,
                   miny:maxy] += (invert * self.material_response(wavelength))
 
@@ -459,6 +502,24 @@ class Agent:
                 image, (mmu, mmu))
 
         return image
+
+    def render(self, wavelength):
+
+        # cascade down to build the agent tree
+        agentstack = self._collect_agents()
+
+        canvas = self.mask() + self.material_response(wavelength)
+
+        for i in imagestack:
+
+            shifted = translate(i['agent'].geometry,
+                                xoff=origin[0], yoff=origin[1])
+            minx, miny, maxx, maxy = [floor(coord) for coord in shifted.bounds]
+
+            canvas[minx:maxx, miny:maxy] *= i['agent'].mask()
+            invert = 1 - i['agent'].mask()
+            canvas[minx:maxx,
+                   miny:maxy] += (invert * agent.material_response(wavelength))
 
     def render_composite(self, wavelengths='default', mmu=1):
 
