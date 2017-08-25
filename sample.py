@@ -41,6 +41,7 @@ class Plume(Agent):
     def __init__(self, **variables):
         Agent.__init__(self, name='Plume', **variables)
         self._material = USGSMaterial('Melting_snow_mSnw01a_ASDFRa_AREF')
+        self.level = 1
 
     def _run(self, state):
 
