@@ -39,7 +39,7 @@ class Agent:
         self._material = False
         self.agents = list()
         self.rules = list()
-        self.journal = list()
+        self._log = list()
         self.level = level
         self.time = 0
         self.attrs = attrs
@@ -82,7 +82,7 @@ class Agent:
 
         if init:
             self.time = 0
-            self.journal = list()
+            self._log = list()
             for attr in self.attrs:
                 setattr(self, attr, self.attrs[attr])
             for agent in self.agents:
@@ -94,11 +94,11 @@ class Agent:
         log.time = self.time
 
         if log.geometry is not None:
-            self.journal.append(log)
+            self._log.append(log)
 
     @property
     def dataframe(self):
-        data = [log.data for log in self.journal]
+        data = [log.data for log in self._log]
         return GeoDataFrame(data)
 
     def _collect_agents(self, origin=[], agentframe=None):
@@ -107,6 +107,9 @@ class Agent:
             origin = np.array([0, 0])
             agentframe = pd.DataFrame()
         else:
+            if self.geometry is None:
+                return agentframe
+
             agentframe = agentframe.append({'agent': self,
                                             'depth': self._depth,
                                             'level': self.level,
@@ -228,7 +231,7 @@ class Agent:
         if self._material:
             return self._material.observe(wavelength)
         else:
-            print('No material set.')
+            print(self.name, ': no material set.')
             return 0
 
     def get_agent(self, name):
@@ -268,12 +271,12 @@ class Agent:
         self.time += 1
         if self.geometry is None:
             self.geometry = self.attrs['geometry']
-        try:
-            self._run(state)
-            self.log()
-        except BaseException as e:
-            print('run failed:')
-            print(str(e))
+        # try:
+        self._run(state)
+        self.log()
+        # except BaseException as e:
+        #     print(self.name, 'run failed:')
+        #     print(str(e))
 
         for sub_agent in self.agents:
             sub_agent.run(state)
@@ -381,7 +384,10 @@ class Agent:
         """
         if restrict == 'default':
             if self.parent:
-                restrict == self.parent
+                if self.parent.geometry is not None:
+                    restrict = self.parent.geometry
+                else:
+                    restrict = False
             else:
                 restrict = False
         for i in range(attempts):
