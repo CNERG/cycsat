@@ -502,7 +502,7 @@ class Agent:
 
         bands = list()
         for wl in wavelengths:
-            bands.append(self.render_material(wl, mmu=mmu))
+            bands.append(self.render(wl, mmu=mmu))
 
         img = np.zeros((bands[0].shape[0], bands[
             0].shape[1], 3), dtype=np.uint8)
