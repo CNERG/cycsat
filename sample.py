@@ -2,13 +2,10 @@ from cycsat.agent import Agent
 from cycsat.rules import NEAR, ALIGN, SET, SIDE
 from cycsat.geometry import grid, LoadFootprints
 from cycsat.laboratory import Material
+from cycsat.laboratory import USGSMaterial
 
 from shapely.geometry import Polygon, box, Point
-import random
-import matplotlib.pyplot as plt
 import geopandas as gpd
-
-from cycsat.laboratory import USGSMaterial
 
 
 class CoolingTowerBlock(Agent):
@@ -53,19 +50,19 @@ class Plume(Agent):
             return False
 
 
-water = Agent(name='water', floating=True,
+water = Agent(name='Water', floating=True,
               geometry=Point(0, 0).buffer(100), value=0)
 water.set_material(USGSMaterial('Marsh_water55%..._CRMS121v47_ASDFRa_AREF'))
 
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
 site.set_material(USGSMaterial('Lawn_Grass_GDS91_green_BECKa_AREF'))
-site.add_rule(SIDE('water 1', value=0))
+site.add_rule(SIDE('Water', value=0))
 
 cblock = CoolingTowerBlock(geometry=box(0, 0, 500, 500), value=10)
-cblock.add_rule(SET('CoolingTower 2', x=0.30, y=0.30, padding=10))
-cblock.add_rule(NEAR('CoolingTower 1', 'CoolingTower 2', value=50))
-cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower 2', axis='x'))
-cblock.add_rule(ALIGN('Turbine 3', 'CoolingTower 1', axis='y'))
+cblock.add_rule(SET('CoolingTower', x=0.30, y=0.30, padding=10))
+cblock.add_rule(NEAR('CoolingTower 1', 'CoolingTower', value=50))
+cblock.add_rule(ALIGN('CoolingTower 1', 'CoolingTower', axis='x'))
+cblock.add_rule(ALIGN('Turbine', 'CoolingTower', axis='y'))
 
 buildings = gpd.read_file('samples/sample.shp').head(8)
 buildings = buildings.geometry.apply(lambda x: Agent(geometry=x, value=10))
@@ -80,7 +77,7 @@ ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
-cblock.add_agents([ctower1, ctower2, turbine])
-cblock.add_agents(buildings.tolist(), scale=True, scale_ratio=0.10)
+cblock.add_agents([water, ctower1, ctower2, turbine])
+cblock.add_agents(buildings.tolist(), scale_ratio=0.10)
 ctower1.add_agent(plume)
 site.add_agents([cblock])

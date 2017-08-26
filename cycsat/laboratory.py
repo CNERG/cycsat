@@ -21,9 +21,9 @@ class Material:
     def __init__(self, name, **args):
         self.name = name
 
-    def observe(self, wavelength):
+    def observe(self, **args):
         try:
-            relectance = self.__response__(wavelength)
+            relectance = self._response(**args)
             if relectance < 0:
                 return 0
             else:
@@ -39,5 +39,5 @@ class USGSMaterial(Material):
         self.model = pickle.load(
             open('{}/data/spectra/{}.txt'.format(DIR, name), 'rb'))
 
-    def __response__(self, wavelength):
+    def _response(self, wavelength, **args):
         return list(self.model.predict(wavelength))[0]

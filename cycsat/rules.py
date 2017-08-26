@@ -6,6 +6,11 @@ from .geometry import calulate_shift, longest_side
 class Rule:
 
     def __init__(self, target, dep='parent', **args):
+        """Create a rule instance.
+
+        Parameters
+        ----------
+        """
         self._target = target
         self._dep = dep
         self.agent = False
@@ -28,7 +33,7 @@ class Rule:
             return False
 
     @property
-    def depend(self):
+    def dependent_on(self):
         try:
             if self._dep == 'parent':
                 if self.target.parent:
@@ -51,7 +56,7 @@ class Rule:
 class SET(Rule):
 
     def _evaluate(self):
-        parent = self.depend.relative_geo
+        parent = self.dependent_on.relative_geo
         minx, miny, maxx, maxy = parent.bounds
         parent_bounds = box(minx, miny, maxx, maxy)
 
@@ -68,17 +73,23 @@ class SET(Rule):
 class SIDE(Rule):
 
     def _evaluate(self):
-        parent = self.depend.relative_geo
+        parent = self.dependent_on.relative_geo
         outer_buffer = parent.buffer(self.value * -1)
         band_width = longest_side(self.target.geometry) * 0.10
         inner_buffer = outer_buffer.buffer(band_width * -1)
         return outer_buffer.difference(inner_buffer)
 
 
+class GRID(Rule):
+
+    def _evaluate(self):
+        parent = self.dependent_on.grid()
+
+
 class NEAR(Rule):
 
     def _evaluate(self):
-        inner_buffer = self.depend.geometry.buffer(self.value)
+        inner_buffer = self.dependent_on.geometry.buffer(self.value)
         outer_buffer = inner_buffer.buffer(100)
         return outer_buffer.difference(inner_buffer)
 
@@ -87,7 +98,7 @@ class ALIGN(Rule):
 
     def _evaluate(self):
 
-        value = getattr(self.depend.geometry.centroid, self.axis)
+        value = getattr(self.dependent_on.geometry.centroid, self.axis)
 
         if self.axis == 'x':
             maxy = self.target.parent.geometry.bounds[-1]

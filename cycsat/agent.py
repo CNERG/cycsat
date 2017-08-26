@@ -33,7 +33,16 @@ from .metrics import Log
 class Agent:
 
     def __init__(self, name=None, level=0, **attrs):
+        """
+        Agent class
 
+        Parameters
+        ----------
+        name -- (optional) a name for the agent
+        level -- (default = 0) the height, or the order to draw the agent on images
+        attrs -- (optional) a dictionary of attributes to track and use during
+            simulations.
+        """
         self._handle = name
         self._dependents = list()
         self._material = False
@@ -95,6 +104,13 @@ class Agent:
 
         if log.geometry is not None:
             self._log.append(log)
+
+    def get_state(self):
+        """Gets the current state of all attributes."""
+        state = {}
+        for attr in self.attrs:
+            state[attr] = getattr(self, attr)
+        return state
 
     @property
     def dataframe(self):
@@ -164,7 +180,9 @@ class Agent:
 
         Parameters
         ----------
-
+        data - 'vector' or 'raster' for a raster image)
+        wavelengths -
+        ---
         """
 
         gif = False
@@ -177,9 +195,8 @@ class Agent:
                 mmu = args.pop('mmu')
             else:
                 mmu = 1
-            fig = plt.imshow(np.flipud(rotate_image(self.render_composite(
+            fig = plt.imshow(np.flipud(rotate_image(self.render_ndarray(
                 wavelengths=wavelengths, mmu=mmu), 90, resize=True)), origin='lower')
-
         else:
             fig = self.agenttree.plot(**args)
 
@@ -227,9 +244,9 @@ class Agent:
     def set_material(self, Material):
         self._material = Material
 
-    def material_response(self, wavelength):
+    def material_response(self, **args):
         if self._material:
-            return self._material.observe(wavelength)
+            return self._material.observe(**args)
         else:
             print(self.name, ': no material set.')
             return 0
@@ -237,19 +254,31 @@ class Agent:
     def get_agent(self, name):
         return [a for a in self.agents if a.name.startswith(name)]
 
-    def add_agent(self, agent, scale=False, scale_ratio=0.25):
+    def add_agent(self, agent, scale_ratio=1):
+        """Add agents to the selected agent as sub-agents.
 
-        if scale:
+        Parameter:
+        ----------
+        agent - the agent to add
+        scale_ratio - the ratio to scale the geometry of the agent by
+        """
+        if scale_ratio != 1:
             rescale(self, agent, scale_ratio)
             agent.log()
 
-        agent._handle = agent.name + ' ' + str(len(self.agents) + 1)
+        name_conflicts = len(
+            [c for c in self.agents if c.name.startswith(agent.name)])
+        if name_conflicts:
+            number = ' ' + str(name_conflicts)
+        else:
+            number = ''
+        agent._handle = agent.name + number
         agent.parent = self
         self.agents.append(agent)
 
-    def add_agents(self, agents, scale=False, scale_ratio=0.25):
+    def add_agents(self, agents, scale_ratio=1):
         for agent in agents:
-            self.add_agent(agent, scale, scale_ratio)
+            self.add_agent(agent, scale_ratio)
 
     def add_attrs(self, **args):
         """Adds a new variable to track in the log."""
@@ -341,7 +370,7 @@ class Agent:
 
         # map dependencies
         for rule in self.rules:
-            depend = rule.depend
+            depend = rule.dependent_on
             try:
                 if depend:
                     if depend.name != self.name:
@@ -422,12 +451,12 @@ class Agent:
             if self.place(verbose, attempts):
                 if verbose:
                     print('success in {} attempts'.format(i + 1))
-                return True
+                return {'status': True, 'attempts': i + 1}
             else:
                 continue
         if verbose:
             print('failure in {} attempts'.format(i + 1))
-        return False
+        return {'status': False, 'attempts': attempts}
 
     def mask(self, inverted=False, xoff=0, yoff=0):
         """Returns an array mask of the agent's geometry."""
@@ -481,13 +510,33 @@ class Agent:
 
         return image
 
-    def render(self, wavelength, mmu=1):
+    def render_1darray(self, field='', mmu=1, **args):
+        """Renders a numpy array as an image.
+
+        Parameters:
+        -----------
+        wavelength - the wavelength to render
+        mmu - minimum mapping unit, size of pixel
+        ---
+        """
+        if field != '':
+            value = getattr(self, field)
+        else:
+            value = self.material_response(**args)
+
+        canvas = self.mask() + value
+        if len(self.agents) == 0:
+            return canvas
+
         imagestack = self._collect_agents().sort_values('level')
-        canvas = self.mask() + self.material_response(wavelength)
         for row in imagestack.iterrows():
             agent = row[1].agent
             level = row[1].level
             origin = row[1].origin
+            if field != '':
+                value = getattr(agent, field)
+            else:
+                value = agent.material_response(**args)
 
             shifted = translate(agent.geometry,
                                 xoff=origin[0], yoff=origin[1])
@@ -495,20 +544,28 @@ class Agent:
             canvas[minx:maxx, miny:maxy] *= agent.mask()
             invert = 1 - agent.mask()
             canvas[minx:maxx,
-                   miny:maxy] += (invert * agent.material_response(wavelength))
+                   miny:maxy] += (invert * value)
 
         if mmu != 1:
             canvas = downscale_local_mean(canvas, (mmu, mmu))
 
         return canvas
 
-    def render_composite(self, wavelengths='default', mmu=1):
+    def render_ndarray(self, wavelengths='default', mmu=1):
+        """Renders an n-d array for provided wavelengths.
+
+        Parameters:
+        ----------
+        wavelengths - (default = RGB) list of wavelengths to render
+        mmu - minimum mapping unit, size of pixel
+        ---
+        """
         if wavelengths == 'default':
             wavelengths = [0.48, 0.56, 0.66]
 
         bands = list()
         for wl in wavelengths:
-            bands.append(self.render(wl, mmu=mmu))
+            bands.append(self.render_1darray(wavelength=wl, mmu=mmu))
 
         img = np.zeros((bands[0].shape[0], bands[
             0].shape[1], 3), dtype=np.uint8)
