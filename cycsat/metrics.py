@@ -1,7 +1,7 @@
 
-class Log:
+class AgentState(Agent):
 
-    def __init__(self, agent, time=None):
+    def __init__(self, agent, time):
         self.agent = agent
         self.time = time
 

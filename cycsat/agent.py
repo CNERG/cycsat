@@ -10,8 +10,8 @@ import io
 import imageio
 
 import pandas as pd
-from geopandas import GeoDataFrame
 import numpy as np
+from geopandas import GeoDataFrame
 import random
 import rasterio
 from matplotlib import pyplot as plt
@@ -27,137 +27,111 @@ from shapely.ops import cascaded_union, unary_union, polygonize
 from .geometry import posit_point, grid, intersect, rescale
 from .geometry import shift_geometry
 from .laboratory import Material
-from .metrics import Log
 
 
 class Agent:
 
-    def __init__(self, name=None, level=0, **attrs):
+    def __init__(self, name=None, geometry=None, level=0, **attrs):
         """
         Agent class
 
         Parameters
         ----------
-        name -- (optional) a name for the agent
-        level -- (default = 0) the height, or the order to draw the agent on images
-        attrs -- (optional) a dictionary of attributes to track and use during
+        name - (optional) a name for the agent
+        level - (default = 0) the height, or the order to draw the agent on images
+        attrs - (optional) a dictionary of attributes to track and use during
             simulations.
         """
+        self.time = 0
         self._handle = name
+        self.attrs = attrs
+        self.attrs['geometry'] = geometry
+        self.level = level
+        self._on = True
         self._dependents = list()
         self._material = False
+        self._statelog = list()
         self.agents = list()
         self.rules = list()
-        self._log = list()
-        self.level = level
-        self.time = 0
-        self.attrs = attrs
         self.parent = False
-        self._placed = False
-
-        self.log(init=True)
+        self.reset()
 
     def __repr__(self):
         return '<{}>'.format(self._handle)
 
     @property
+    def depth(self):
+        """Returns the agent's hierarchical tree depth."""
+        level = 0
+        if self.parent:
+            level += 1
+            level += self.parent.depth
+        return level
+
+    @property
     def name(self):
+        """The name of the agent. Used internally."""
         if self._handle:
             return self._handle
         else:
             return self.__class__.__name__
 
     def rename(self, name):
+        """Renames the agent."""
         self._handle = name
 
-    @property
-    def _depth(self):
-        """Determines the agent's level by looking for ancestors."""
-        level = 0
-        if self.parent:
-            level += 1
-            level += self.parent._depth
-        return level
-
-    def print_diagram(self):
-        """Prints a diagram of this agents and all its children"""
-        print('    ' * self._depth, self)
+    def print_tree(self):
+        """Prints a hierarchical diagram of this agent and all
+        its sub-agents."""
+        print('    ' * self.depth, self)
         for agent in self.agents:
-            agent.print_diagram()
+            agent.print_tree()
 
-    def log(self, init=False):
-        """Looks for changes and logs the agents attributes if there is a change."""
-        log = Log(agent=self)
+    def reset(self):
+        """Clears the agent's data and resets the attributes to
+        initial conditions."""
+        self.time = 0
+        self._statelog = list()
+        for attr in self.attrs:
+            setattr(self, attr, self.attrs[attr])
+        self.log_state()
 
-        if init:
-            self.time = 0
-            self._log = list()
+    def get_state(self, time='current'):
+        """Returns the current state of all attributes as a dictionary."""
+        if time == 'current':
+            state = {}
             for attr in self.attrs:
-                setattr(self, attr, self.attrs[attr])
-            for agent in self.agents:
-                agent.log(init=True)
-
-        for attr in self.attrs:
-            setattr(log, attr, getattr(self, attr))
-
-        log.time = self.time
-
-        if log.geometry is not None:
-            self._log.append(log)
-
-    def get_state(self):
-        """Gets the current state of all attributes."""
-        state = {}
-        for attr in self.attrs:
-            state[attr] = getattr(self, attr)
+                state[attr] = getattr(self, attr)
+        else:
+            try:
+                state = [state for state in self._statelog if state[
+                    'time'] == time][0]
+            except:
+                state = {}
+        state['agent_on'] = self._on
         return state
+
+    def log_state(self):
+        """Records the current state of the agent at the current time."""
+        lookup = lambda state: False if state['time'] == self.time else True
+        statelog = np.array(self._statelog)
+        self._statelog = statelog[
+            [lookup(state) for state in statelog]].tolist()
+        state = self.get_state()
+        state['time'] = self.time
+        self._statelog.append(state)
+
+    def set_state(self, time):
+        """Set the attributes of the agent to a previous time."""
+        state = self.get_state(time)
+        for attr in state:
+            setattr(self, attr, state[attr])
+        for agent in self.agents:
+            agent.set_state(time)
 
     @property
     def dataframe(self):
-        data = [log.data for log in self._log]
-        return GeoDataFrame(data)
-
-    def _collect_agents(self, origin=[], agentframe=None):
-        """Collects agents by cascading to gather information for global placement."""
-        if len(origin) == 0:
-            origin = np.array([0, 0])
-            agentframe = pd.DataFrame()
-        else:
-            if self.geometry is None:
-                return agentframe
-
-            agentframe = agentframe.append({'agent': self,
-                                            'depth': self._depth,
-                                            'level': self.level,
-                                            'origin': origin.copy()}, ignore_index=True)
-            origin += self.origin
-
-        for agent in self.agents:
-            agentframe = agent._collect_agents(origin.copy(), agentframe)
-
-        return agentframe
-
-    def _agenttree(self, origin=[]):
-        """Hidden function collects the current attributes of all agents by cascading
-        and returns the global origin."""
-        if self.geometry is None:
-            return pd.DataFrame()
-
-        df = self.dataframe.tail(1)
-
-        if len(origin) > 0:
-            df = df.assign(geometry=df.translate(
-                xoff=origin[0], yoff=origin[1]))
-            origin += self.origin
-        else:
-            df = df.assign(geometry=self.relative_geo)
-            origin = np.array([0.0, 0.0])
-
-        for agent in self.agents:
-            df = df.append(agent._agenttree(
-                origin=origin.copy()), ignore_index=True)
-
-        return df
+        return GeoDataFrame(self._statelog)
 
     @property
     def agentframe(self):
@@ -170,10 +144,35 @@ class Agent:
                 attrs, ignore_index=True)
         return agent_frame
 
+    def _agenttree(self, headers=True, origin=[], agentframe=None):
+        """Collects agents by cascading to gather information for global placement."""
+        if len(origin) == 0:
+            origin = np.array([0, 0])
+            agentframe = pd.DataFrame()
+        else:
+            head = {'agent': self,
+                    'depth': self.depth,
+                    'level': self.level,
+                    'origin': origin.copy()}
+            state = self.get_state()
+            state['geometry'] = translate(
+                state['geometry'], xoff=origin[0], yoff=origin[1])
+            if headers:
+                data = {**head, **state}
+            else:
+                data = state
+            print(data['agent_on'])
+            agentframe = agentframe.append(data, ignore_index=True)
+            origin += self.origin
+
+        for agent in self.agents:
+            agentframe = agent._agenttree(headers, origin.copy(), agentframe)
+        return GeoDataFrame(agentframe)
+
     @property
     def agenttree(self):
         """Atrribute data frame of all sub agents."""
-        return self._agenttree()
+        return self._agenttree(headers=False)
 
     def plot(self, data='vector', wavelengths='default', **args):
         """Plots the agent with all subagents.
@@ -181,15 +180,13 @@ class Agent:
         Parameters
         ----------
         data - 'vector' or 'raster' for a raster image)
-        wavelengths -
-        ---
+        wavelengths - wavelengths to plot if raster (default RGB)
+        ----------
         """
-
         gif = False
         if 'virtual' in args:
             gif = True
             virtual = args.pop('virtual')
-
         if data == 'raster':
             if 'mmu' in args:
                 mmu = args.pop('mmu')
@@ -198,7 +195,8 @@ class Agent:
             fig = plt.imshow(np.flipud(rotate_image(self.render_ndarray(
                 wavelengths=wavelengths, mmu=mmu), 90, resize=True)), origin='lower')
         else:
-            fig = self.agenttree.plot(**args)
+            agenttree = self._agenttree()
+            fig = agenttree[agenttree['agent_on']].plot(**args)
 
         if gif:
             plt.savefig(virtual, format='png')
@@ -206,8 +204,17 @@ class Agent:
 
         return fig
 
-    def gif(self, runs, data='vector', name=None, fps=1):
+    def gif(self, runs, data='vector', filename=None, fps=1):
+        """Export an animated GIF of the agent runs.
 
+        Parameters
+        ----------
+        runs - the number of runs
+        data - 'vector' or 'raster'
+        filename - filename (optional)
+        fps - frames per second
+        ----------
+        """
         plt.ioff()
         plots = list()
         for run in range(runs):
@@ -216,16 +223,14 @@ class Agent:
             plot = self.plot(data=data, virtual=virtual_plot)
             plots.append(plot)
             plt.close()
-
         images = list()
         for plot in plots:
             plot.seek(0)
             image = imageio.imread(plot)
             images.append(image)
 
-        if not name:
+        if not filename:
             name = self.name + '_{}.gif'.format(data)
-
         imageio.mimsave(name, images, fps=fps)
         plt.ion()
 
@@ -264,7 +269,7 @@ class Agent:
         """
         if scale_ratio != 1:
             rescale(self, agent, scale_ratio)
-            agent.log()
+            agent.log_state()
 
         name_conflicts = len(
             [c for c in self.agents if c.name.startswith(agent.name)])
@@ -281,39 +286,50 @@ class Agent:
             self.add_agent(agent, scale_ratio)
 
     def add_attrs(self, **args):
-        """Adds a new variable to track in the log."""
+        """Adds a new variable to track in the state log."""
         for arg in args:
             setattr(self, arg, args[arg])
-
         if self.attrs:
             self.attrs.update(args)
         else:
             self.attrs = args
 
     def add_rule(self, rule):
+        """Adds a placment rule for this agent's sub-agents. Rules must be added
+        through this function."""
         rule.agent = self
         self.rules.append(rule)
 
-    def run(self, state={}, **args):
-        """Evaluates the custom-defined _run function and runs through sub agents.
-        Takes a dictionary as a state of variables."""
-        self.time += 1
-        if self.geometry is None:
-            self.geometry = self.attrs['geometry']
-        # try:
-        self._run(state)
-        self.log()
-        # except BaseException as e:
-        #     print(self.name, 'run failed:')
-        #     print(str(e))
+    def turn_on(self):
+        """Turns the agent ON making it VISIBLE in images and dataframes."""
+        self._on = True
+        self.log_state()
 
+        for agent in self.agents:
+            agent.turn_on()
+
+    def turn_off(self):
+        """Turns the agent OFF making it INVISIBLE in images and dataframes."""
+        self._on = False
+        self.log_state()
+
+        for agent in self.agents:
+            agent.turn_off()
+
+    def run(self, state={}, **args):
+        """Evaluates the _run function and runs through sub agents.
+
+        Parameter
+        ---------
+        state - a dictionary of global variables
+        ---------
+        """
+        self.time += 1
+        self._run(state)
+        self.log_state()
         for sub_agent in self.agents:
             sub_agent.run(state)
-
         return state
-
-    def grid(self, grid_size=1, buffer=10, align='none'):
-        return grid(self, grid_size, buffer)
 
     def place(self, verbose=False, attempts=100):
         """Attempts to place all sub agents.
@@ -322,6 +338,7 @@ class Agent:
         ----------
         verbose - print detailed placement results
         attempts - the attempts before the placement of a subagent fails
+        ----------
         """
         if sum([a.geometry.area for a in self.agents]) > self.geometry.area:
             if verbose:
@@ -335,30 +352,25 @@ class Agent:
             for agent in batch:
                 evals = [rule.evaluate()
                          for rule in self.rules if rule._target == agent.name]
-
                 valid_area = [mask] + evals
                 region = intersect(valid_area)
                 if not region:
                     if verbose:
                         print(agent.name, 'rule failure')
                     return False
-
                 placed = agent.place_in(
                     region, mask, attempts=attempts)
                 if placed:
                     mask = mask.difference(agent.geometry)
-                    agent.log()
+                    agent.log_state()
                 else:
                     if verbose:
                         print('failed on:', agent.name)
                     return False
-
         for sub_agent in self.agents:
             result = sub_agent.place(verbose, attempts)
             if not result:
                 return False
-
-        self._placed = True
         return True
 
     def dep_graph(self):
@@ -367,7 +379,6 @@ class Agent:
         # clears dependencies variable from early builds
         for agent in self.agents:
             agent._dependents = list()
-
         # map dependencies
         for rule in self.rules:
             depend = rule.dependent_on
@@ -377,11 +388,9 @@ class Agent:
                         rule.target._dependents.append(depend.name)
             except:
                 pass
-
         # create dependency graph
         graph = dict((a.name, set(a._dependents))
                      for a in self.agents)
-
         name_to_instance = dict((a.name, a) for a in self.agents)
         batches = list()
         while graph:
@@ -403,13 +412,14 @@ class Agent:
         return batches
 
     def place_in(self, region, restrict='default', attempts=100):
-        """Places an agent within a region that is contained by the parent.
+        """Places an agent within a region that is restricted
 
         Parameters
         ----------
         region : region to place agent in
         restrict : bounds to restric placement by, 'default' means parent
         attempts : attempts before failure
+        ----------
         """
         if restrict == 'default':
             if self.parent:
@@ -441,7 +451,7 @@ class Agent:
         verbose : Flag for printing out detailed results
         attempts : The number of attempts before failure, this paramater cascades
                 down to the place and place_in functions
-
+        ----------
         """
         for i in range(attempts):
             if verbose:
@@ -460,7 +470,6 @@ class Agent:
 
     def mask(self, inverted=False, xoff=0, yoff=0):
         """Returns an array mask of the agent's geometry."""
-
         # get corners
         minx, miny, maxx, maxy = [floor(coord)
                                   for coord in self.geometry.bounds]
@@ -480,61 +489,33 @@ class Agent:
             image = 1 - image
         return image
 
-    def render_value(self, value_field, image=[], origin=[], mmu=1):
-        """Cascades through agents and renders geometries as a numpy array."""
-
-        if len(image) == 0:
-            image = self.mask() + getattr(self, value_field)
-            origin = np.array([0.0, 0.0])
-        else:
-            shifted = translate(self.geometry,
-                                xoff=origin[0], yoff=origin[1])
-
-            minx, miny, maxx, maxy = [round(coord) for coord in shifted.bounds]
-
-            image[minx:maxx, miny:maxy] *= self.mask()
-
-            invert = 1 - self.mask()
-            image[minx:maxx,
-                  miny:maxy] += (invert * getattr(self, value_field))
-
-            origin += self.origin
-
-        for agent in self.agents:
-            image = agent.render_value(value_field, image=image,
-                                       origin=origin.copy())
-
-        if mmu != 1:
-            image = downscale_local_mean(
-                image, (mmu, mmu))
-
-        return image
-
-    def render_1darray(self, field='', mmu=1, **args):
+    def render_1darray(self, attr=None, mmu=1, **args):
         """Renders a numpy array as an image.
 
         Parameters:
         -----------
-        wavelength - the wavelength to render
+        attr - the attribute to base pixel value on (optional)
         mmu - minimum mapping unit, size of pixel
-        ---
+
+        Additional args are used to render the agent's surface, if attr is
+        None.
+        -----------
         """
-        if field != '':
-            value = getattr(self, field)
+        if attr is not None:
+            value = getattr(self, attr)
         else:
             value = self.material_response(**args)
-
         canvas = self.mask() + value
         if len(self.agents) == 0:
             return canvas
 
-        imagestack = self._collect_agents().sort_values('level')
+        imagestack = self._agenttree().sort_values('level')
         for row in imagestack.iterrows():
             agent = row[1].agent
             level = row[1].level
             origin = row[1].origin
-            if field != '':
-                value = getattr(agent, field)
+            if attr is not None:
+                value = getattr(agent, attr)
             else:
                 value = agent.material_response(**args)
 
@@ -545,34 +526,32 @@ class Agent:
             invert = 1 - agent.mask()
             canvas[minx:maxx,
                    miny:maxy] += (invert * value)
-
         if mmu != 1:
             canvas = downscale_local_mean(canvas, (mmu, mmu))
-
         return canvas
 
-    def render_ndarray(self, wavelengths='default', mmu=1):
-        """Renders an n-d array for provided wavelengths.
+    def render_ndarray(self, band_args='default', mmu=1):
+        """Renders an n-d array for provided bands.
 
         Parameters:
         ----------
-        wavelengths - (default = RGB) list of wavelengths to render
+        band_args - list of dictionaries to pass as rendering arguments
         mmu - minimum mapping unit, size of pixel
-        ---
+        ----------
         """
-        if wavelengths == 'default':
-            wavelengths = [0.48, 0.56, 0.66]
+        if band_args == 'default':
+            band_args = [{'wavelength': 0.48},
+                         {'wavelength': 0.56},
+                         {'wavelength': 0.66}]
 
         bands = list()
-        for wl in wavelengths:
-            bands.append(self.render_1darray(wavelength=wl, mmu=mmu))
+        for band_arg in band_args:
+            bands.append(self.render_1darray(mmu=mmu, **band_arg))
 
         img = np.zeros((bands[0].shape[0], bands[
             0].shape[1], 3), dtype=np.uint8)
-
         for i, band in enumerate(bands):
             img[:, :, i] = band * 255
-
         return img
 
     def move(self, xoff, yoff):

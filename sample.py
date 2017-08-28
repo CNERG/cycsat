@@ -43,14 +43,13 @@ class Plume(Agent):
     def _run(self, state):
 
         if self.parent.on == 1:
+            self.turn_on()
             self.place_in(self.parent.relative_geo.buffer(5), restrict=False)
-            return True
         else:
-            self.geometry = None
-            return False
+            self.turn_off()
 
 
-water = Agent(name='Water', floating=True,
+water = Agent(name='Water',
               geometry=Point(0, 0).buffer(100), value=0)
 water.set_material(USGSMaterial('Marsh_water55%..._CRMS121v47_ASDFRa_AREF'))
 
