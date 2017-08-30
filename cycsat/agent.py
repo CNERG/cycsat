@@ -100,23 +100,25 @@ class Agent:
         """Returns the current state of all attributes as a dictionary."""
         if time == 'current':
             state = {}
+            state['_metavars'] = {'_on': self._on}
             for attr in self.attrs:
                 state[attr] = getattr(self, attr)
         else:
             try:
                 state = [state for state in self._statelog if state[
-                    'time'] == time][0]
+                    'time'] == time][0].copy()
             except:
                 state = {}
-        state['agent_on'] = self._on
         return state
 
     def log_state(self):
         """Records the current state of the agent at the current time."""
+        # remove existing logs from current time
         lookup = lambda state: False if state['time'] == self.time else True
         statelog = np.array(self._statelog)
         self._statelog = statelog[
             [lookup(state) for state in statelog]].tolist()
+        # get state an log it
         state = self.get_state()
         state['time'] = self.time
         self._statelog.append(state)
@@ -124,10 +126,17 @@ class Agent:
     def set_state(self, time):
         """Set the attributes of the agent to a previous time."""
         state = self.get_state(time)
+        if len(state) == 0:
+            print('state {} does not exist.'.format(time))
+            return False
+        metavars = state.pop('_metavars')
+        for var in metavars:
+            setattr(self, var, metavars[var])
         for attr in state:
             setattr(self, attr, state[attr])
         for agent in self.agents:
             agent.set_state(time)
+        return True
 
     @property
     def dataframe(self):
@@ -144,37 +153,40 @@ class Agent:
                 attrs, ignore_index=True)
         return agent_frame
 
-    def _agenttree(self, headers=True, origin=[], agentframe=None):
+    def _agenttree(self, show_metavars=True, origin=[], agentframe=None):
         """Collects agents by cascading to gather information for global placement."""
         if len(origin) == 0:
             origin = np.array([0, 0])
             agentframe = pd.DataFrame()
         else:
-            head = {'agent': self,
-                    'depth': self.depth,
-                    'level': self.level,
-                    'origin': origin.copy()}
+            headers = {'_agent': self,
+                       '_depth': self.depth,
+                       '_level': self.level,
+                       '_origin': origin.copy()}
             state = self.get_state()
-            state['geometry'] = translate(
-                state['geometry'], xoff=origin[0], yoff=origin[1])
-            if headers:
-                data = {**head, **state}
-            else:
-                data = state
-            print(data['agent_on'])
-            agentframe = agentframe.append(data, ignore_index=True)
-            origin += self.origin
+            metavars = state.pop('_metavars')
+            # if the agent is on then add to frame
+            if (metavars['_on'] == True) or (metavars['_on'] == 1):
+                if show_metavars:
+                    headers = {**headers, **metavars}
+                else:
+                    headers = {'_agent': self}
+                state['geometry'] = translate(
+                    state['geometry'], xoff=origin[0], yoff=origin[1])
+                agentframe = agentframe.append({**headers, **state}, ignore_index=True)
+                origin += self.origin
 
         for agent in self.agents:
-            agentframe = agent._agenttree(headers, origin.copy(), agentframe)
+            agentframe = agent._agenttree(
+                show_metavars, origin.copy(), agentframe)
+
         return GeoDataFrame(agentframe)
 
-    @property
-    def agenttree(self):
+    def agenttree(self, show_metavars=False):
         """Atrribute data frame of all sub agents."""
-        return self._agenttree(headers=False)
+        return self._agenttree(show_metavars=show_metavars)
 
-    def plot(self, data='vector', wavelengths='default', **args):
+    def plot(self, data='vector', band_args='default', **args):
         """Plots the agent with all subagents.
 
         Parameters
@@ -193,10 +205,9 @@ class Agent:
             else:
                 mmu = 1
             fig = plt.imshow(np.flipud(rotate_image(self.render_ndarray(
-                wavelengths=wavelengths, mmu=mmu), 90, resize=True)), origin='lower')
+                band_args=band_args, mmu=mmu), 90, resize=True)), origin='lower')
         else:
-            agenttree = self._agenttree()
-            fig = agenttree[agenttree['agent_on']].plot(**args)
+            fig = self._agenttree().plot(**args)
 
         if gif:
             plt.savefig(virtual, format='png')
@@ -315,6 +326,12 @@ class Agent:
 
         for agent in self.agents:
             agent.turn_off()
+
+    def move(self, xoff, yoff):
+        self.geometry = translate(self.geometry, xoff, yoff)
+
+    def _run(self, state):
+        pass
 
     def run(self, state={}, **args):
         """Evaluates the _run function and runs through sub agents.
@@ -509,11 +526,11 @@ class Agent:
         if len(self.agents) == 0:
             return canvas
 
-        imagestack = self._agenttree().sort_values('level')
+        imagestack = self._agenttree().sort_values('_level')
         for row in imagestack.iterrows():
-            agent = row[1].agent
-            level = row[1].level
-            origin = row[1].origin
+            agent = row[1]._agent
+            level = row[1]._level
+            origin = row[1]._origin
             if attr is not None:
                 value = getattr(agent, attr)
             else:
@@ -553,9 +570,3 @@ class Agent:
         for i, band in enumerate(bands):
             img[:, :, i] = band * 255
         return img
-
-    def move(self, xoff, yoff):
-        self.geometry = translate(self.geometry, xoff, yoff)
-
-    def _run(self, state):
-        return True
