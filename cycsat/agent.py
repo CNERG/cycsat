@@ -4,24 +4,18 @@ from math import floor
 import random
 import re
 import io
-
 import imageio
-
 import pandas as pd
 import numpy as np
 from geopandas import GeoDataFrame
-
 import rasterio
 from matplotlib import pyplot as plt
-
 from skimage.draw import polygon
 from skimage.transform import rotate as rotate_image
 from skimage.transform import downscale_local_mean
-
 from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
-
 from .geometry import posit_point, grid, intersect, rescale
 from .geometry import shift_geometry
 from .laboratory import Material
@@ -33,12 +27,13 @@ class Agent:
         """
         Agent class.
 
-        Parameters
+        Parameters:
         ----------
         name - (optional) a name for the agent
         level - (default = 0) the height, or the order to draw the agent on images
         attrs - (optional) a dictionary of attributes to track and use during
             simulations.
+        ----------
         """
         self.time = 0
         self._handle = name
@@ -209,8 +204,10 @@ class Agent:
                 mmu = 1
             fig = plt.imshow(np.flipud(rotate_image(self.render_ndarray(
                 band_args=band_args, mmu=mmu), 90, resize=True)), origin='lower')
+            fig.axes.set_title('{}\n time: {}'.format(self.name, self.time))
         else:
             fig = self._agenttree().plot(**args)
+            fig.set_title('{}\n time: {}'.format(self.name, self.time))
         if gif:
             plt.savefig(virtual, format='png')
             return virtual
