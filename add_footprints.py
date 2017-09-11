@@ -25,23 +25,18 @@ def reset_dir(DIR):
 
 
 def get_dataset(dataset_url):
-
     print('Downloading {} footprint shapefiles'.format(dataset_url))
     reset_dir(TEMP_DIR)
-
     url = 'http://download.geofabrik.de/{}-latest-free.shp.zip'.format(
         dataset_url)
-
     filename = DATA_DIR + 'footprints_temp.zip'
     filename = wget.download(url, filename)
-
     print('')
     print('Unpacking...')
     zip_ref = zipfile.ZipFile(filename, 'r')
     zip_ref.extractall(TEMP_DIR)
     zip_ref.close()
     os.remove(filename)
-
     for f in os.listdir(TEMP_DIR):
         if 'gis.osm_buildings_a_free_1' in f:
             filename, ext = os.path.splitext(f)
@@ -53,12 +48,10 @@ def get_dataset(dataset_url):
 def main(args):
     if args.wipe:
         reset_dir(SHAPE_DIR)
-
     get_dataset(args.ds)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--ds')
     parser.add_argument('--wipe', default=False)
