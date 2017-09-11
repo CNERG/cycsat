@@ -12,19 +12,22 @@ from .geometry import calulate_shift, longest_side
 class Rule:
 
     def __init__(self, target, dep='parent', **args):
-        """The Rule class.
+        """Rule class.
 
         This class represents a method for placing a
         "target" agent in relation to a "dependent" agent. Rule intances are
         added to agents for the placement of their sub-agents. Evaluating the rule
         instance returns a valid area for placement.
 
-        Parameters
-        ----------
-        target - the name of the target Agent to apply the rule to
-        dep - the name of the dependent Agent to use evaluate the rule.
-            By default (i.e. 'parent') the dependent agent is the parent agent itself.
-        ----------
+        Parameter
+        ---------
+        target : string
+                The name of the target agent to apply the rule to
+
+        dep : string or 'parent', default: 'parent'
+                The name of the dependent agent to use to evaluate the rule.
+                The default ('parent') sets the dependent agent to the parent agent itself.
+        ---------
         """
         self._target = target
         self._dep = dep
@@ -60,6 +63,7 @@ class Rule:
             return False
 
     def evaluate(self):
+        """Evaluates the rule and returns a valid region for placement."""
         try:
             return self._evaluate()
         except BaseException as e:
@@ -67,7 +71,7 @@ class Rule:
             return False
 
 # -------------------------------------------------
-# Rule library
+# DEFINED RULES
 # -------------------------------------------------
 
 
@@ -76,12 +80,19 @@ class SET(Rule):
     def __init__(self, target, dep='parent', x=0, y=0, padding=10):
         """Returns a relative position within the target agent's parent.
 
-        Parameters:
-        -----------
-        x - the relative x position (-1 - 1)
-        y - the relative y postion (-1 - 1)
-        padding - the padding for placement
-        -----------
+        Parameter
+        ---------
+        x : float, 1 >= x >= -1, default: 0
+                The relative x position. 0 means the center 1
+                means the far right and -1 means the far left of the
+                parent.
+
+        y : float, 1 >= x >= -1, default: 0
+                The relative y postion (see above).
+
+        padding : float, default: 10
+                The padding for placement
+        ---------
         """
         Rule.__init__(self, target, dep, x=x, y=y, padding=padding)
 
@@ -102,10 +113,11 @@ class SIDE(Rule):
     def __init__(self, target, dep='parent', value=100):
         """Returns the side area from within a parent agent.
 
-        Parameters:
-        -----------
-        value - buffer value
-        -----------
+        Parameter
+        ---------
+        value : float, default: 100
+                Buffer value
+        ---------
         """
         Rule.__init__(self, target, dep, value=value)
 
@@ -122,10 +134,11 @@ class NEAR(Rule):
     def __init__(self, target, dep='parent', value=100):
         """Returns a valid area near a dependent agent to place the target agent.
 
-        Parameters:
-        -----------
-        value - distance value
-        -----------
+        Parameter
+        ---------
+        value : float, default: 100
+                Buffer value
+        ---------
         """
         Rule.__init__(self, target, dep, value=value)
 
@@ -140,10 +153,11 @@ class ALIGN(Rule):
     def __init__(self, target, dep='parent', axis='x'):
         """Align the target agent to the same axis as the dependent agent.
 
-        Parameters:
-        -----------
-        axis - the axis to align by, i.e. 'x' or 'y'
-        -----------
+        Parameter
+        ---------
+        axis : {'x', 'y'}, default: 'x'
+                The axis to align by, i.e. 'x' or 'y'
+        ---------
         """
         Rule.__init__(self, target, dep, axis=axis)
 

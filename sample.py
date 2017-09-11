@@ -115,3 +115,13 @@ site.add_agents([cblock])
 # Build the site (place all the agents according to rules) with
 # detailed information.
 site.build(verbose=True)
+
+# Run the site for 20 timesteps
+for i in range(20):
+    site.run()
+
+# Set the state of the site to an earlier time
+site.set_state(5)
+
+# Plot a polygon map of the site
+site.plot()

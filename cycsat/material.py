@@ -19,7 +19,7 @@ USGSLibrary = pd.Series(os.listdir(DIR + '/data/spectra/')
 class Material:
 
     def __init__(self, name, **args):
-        """The Material class.
+        """Material class.
 
         This class is for modeling the response of materials.
         """
@@ -39,7 +39,7 @@ class Material:
             pass
 
 # -------------------------------------------------
-# Material library
+# DEFINED MATERIALS
 # -------------------------------------------------
 
 
@@ -49,10 +49,11 @@ class USGSMaterial(Material):
         """Uses the USGS Spectral Library to model the reflectance response
         to wavelengths.
 
-        Parameters:
-        ----------
-        name - the name of the material model
-        ----------
+        Parameter
+        ---------
+        name : string
+                The name of the USGS material model
+        ---------
         """
         Material.__init__(self, name)
         self.model = pickle.load(
