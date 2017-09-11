@@ -7,18 +7,15 @@ from cycsat.agent import Agent
 # import the Rule classes that will be used for placing sub-agents
 from cycsat.rule import NEAR, ALIGN, SET, SIDE
 
-# import the LoadFootprints function for loading building footprints
-from cycsat.geometry import LoadFootprints
-
 # import the USGS material class for modeling materials (i.e. grass, cement)
 from cycsat.material import USGSMaterial
 
-# import Shapely, Gsieopandas libraries for creating geometry for agents
-# and plotting.
+# import Shapely and Geopandas libraries for creating the geometry for agents
 from shapely.geometry import Polygon, box, Point
 import geopandas as gpd
 
 # There are a two options for creating Agents.
+
 # The simplest way is to create an Agent instance. The site agent will
 # contain all other agents.
 site = Agent(geometry=box(0, 0, 1000, 1000), name='Site', value=100)
@@ -101,7 +98,7 @@ ctower1 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 ctower2 = CoolingTower(on=0, geometry=Point(0, 0).buffer(75), value=20)
 plume = Plume(geometry=Point(0, 0).buffer(50), value=100)
 
-# Here agents are added to their parents the CoolingTowerBlock contains
+# Here agents are added to their parents. The CoolingTowerBlock contains
 # several agents
 cblock.add_agents([water, ctower1, ctower2, turbine])
 cblock.add_agents(buildings.tolist(), scale_ratio=0.10)
