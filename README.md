@@ -2,7 +2,7 @@
 A synthetic satellite time series generator intended for use with Cyclus for nuclear non-proliferation monitoring. cycsat is made up of agents, materials, and rules.
 
 ## Agents
-This is the core class of cycsat. Anything that can be observed in a satellite image is an agent. An agent is defined by a geometry (a ![Shapely](https://pypi.python.org/pypi/Shapely) Polygon or Point object), a material response (see the material class), core attributes that are tracked over time, and a behavior (a user-defined _run function).
+This is the core class of cycsat. Anything that can be observed in a satellite image is an agent. An agent is defined by a geometry (a [Shapely](https://pypi.python.org/pypi/Shapely) Polygon or Point object), a material response (see the material class), core attributes that are tracked over time, and a behavior (a user-defined _run function).
 
 Agents can be assigned sub-agents. A sub-agent's geometry must fall within it's parent agent. Agents have rules that provide instructions for how to place sub-agents. Running or plotting an agent will run all its sub-agents. A hierarchical structure of agents and sub-agents is called an "agent tree."
 
