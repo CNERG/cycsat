@@ -13,6 +13,6 @@ This class defines how the surface of an agent is converted to numeric values fo
 This class defines an instruction for how an agent is to place one of its named sub-agents. Some defined rules include NEAR (place a named sub-agent near to another named sub-agent) and ALIGN (align a named sub-agent by its x or y axis to another named sub-agent). Users can define their own rule subclasses.
 
 ## Example
-The example shown below demonstrates a RGB rendering of a simple reactor with two cooling towers. The green background is lawn grass, the gray is concrete, the large circle is water, and the black shapes are black roof asphalt. The white circle (modeled using the spectral response of snow) represents a cooling tower plume. See sample.py to see how this agent stack and image was created.
+The example shown below demonstrates a RGB rendering of a simple reactor with two cooling towers. The green background is lawn grass, the gray is concrete, the large circle is water, and the black shapes are black roof asphalt. The white circle (modeled using the spectral response of snow) represents a cooling tower plume. See sample.py to see how this agent stack and image were created.
 
 ![example png](/samples/site_render_example.png?raw=true "example")
