@@ -1,15 +1,15 @@
 """
-laboratory.py
+material.py
 
 Defines the material class for modeling the response of surfaces.
 """
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
 import os
 import ast
 import pickle
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 DIR = os.path.dirname(__file__)
 USGSLibrary = pd.Series(os.listdir(DIR + '/data/spectra/')

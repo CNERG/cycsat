@@ -3,7 +3,7 @@ LICENSE
 *******
 ::
 
-    Copyright (c) 2010-2016, Cyclus Developers
+    Copyright (c) 2010-2017, Cyclus Developers
      All rights reserved.
 
     Redistribution and use in source and binary forms, with or without

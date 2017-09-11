@@ -5,6 +5,7 @@ Defines the Rule class for placing agents according to rules.
 """
 from shapely.ops import nearest_points
 from shapely.geometry import LineString, Point, box
+
 from .geometry import calulate_shift, longest_side
 
 

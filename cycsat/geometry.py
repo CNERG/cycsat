@@ -7,9 +7,8 @@ and Rule classes.
 import random
 import itertools
 import time
-import itertools
-import math
 import os
+
 from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 import numpy as np

@@ -5,13 +5,13 @@ This sample file demonstrates how to set up a cycsat simulation.
 from cycsat.agent import Agent
 
 # import the Rule classes that will be used for placing sub-agents
-from cycsat.rules import NEAR, ALIGN, SET, SIDE
+from cycsat.rule import NEAR, ALIGN, SET, SIDE
 
 # import the LoadFootprints function for loading building footprints
 from cycsat.geometry import LoadFootprints
 
 # import the USGS material class for modeling materials (i.e. grass, cement)
-from cycsat.laboratory import USGSMaterial
+from cycsat.material import USGSMaterial
 
 # import Shapely, Gsieopandas libraries for creating geometry for agents
 # and plotting.

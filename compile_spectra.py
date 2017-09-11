@@ -2,15 +2,15 @@
 A script for building the materials database from the
 USGS Spectral Library (https://www.sciencebase.gov/catalog/item/586e8c88e4b0f5ce109fccae)
 """
-import wget
-import zipfile
 import os
 import shutil
-import pandas as pd
 import pickle
 import argparse
 import sys
 
+import wget
+import zipfile
+import pandas as pd
 from sklearn import svm
 from sklearn.neighbors import KNeighborsRegressor
 
@@ -33,6 +33,7 @@ def clear_datadir(DATA_DIR):
             shutil.rmtree(DATA_DIR + path)
         else:
             os.remove(DATA_DIR + path)
+    print('success')
 
 
 def clear_spectral_data(DATA_DIR):
@@ -42,6 +43,7 @@ def clear_spectral_data(DATA_DIR):
     for path in contents:
         if path == 'spectra':
             shutil.rmtree(DATA_DIR + path)
+    print('success')
 
 
 def get_library(DATA_DIR, file=False):
@@ -60,25 +62,29 @@ def get_library(DATA_DIR, file=False):
     zip_ref = zipfile.ZipFile(filename, 'r')
     zip_ref.extractall('cycsat/data/')
     zip_ref.close()
+    print('success')
 
 
 def detect_scale(file):
     if 'ASD' in file:
-        return pd.read_table(
+        scale_file = pd.read_table(
             DATASET + 'splib07a_Wavelengths_ASD_0.35-2.5_microns_2151_ch.txt',
             skiprows=1, header=None)
     elif 'AVIRIS' in file:
-        return pd.read_table(
+        scale_file = pd.read_table(
             DATASET + 'splib07a_Wavelengths_AVIRIS_1996_0.37-2.5_microns.txt',
             skiprows=1, header=None)
     elif 'BECK' in file:
-        return pd.read_table(
+        scale_file = pd.read_table(
             DATASET + 'splib07a_Wavelengths_BECK_Beckman_0.2-3.0_microns.txt',
             skiprows=1, header=None)
     elif 'NIC':
-        return pd.read_table(
+        scale_file = pd.read_table(
             DATASET + 'splib07a_Wavelengths_NIC4_Nicolet_1.12-216microns.txt',
             skiprows=1, header=None)
+    else:
+        print("Can't identify your file!")
+    return scale_file
 
 
 def learn_lib(DATA_DIR, DATASET):
@@ -121,6 +127,7 @@ def learn_lib(DATA_DIR, DATASET):
 
     shutil.rmtree(DATASET)
     os.remove(DATA_DIR + 'spectra.zip')
+    print('success')
 
 
 def compile_spectra(DATA_DIR, DATASET, file=False):
@@ -129,10 +136,8 @@ def compile_spectra(DATA_DIR, DATASET, file=False):
     learn_lib(DATA_DIR, DATASET)
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', default=False,
                         help="Loads the USGS library from file (optional).")
     args = parser.parse_args()
-
     compile_spectra(DATA_DIR, DATASET, args.file)

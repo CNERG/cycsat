@@ -4,6 +4,7 @@ from math import floor
 import random
 import re
 import io
+
 import imageio
 import pandas as pd
 import numpy as np
@@ -16,9 +17,9 @@ from skimage.transform import downscale_local_mean
 from shapely.geometry import Point, box
 from shapely.affinity import rotate, translate
 from shapely.ops import cascaded_union, unary_union, polygonize
+
 from .geometry import posit_point, grid, intersect, rescale
 from .geometry import shift_geometry
-from .laboratory import Material
 
 
 class Agent:
@@ -30,23 +31,23 @@ class Agent:
         Parameters:
         ----------
         name - (optional) a name for the agent
-        level - (default = 0) the height, or the order to draw the agent on images
+        level - (default = 0) the relative order to draw the agent on images
         attrs - (optional) a dictionary of attributes to track and use during
             simulations.
         ----------
         """
-        self.time = 0
-        self._handle = name
-        self.attrs = attrs
+        self.time = 0  # the time of the agent
+        self._handle = name  # used for Rules
+        self.attrs = attrs  # the attributes being tracked
         self.attrs['geometry'] = geometry
         self.level = level
-        self._on = True
-        self._dependents = list()
-        self._material = False
-        self._statelog = list()
-        self.agents = list()
-        self.rules = list()
-        self.parent = False
+        self._on = True  # if the agent is visable
+        self._dependents = list()  # list of dependents (internal use only)
+        self._material = False  # the material
+        self._statelog = list()  # the log of states over time
+        self.agents = list()  # sub-agents
+        self.rules = list()  # placement rules
+        self.parent = False  # the parent agent
         self.reset()
 
     def __repr__(self):
