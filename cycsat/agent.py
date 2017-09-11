@@ -25,19 +25,27 @@ from .geometry import shift_geometry
 class Agent:
 
     def __init__(self, name=None, geometry=None, level=0, **attrs):
-        """
-        Agent class.
+        """Agent class.
 
-        Parameters:
-        ----------
-        name - (optional) a name for the agent
-        level - (default = 0) the relative order to draw the agent on images
-        attrs - (optional) a dictionary of attributes to track and use during
-            simulations.
-        ----------
+        Parameter
+        ---------
+        name : string, optional
+                A name for the agent
+
+        geometry : Shapely geometry, optional
+                The geometry of the agent
+
+        level : integer, default: 0
+                The order to draw the agent in the agent tree, i.e. lower levels
+                are drawn first.
+
+        attrs : other named parameters, optional
+                These paramaters will be stored in a dictionary and become the
+                tracked attributes of this agent.
+        ---------
         """
         self.time = 0  # the time of the agent
-        self._handle = name  # used for Rules
+        self._handle = name  # name
         self.attrs = attrs  # the attributes being tracked
         self.attrs['geometry'] = geometry
         self.level = level
@@ -76,7 +84,7 @@ class Agent:
 
     def print_tree(self):
         """Prints a hierarchical diagram of this agent and all
-        its sub-agents."""
+        its sub-agents, i.e. the agent tree."""
         print('    ' * self.depth, self)
         for agent in self.agents:
             agent.print_tree()
@@ -91,9 +99,9 @@ class Agent:
         self.log_state()
 
     def get_state(self, time='current'):
-        """Returns the current state of all attributes as a dictionary at the given time.
-
-        _metavars is a dictionary of variables used by cycsat internally.
+        """Returns the current state of all the agent's tracked attributes
+        as a dictionary at the given time. _metavars is a dictionary of variables
+        used by cycsat internally.
         """
         if time == 'current':
             state = {}
@@ -142,7 +150,7 @@ class Agent:
 
     @property
     def agentframe(self):
-        """Returns the agents"""
+        """Returns the sub-agents with attributes as a pandas DataFrame."""
         agent_frame = GeoDataFrame()
         for agent in self.agents:
             attrs = agent.dataframe.tail(1)
@@ -182,17 +190,22 @@ class Agent:
         return GeoDataFrame(agentframe)
 
     def agenttree(self, show_metavars=False):
-        """Atrribute data frame of all sub agents."""
+        """Returns an atrribute dataframe of all agents and sub-agents, i.e. the agent tree."""
         return self._agenttree(show_metavars=show_metavars)
 
     def plot(self, data='vector', band_args='default', **args):
-        """Plots the agent with all subagents.
+        """Plots the agent tree.
 
-        Parameters
-        ----------
-        data - 'vector' or 'raster' for a raster image
-        band_args - the arguments for rendering bands, default RGB
-        ----------
+        Parameter
+        ---------
+        data : {'vector', raster'}, default: 'vector'
+                Sets the way to display the data.
+
+        band_args : dictionary or 'default', default: 'default'
+                A dictionary of arguments for rendering bands if data is 'raster'
+                The 'default' option renders an RGB image, but this will only work
+                for the USGSMaterial.
+        ---------
         """
         gif = False
         if 'virtual' in args:
@@ -203,8 +216,12 @@ class Agent:
                 mmu = args.pop('mmu')
             else:
                 mmu = 1
-            fig = plt.imshow(np.flipud(rotate_image(self.render_ndarray(
-                band_args=band_args, mmu=mmu), 90, resize=True)), origin='lower')
+            if 'ax' in args:
+                ax = args.pop('ax')
+            else:
+                ax = plt
+            fig = ax.imshow(np.flipud(rotate_image(self.render_ndarray(
+                band_args=band_args, mmu=mmu), 90, resize=True)), origin='lower', **args)
             fig.axes.set_title('{}\n time: {}'.format(self.name, self.time))
         else:
             fig = self._agenttree().plot(**args)
@@ -215,17 +232,24 @@ class Agent:
         return fig
 
     def render(self, band_args='default', **args):
+        """Shortcut for agent.plot(data='raster')."""
         return self.plot(data='raster', band_args=band_args, **args)
 
     def gif(self, runs, data='vector', filename=None, fps=1):
-        """Export an animated GIF of the agent runs.
+        """Export an animated GIF of the agent tree.
 
         Parameters
         ----------
-        runs - the number of runs
-        data - 'vector' or 'raster'
-        filename - filename (optional)
-        fps - frames per second
+        runs : integer
+                The number of runs to animate.
+
+        data : {'vector', 'raster'}, default: 'vector'
+                Sets the way to display the data.
+
+        filename : string, optional, default: None (cycsat creates a name)
+
+        fps : integer > 1, default: 1
+                Frames per second.
         ----------
         """
         plt.ioff()
@@ -241,7 +265,6 @@ class Agent:
             plot.seek(0)
             image = imageio.imread(plot)
             images.append(image)
-
         if not filename:
             name = self.name + '_{}.gif'.format(data)
         imageio.mimsave(name, images, fps=fps)
@@ -249,10 +272,13 @@ class Agent:
 
     @property
     def origin(self):
+        """The origin (or lower corner) of the agent's geometry."""
         return np.array([floor(self.geometry.bounds[0]), floor(self.geometry.bounds[1])])
 
     @property
     def relative_geo(self):
+        """The geometry of the agent with its origin set to (0,0). This is the geometry that
+        all sub-agents will be placed into."""
         minx, miny, maxx, maxy = [floor(coord)
                                   for coord in self.geometry.bounds]
         rel_geo = translate(
@@ -260,9 +286,12 @@ class Agent:
         return rel_geo
 
     def set_material(self, Material):
+        """Sets the Material of the agent. Requires a Material instance."""
         self._material = Material
 
     def material_response(self, **args):
+        """Returns the Material response given a set of variables.
+        For example to render a USGSMaterial a 'wavelength' variable must be passed."""
         if self._material:
             return self._material.observe(**args)
         else:
@@ -270,15 +299,22 @@ class Agent:
             return 0
 
     def get_agent(self, name):
+        """Get a list of sub-agents by name. Searches for any agent with with a name that starts
+        with the provided name."""
         return [a for a in self.agents if a.name.startswith(name)]
 
     def add_agent(self, agent, scale_ratio=1):
-        """Add sub-agents to agent.
+        """Add sub-agent to agent.
 
-        Parameters:
+        Parameter
         ----------
-        agent - the agent to add
-        scale_ratio - the ratio to scale the geometry of the agent by
+        agent : Agent instance
+                The sub-agent to add.
+
+        scale_ratio : ratio, > 0 > 1, default: 1
+                The ratio to scale the geometry of the sub-agent to fit inside the parent.
+                See rescale in geomtry.py.
+        ----------
         """
         if scale_ratio != 1:
             rescale(self, agent, scale_ratio)
@@ -297,17 +333,20 @@ class Agent:
     def add_agents(self, agents, scale_ratio=1):
         """Add multiple sub-agents to agent.
 
-        Parameters:
-        ----------
-        agents - a list of agents
-        scale_ratio the ratio to scale the geometry of the agents by
-        ----------
+        Parameter
+        ---------
+        agents : list of Agent instances
+
+        scale_ratio : ratio, > 0 > 1, default: 1
+                The ratio to scale the geometry of the sub-agent to fit inside the parent.
+                See rescale in geomtry.py.
+        ---------
         """
         for agent in agents:
             self.add_agent(agent, scale_ratio)
 
     def add_attrs(self, **args):
-        """Adds new attributes to track in the statelog. Paramters passed
+        """Adds new attributes to track in the _statelog. Paramters passed
         become newly tracked attributes."""
         for arg in args:
             setattr(self, arg, args[arg])
@@ -317,7 +356,7 @@ class Agent:
             self.attrs = args
 
     def add_rule(self, rule):
-        """Adds a placment rule for this agent's sub-agents. Rules must be added
+        """Adds a placment rule. Rules must be added
         through this function."""
         rule.agent = self
         self.rules.append(rule)
@@ -333,7 +372,6 @@ class Agent:
         """Turns the agent OFF making it INVISIBLE in images and dataframes."""
         self._on = False
         self.log_state()
-
         for agent in self.agents:
             agent.turn_off()
 
@@ -345,13 +383,14 @@ class Agent:
         """User-defined run function."""
         pass
 
-    def run(self, state={}, **args):
-        """Evaluates the user-defined _run function and runs through sub-agents.
+    def run(self, state={}):
+        """Evaluates the user-defined _run function and runs through agent tree.
 
-        Parameters:
-        ----------
-        state - a dictionary of global variables
-        ----------
+        Parameter
+        ---------
+        state : dictionary
+                A dictionary of global variables.
+        ---------
         """
         self.time += 1
         self._run(state)
@@ -382,26 +421,29 @@ class Agent:
         batches = list()
         while graph:
             # Get all observables with no dependencies
-            ready = {name for name, deps in graph.items() if not deps}
-            if not ready:
+            nodeps = {name for name, deps in graph.items() if not deps}
+            if not nodeps:
                 msg = "Circular dependencies found!"
                 raise ValueError(msg)
             # Remove them from the dependency graph
-            for name in ready:
+            for name in nodeps:
                 graph.pop(name)
             for deps in graph.values():
-                deps.difference_update(ready)
+                deps.difference_update(nodeps)
             # add the batch to the list
-            batches.append([name_to_instance[name] for name in ready])
+            batches.append([name_to_instance[name] for name in nodeps])
         return batches
 
     def place(self, verbose=False, attempts=100):
-        """Attempts to place all sub-agents.
+        """Attempts to place agent tree.
 
-        Parameters:
-        ----------
-        verbose - if True print detailed placement results
-        attempts - the attempts before the placement of a subagent fails
+        Parameter
+        ---------
+        verbose : bool, default: False
+                If True prints detailed placement results.
+
+        attempts : integer, default: 100
+                The attempts to make before the placement fails
         ----------
         """
         # check for sufficent area
@@ -440,12 +482,17 @@ class Agent:
     def place_in(self, region, restrict='default', attempts=100):
         """Places an agent within a region.
 
-        Parameters:
-        ----------
-        region - region to place agent in
-        restrict - bounds to restric placement by, 'default' is the agent's parent
-        attempts - attempts before failure
-        ----------
+        Parameter
+        ---------
+        region : Shapely geometry
+                The region to place the agent in
+
+        restrict : Shapely geometry, default: 'default'
+                This defines the bounds to restric the placement by. The 'default' option is the agent's parent
+
+        attempts : integer, default: 100
+                Attempts before failure
+        ---------
         """
         if restrict == 'default':
             if self.parent:
@@ -472,11 +519,14 @@ class Agent:
     def build(self, verbose=True, attempts=100):
         """Attempts to place all the agent's sub-agents until success.
 
-        Parameters:
-        ----------
-        verbose : if True, print detailed placement results
-        attempts : attempts before failure
-        ----------
+        Parameter
+        ---------
+        verbose : bool, default: True
+                If True prints detailed placement results.
+
+        attempts : integer, default: 100
+                Attempts before failure
+        ---------
         """
         for i in range(attempts):
             if verbose:
@@ -494,13 +544,8 @@ class Agent:
         return {'status': False, 'attempts': attempts}
 
     def mask(self, inverted=False):
-        """Returns an array mask of the agent's geometry.
-
-        Parameters:
-        ----------
-        inverted - if True, the agent's mask is 1 not 0
-        ----------
-        """
+        """Returns an array mask of the agent's geometry. If inverted param is True
+        the mask will be in 1s rather than 0s."""
         minx, miny, maxx, maxy = [floor(coord)
                                   for coord in self.geometry.bounds]
         ylen = maxy - miny
@@ -519,11 +564,14 @@ class Agent:
         """Renders an image of this agent as a numpy array. If attr is left
         as None additional args are used to render the agent's surface
 
-        Parameters:
-        -----------
-        attr - the attribute to base pixel value on (optional)
-        mmu - minimum mapping unit, i.e size of pixel. Must be >= 1.
-        -----------
+        Parameter
+        ---------
+        attr : string, optional, default: None
+                the named attribute to the base pixel value on
+
+        mmu : integer, >= 1, default: 1,
+                The minimum mapping unit, i.e size of pixel. Must be >= 1.
+        ---------
         """
         if attr is not None:
             value = getattr(self, attr)
@@ -556,12 +604,16 @@ class Agent:
     def render_ndarray(self, band_args='default', mmu=1):
         """Renders an n-d array using a list of band argument dictionaries.
 
-        Parameters:
-        ----------
-        band_args - a list of dictionaries with rendering arguments. Each
-                dictionary of arguments will create a band
-        mmu - minimum mapping unit, i.e. size of pixel. Must be >= 1.
-        ----------
+        Parameter
+        ---------
+        band_args : list of dictionaries, default: 'default'
+                a list of dictionaries with rendering arguments. Each
+                dictionary of arguments will create a band. The 'default' will
+                render an RGB image for agents with USGSMaterials.
+
+        mmu : integer, >= 1, default: 1,
+                The minimum mapping unit, i.e size of pixel. Must be >= 1.
+        ---------
         """
         if band_args == 'default':
             band_args = [{'wavelength': 0.48},
