@@ -9,7 +9,6 @@ import itertools
 import time
 import os
 
-from descartes import PolygonPatch
 from matplotlib import pyplot as plt
 import numpy as np
 import geopandas as gpd
