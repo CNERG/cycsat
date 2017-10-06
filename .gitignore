@@ -1,30 +1,8 @@
-# byte-compiled / optimized / DLL files
+# ignore
 *.pyc
-cycsat/config.ini
-__pycache__/*
+__pycache__/
+/cycsat/data/*
+data_bkp/
 
-# Sublime files
-cycsat-sublime.sublime-project
-cycsat-sublime.sublime-workspace
-
-# Other
-testing.py
-test_data/*
-.ipynb_checkpoints/*
-demos/*
-*.db
-*.tif
-*.xml
-notes/
-output/
-swu_capacitated.xml
-*.sqlite
-simulations/
-plots/
-materials/
-*.pdf
-materials/ASCII/
-*dbf
-*shp
-*shx
-extra/
+# exceptions
+!/cycsat/data/info.md
